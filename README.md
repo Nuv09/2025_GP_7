@@ -43,5 +43,5 @@ Palm trees are a vital agricultural and economic resource in Saudi Arabia and th
 
 
 4. **Database Setup:**
-    TBD – database setup steps will be added later
+   TBD – backend setup steps will be added later
 
