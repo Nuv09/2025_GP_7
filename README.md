@@ -32,7 +32,7 @@ Palm trees are a vital agricultural and economic resource in Saudi Arabia and th
    ```
 
 2. **Backend Setup (Flask):**  
-TBD – backend setup steps will be added later
+   TBD – backend setup steps will be added later
 
 3. **Frontend Setup (Flutter):**  
    ```bash
@@ -43,6 +43,5 @@ TBD – backend setup steps will be added later
 
 
 4. **Database Setup:**
-
-TBD – database setup steps will be added later
+    TBD – database setup steps will be added later
 
