@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:saafapp/constant.dart';
-import 'package:saafapp/farms/farmsList.dart';
+import 'package:saafapp/farms/farms_list.dart';
 import 'package:saafapp/widgets/farms/farm_card.dart';
 
 //hello
-class farmsBody extends StatelessWidget {
-  const farmsBody({super.key});
+class FarmsBody extends StatelessWidget {
+  const FarmsBody({super.key});
 
   @override
   Widget build(BuildContext context) {

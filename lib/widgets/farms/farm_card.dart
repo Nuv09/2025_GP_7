@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:saafapp/constant.dart';
-import 'package:saafapp/farms/farmsList.dart';
+import 'package:saafapp/farms/farms_list.dart';
 
 class FarmCard extends StatelessWidget {
   final int farmIndex;
-  final farmsList farmlist;
+  final FarmsList farmlist;
 
   const FarmCard({super.key, required this.farmIndex, required this.farmlist});
 
