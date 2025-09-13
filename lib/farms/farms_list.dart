@@ -1,8 +1,8 @@
-class farmsList {
+class FarmsList {
   final String farmOwner, farmName, infectionAreas;
   final int numberOfPalm;
   //hello
-  farmsList({
+  FarmsList({
     required this.farmOwner,
     required this.farmName,
     required this.numberOfPalm,
@@ -11,29 +11,29 @@ class farmsList {
 }
 
 //list of farms
-List<farmsList> farmlists = [
-  farmsList(
+List<FarmsList> farmlists = [
+  FarmsList(
     farmOwner: "لطيفة الشريف",
     farmName: "مزرعة النخيل - الرياض",
     numberOfPalm: 250,
     infectionAreas: "الجزء الشمالي (15%)",
   ),
 
-  farmsList(
+  FarmsList(
     farmOwner: "روان البطاطي",
     farmName: "واحة النخيل - القصيم",
     numberOfPalm: 400,
     infectionAreas: "لا توجد إصابة",
   ),
 
-  farmsList(
+  FarmsList(
     farmOwner: "ولاء المطيري",
     farmName: "مزرعة الوادي الأخضر - الأحساء",
     numberOfPalm: 320,
     infectionAreas: "الحقل الغربي (8%)",
   ),
 
-  farmsList(
+  FarmsList(
     farmOwner: "نوف العسكر",
     farmName: "مزرعة صحراء النخيل - وادي الدواسر",
     numberOfPalm: 380,

@@ -192,9 +192,7 @@ class _SaafLandingScreenState extends State<SaafLandingScreen>
                                 onTap: () async {
                                   await _stopAmbientNow();
                                   // ✅ تم إضافة هذا السطر لحل مشكلة التحذير
-                                  if (!mounted) {
-                                    return;
-                                  }
+                                  if (!context.mounted) return; // ✅ الحارس المرتبط بنفس الـ BuildContext
                                   Navigator.pushNamed(context, '/login');
                                 },
                               ),
