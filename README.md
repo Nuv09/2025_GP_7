@@ -27,21 +27,21 @@ Palm trees are a vital agricultural and economic resource in Saudi Arabia and th
 ## ⚙️ Launching Instructions  
 1. **Clone the repository:**  
    ```bash
-   git clone https://github.com/Nuv90/2025_GP_7.git
+   git clone https://github.com/Nuv09/2025_GP_7.git
    cd 2025_GP_7
    ```
 
 2. **Backend Setup (Flask):**  
-TBD
+TBD – backend setup steps will be added later
 
 3. **Frontend Setup (Flutter):**  
    ```bash
-   cd frontend
+   cd saafapp
    flutter pub get
    flutter run
    ```
 
 
 4. **Database Setup:**
-TBD
+TBD – database setup steps will be added later
 
