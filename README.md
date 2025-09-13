@@ -31,10 +31,11 @@ Palm trees are a vital agricultural and economic resource in Saudi Arabia and th
    cd 2025_GP_7
    ```
 
-2. **Backend Setup (Flask):**  
+2. **Backend Setup (Flask):**
+
    TBD – backend setup steps will be added later
 
-3. **Frontend Setup (Flutter):**  
+4. **Frontend Setup (Flutter):**  
    ```bash
    cd saafapp
    flutter pub get
@@ -42,6 +43,7 @@ Palm trees are a vital agricultural and economic resource in Saudi Arabia and th
    ```
 
 
-4. **Database Setup:**
+5. **Database Setup:**
+
    TBD – backend setup steps will be added later
 
