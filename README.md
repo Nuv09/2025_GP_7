@@ -14,13 +14,13 @@ Palm trees are a vital agricultural and economic resource in Saudi Arabia and th
 - **Visualization:** Interactive maps, dashboards, and reports  
 
 ## 🚀 Project Features  
-- User registration & login (Farmers & Admin)  
+- User registration & login
 - Add and manage farms with GPS coordinates  
 - Interactive map to view farm locations and palm health status  
 - Automated analysis of satellite imagery and Vegetation Indices  
 - AI-based classification of palm tree health (Healthy, Infected, Water Stress, Nutrient Deficiency)  
 - Early warning and notification system  
-- Admin dashboard for monitoring farms and managing users  
+- Admin dashboard for monitoring farms  
 - Report generation (PDF/Excel)  
 
 
