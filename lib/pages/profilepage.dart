@@ -1,0 +1,749 @@
+// lib/pages/profilepage.dart
+import 'dart:io' show File;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // InputFormatters + Uint8List
+import 'package:image_picker/image_picker.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+// Firebase
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+
+// ودجت الصورة الشرطي (ويب/موبايل)
+// تم الإبقاء على saafNetworkImage كدالة لضمان عمل الكود
+Widget saafNetworkImage(
+  String url, {
+  Key? key,
+  double? width,
+  double? height,
+  BoxFit? fit,
+}) {
+  return Image.network(
+    url,
+    key: key,
+    width: width,
+    height: height,
+    fit: fit,
+    errorBuilder: (context, error, stackTrace) => Container(
+      color: Colors.white.withValues(alpha: 0.15), // بديل withOpacity
+      child: const Icon(Icons.broken_image, color: Colors.white70),
+    ),
+  );
+}
+
+// 🎨 الألوان
+const Color kDeepGreen = Color(0xFF042C25);
+const Color kGold = Color(0xFFEBB974);
+const Color kBeige = Color(0xFFFFF6E0);
+const Color kAccent = Color(0xFFFDCB6E);
+
+class ProfilePage extends StatefulWidget {
+  const ProfilePage({super.key});
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  final ImagePicker _picker = ImagePicker();
+  bool _saving = false;
+  bool _loading = true;
+
+  // بيانات
+  String? name, phone, email, region, avatarPath;
+
+  // حقول
+  final _nameCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+
+  bool _editName = false, _editPhone = false, _editEmail = false;
+
+  // Firebase
+  final _auth = FirebaseAuth.instance;
+  final _db = FirebaseFirestore.instance;
+  final _storage = FirebaseStorage.instance;
+
+  // ملف/بايتات الصورة المختارة محليًا
+  String? _pickedFilePath; // للأجهزة
+  Uint8List? _pickedBytes; // للويب + معاينة فورية
+
+  // المنطقة
+  String? _selectedRegion;
+  final List<String> _regions = const [
+    'الرياض',
+    'مكة المكرمة',
+    'المدينة المنورة',
+    'القصيم',
+    'الشرقية',
+    'عسير',
+    'تبوك',
+    'حائل',
+    'الحدود الشمالية',
+    'جازان',
+    'نجران',
+    'الباحة',
+    'الجوف',
+  ];
+
+  // لمجرد إجبار إعادة بناء HtmlElementView عند الحاجة
+  int _avatarRev = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _phoneCtrl.dispose();
+    _emailCtrl.dispose();
+    super.dispose();
+  }
+
+  // 🔔 Toast آمن
+  void _safeToast(String msg) {
+    if (!mounted) return;
+    final m = ScaffoldMessenger.maybeOf(context);
+    m?.showSnackBar(SnackBar(content: Text(msg, style: GoogleFonts.almarai())));
+  }
+
+  Future<void> _loadUser() async {
+    try {
+      final u = _auth.currentUser;
+      if (u == null) {
+        if (mounted) setState(() => _loading = false);
+        return;
+      }
+
+      final doc = await _db.collection('users').doc(u.uid).get();
+      final data = doc.data() ?? {};
+
+      final photo = (data['photoURL'] ??
+              data['photoUrl'] ??
+              data['avatar'] ??
+              u.photoURL ??
+              '')
+          .toString();
+
+      if (!mounted) return;
+      setState(() {
+        name = (data['name'] ?? '').toString();
+        phone = (data['phone'] ?? '').toString();
+        region = (data['region'] ?? '').toString();
+        avatarPath = photo.isNotEmpty ? photo : null;
+        email = u.email;
+
+        _nameCtrl.text = name ?? '';
+        _phoneCtrl.text = phone ?? '';
+        _emailCtrl.text = email ?? '';
+        _selectedRegion = (region?.isNotEmpty ?? false) ? region : null;
+
+        _loading = false;
+      });
+    } catch (e) {
+      _safeToast('تعذر تحميل البيانات: $e');
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  // كسر الكاش + تضمين نسخة اختيارية
+  String _bust(String url) {
+    final sep = url.contains('?') ? '&' : '?';
+    return '$url${sep}rev=$_avatarRev';
+  }
+
+  // =========== صورة الأفاتار ===========
+  static const bool _usePlainNetworkImage = false;
+
+  Widget _avatarWidget() {
+    if (_pickedBytes != null) {
+      return ClipOval(
+        child: Image.memory(
+          _pickedBytes!,
+          width: 120,
+          height: 120,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _brokenImage(),
+        ),
+      );
+    }
+    if (!kIsWeb && _pickedFilePath != null) {
+      return ClipOval(
+        child: Image.file(
+          File(_pickedFilePath!),
+          width: 120,
+          height: 120,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _brokenImage(),
+        ),
+      );
+    }
+
+    final url = avatarPath;
+    if (url != null && url.startsWith('http')) {
+      final busted = _bust(url);
+
+      if (_usePlainNetworkImage) {
+        return ClipOval(
+          child: Image.network(
+            busted,
+            width: 120,
+            height: 120,
+            fit: BoxFit.cover,
+            gaplessPlayback: true,
+            errorBuilder: (_, __, ___) => _brokenImage(),
+          ),
+        );
+      }
+
+      return ClipOval(
+        child: SizedBox(
+          width: 120,
+          height: 120,
+          child: saafNetworkImage(
+            busted,
+            key: ValueKey('img-$busted'),
+            width: 120,
+            height: 120,
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
+    }
+
+    return const ClipOval(
+      child: SizedBox(
+        width: 120,
+        height: 120,
+        child: Image(
+          image: AssetImage('assets/images/saaf_logo.png'),
+          fit: BoxFit.cover,
+        ),
+      ),
+    );
+  }
+
+  Widget _clickableAvatar() {
+    final avatar = _avatarWidget();
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        avatar,
+        Positioned.fill(
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(999),
+              onTap: _pickFromGallery,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _brokenImage() => Container(
+        width: 120,
+        height: 120,
+        color: Colors.white.withValues(alpha: 0.15),
+        alignment: Alignment.center,
+        child: const Icon(Icons.person, color: Colors.white70, size: 40),
+      );
+
+  Future<void> _pickFromGallery() async {
+    try {
+      final x = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 1024,
+      );
+      if (x == null) return;
+
+      if (kIsWeb) {
+        final bytes = await x.readAsBytes();
+        if (!mounted) return;
+        setState(() {
+          _pickedBytes = bytes;
+          _pickedFilePath = null;
+        });
+      } else {
+        if (!mounted) return;
+        setState(() {
+          _pickedFilePath = x.path;
+          _pickedBytes = null;
+        });
+      }
+    } catch (e) {
+      _safeToast('خطأ أثناء اختيار الصورة: $e');
+    }
+  }
+
+  Future<String?> _uploadAvatar(String uid) async {
+    if (_pickedBytes == null && _pickedFilePath == null) return avatarPath;
+    try {
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final ref = _storage.ref().child('users/$uid/avatar_$ts.jpg');
+
+      final meta = SettableMetadata(
+        contentType: 'image/jpeg',
+        cacheControl: 'no-store, no-cache, max-age=0, must-revalidate',
+      );
+
+      if (_pickedBytes != null) {
+        await ref.putData(_pickedBytes!, meta);
+      } else {
+        await ref.putFile(File(_pickedFilePath!), meta);
+      }
+
+      final url = await ref.getDownloadURL();
+
+      try {
+        final bytes = await ref.getData(2 * 1024 * 1024);
+        if (bytes != null && mounted) {
+          setState(() {
+            _pickedBytes = bytes;
+            _pickedFilePath = null;
+          });
+        }
+      } catch (_) {}
+
+      return url;
+    } catch (e) {
+      _safeToast('تعذر رفع الصورة: $e');
+      return null;
+    }
+  }
+
+  // ===== AlertDialog ملوّن لتأكيد الهوية (كلمة المرور) =====
+  Future<String?> _askForPassword() async {
+    final ctrl = TextEditingController();
+    return await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: kDeepGreen,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          'تأكيد الهوية',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.almarai(
+            color: kAccent,
+            fontWeight: FontWeight.w800,
+            fontSize: 22,
+          ),
+        ),
+        content: TextField(
+          controller: ctrl,
+          obscureText: true,
+          style: GoogleFonts.almarai(color: Colors.white),
+          decoration: InputDecoration(
+            labelText: 'كلمة المرور الحالية',
+            labelStyle: GoogleFonts.almarai(color: Colors.white70),
+            filled: true,
+            fillColor: const Color.fromARGB(25, 255, 255, 255),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(15.0)),
+              borderSide: BorderSide(color: Color.fromARGB(76, 253, 203, 110)),
+            ),
+            focusedBorder: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(15.0)),
+              borderSide: BorderSide(color: kAccent, width: 2),
+            ),
+          ),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'إلغاء',
+              style: GoogleFonts.almarai(
+                color: const Color(0xFFAAAAAA),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: kAccent,
+              foregroundColor: kDeepGreen,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'تأكيد',
+              style: GoogleFonts.almarai(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    ).then((ok) => ok == true ? ctrl.text.trim() : null);
+  }
+
+  Future<bool> _reauthWithPassword(String password) async {
+    final u = _auth.currentUser!;
+    try {
+      final cred =
+          EmailAuthProvider.credential(email: u.email!, password: password);
+      await u.reauthenticateWithCredential(cred);
+      return true;
+    } on FirebaseAuthException catch (e) {
+      _safeToast('فشل تأكيد الهوية: ${e.message}');
+      return false;
+    } catch (e) {
+      _safeToast('فشل تأكيد الهوية: $e');
+      return false;
+    }
+  }
+
+  Future<bool> _updateEmailFlow(String newEmail) async {
+    final u = _auth.currentUser!;
+    try {
+      if (u.providerData.any((p) => p.providerId == 'password')) {
+        final pwd = await _askForPassword();
+        if (pwd == null || pwd.isEmpty) return false;
+        final ok = await _reauthWithPassword(pwd);
+        if (!ok) return false;
+      } else {
+        _safeToast(
+            'حسابك ليس Email/Password. أعِد تسجيل الدخول بمزوّدك ثم حاول مجددًا.');
+        return false;
+      }
+
+      await u.verifyBeforeUpdateEmail(newEmail);
+      await _db.collection('users').doc(u.uid).set({
+        'pendingEmail': newEmail,
+        'emailChangeRequestedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      _safeToast('تم إرسال رابط تأكيد إلى البريد الجديد.');
+      return true;
+    } on FirebaseAuthException catch (e) {
+      String msg = e.message ?? e.code;
+      if (e.code == 'email-already-in-use') msg = 'البريد مستخدم من قبل.';
+      if (e.code == 'invalid-email') msg = 'بريد غير صالح.';
+      if (e.code == 'requires-recent-login') {
+        msg = 'يلزم تأكيد الهوية. أعِد تسجيل الدخول وحاول مجددًا.';
+      }
+      _safeToast(msg);
+      return false;
+    } catch (e) {
+      _safeToast('تعذر بدء تغيير البريد: $e');
+      return false;
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    final navigator = Navigator.of(context);
+    final u = _auth.currentUser;
+    if (u == null) return;
+
+    setState(() => _saving = true);
+    try {
+      final newName = _nameCtrl.text.trim();
+      final newPhone = _phoneCtrl.text.trim();
+      final newRegion = _selectedRegion;
+      final newEmail = _emailCtrl.text.trim();
+
+      final emailChanged = newEmail.isNotEmpty && newEmail != (u.email ?? '');
+      if (emailChanged) {
+        final ok = await _updateEmailFlow(newEmail);
+        if (!ok) {
+          if (mounted) setState(() => _saving = false);
+          return;
+        }
+      }
+
+      final newPhoto = await _uploadAvatar(u.uid);
+
+      await _db.collection('users').doc(u.uid).set({
+        'name': newName,
+        'phone': newPhone,
+        'region': newRegion,
+        if (newPhoto != null) ...{
+          'photoURL': newPhoto,
+          'photoUrl': newPhoto,
+        },
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      if (u.displayName != newName) await u.updateDisplayName(newName);
+      if (newPhoto != null) await u.updatePhotoURL(newPhoto);
+
+      if (!mounted) return;
+      setState(() {
+        name = newName;
+        phone = newPhone;
+        region = newRegion;
+        if (newPhoto != null) {
+          avatarPath = newPhoto;
+          _avatarRev++;
+        }
+      });
+
+      _safeToast('تم حفظ التعديلات ✅');
+
+      if (emailChanged) {
+        await _auth.signOut();
+        navigator.pushNamedAndRemoveUntil('/login', (_) => false);
+        return;
+      }
+    } catch (e) {
+      _safeToast('خطأ أثناء الحفظ: $e');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        backgroundColor: kDeepGreen,
+        body: Center(child: CircularProgressIndicator(color: kGold)),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: kDeepGreen,
+      appBar: AppBar(
+        backgroundColor: kDeepGreen,
+        elevation: 0,
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+
+        // زر الرجوع الدائري
+        leading: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10.0),
+          child: Material(
+            color: Colors.black45,
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () => Navigator.of(context)
+                  .pushNamedAndRemoveUntil('/main', (route) => false),
+              child: const Padding(
+                padding: EdgeInsets.all(10),
+                child: Icon(Icons.arrow_back, color: Colors.white),
+              ),
+            ),
+          ),
+        ),
+
+        title: Text(
+          'الملف الشخصي',
+          style: GoogleFonts.almarai(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+
+        actions: [
+          IconButton(
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              await _auth.signOut();
+              navigator.pushNamedAndRemoveUntil('/login', (_) => false);
+            },
+            icon: const Icon(Icons.logout_rounded, color: Colors.white),
+            tooltip: 'تسجيل الخروج',
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+
+      body: Container(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+        child: SingleChildScrollView(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color.fromARGB(25, 255, 255, 255),
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(color: const Color.fromARGB(51, 255, 255, 255)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color.fromARGB(51, 0, 0, 0),
+                  blurRadius: 15,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: SizedBox(
+                    width: 120,
+                    height: 120,
+                    child: _clickableAvatar(),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                _buildField(
+                  controller: _nameCtrl,
+                  label: 'الاسم الكامل',
+                  icon: Icons.person,
+                  editing: _editName,
+                  onToggle: () => setState(() => _editName = !_editName),
+                ),
+                const SizedBox(height: 12),
+
+                _buildField(
+                  controller: _phoneCtrl,
+                  label: 'رقم الجوال',
+                  icon: Icons.phone,
+                  editing: _editPhone,
+                  onToggle: () => setState(() => _editPhone = !_editPhone),
+                  keyboardType: TextInputType.phone,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9+]+')),
+                    LengthLimitingTextInputFormatter(13),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                _buildField(
+                  controller: _emailCtrl,
+                  label: 'البريد الإلكتروني',
+                  icon: Icons.email,
+                  editing: _editEmail,
+                  onToggle: () => setState(() => _editEmail = !_editEmail),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 12),
+
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedRegion,
+                  decoration: InputDecoration(
+                    labelText: 'المنطقة',
+                    labelStyle: GoogleFonts.almarai(color: Colors.white70),
+                    prefixIcon: const Icon(Icons.location_on, color: kAccent),
+                    filled: true,
+                    fillColor: const Color.fromARGB(25, 255, 255, 255),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(15.0)),
+                      borderSide:
+                          BorderSide(color: Color.fromARGB(76, 253, 203, 110)),
+                    ),
+                    focusedBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(15.0)),
+                      borderSide: BorderSide(color: kAccent, width: 2),
+                    ),
+                  ),
+                  dropdownColor: kDeepGreen,
+                  style: GoogleFonts.almarai(color: Colors.white),
+                  isExpanded: true,
+                  hint: Text(
+                    'اختر منطقة',
+                    style: GoogleFonts.almarai(color: Colors.white54),
+                  ),
+                  onChanged: (val) => setState(() => _selectedRegion = val),
+                  items: _regions
+                      .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                      .toList(),
+                ),
+
+                const SizedBox(height: 28),
+
+                SizedBox(
+                  height: 54,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [kGold, kBeige]),
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.25),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(15),
+                        onTap: _saving ? null : _saveProfile,
+                        child: Center(
+                          child: Text(
+                            _saving ? '...جاري الحفظ' : 'حفظ التعديلات',
+                            style: GoogleFonts.almarai(
+                              color: kDeepGreen,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required bool editing,
+    required VoidCallback onToggle,
+    TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
+    return TextField(
+      controller: controller,
+      readOnly: !editing,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      style: GoogleFonts.almarai(color: Colors.white),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.almarai(color: Colors.white70),
+        prefixIcon: Icon(icon, color: kAccent),
+        suffixIcon: IconButton(
+          tooltip: editing ? 'إقفال الحقل' : 'تعديل',
+          onPressed: onToggle,
+          icon: Icon(
+            editing ? Icons.check_rounded : Icons.edit_rounded,
+            color: editing ? Colors.greenAccent : Colors.white70,
+          ),
+        ),
+        filled: true,
+        fillColor: const Color.fromARGB(25, 255, 255, 255),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(15.0)),
+          borderSide: BorderSide(color: Color.fromARGB(76, 253, 203, 110)),
+        ),
+        focusedBorder: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(15.0)),
+          borderSide: BorderSide(color: kAccent, width: 2),
+        ),
+      ),
+    );
+  }
+}

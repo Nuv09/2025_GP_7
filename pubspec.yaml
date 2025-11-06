@@ -1,0 +1,66 @@
+name: saafapp
+description: "A new Flutter project."
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.9.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # 🗺️ الخرائط والموقع
+  http: ^1.1.0
+  google_maps_flutter: ^2.6.0
+  latlong2: ^0.9.1
+  geolocator: ^10.1.0
+  geocoding: ^2.1.0
+  animate_do: ^4.2.0
+  curved_navigation_bar: ^1.0.6
+
+  # 🌐 الخطوط والتصميم
+  flutter_localizations:
+    sdk: flutter
+  google_fonts: ^6.3.1
+  cupertino_icons: ^1.0.8
+
+  # 📸 الصورة والصوت
+  image_picker: ^1.2.0
+  audioplayers: ^6.5.1
+
+  # 🔥 Firebase (إصدارات متوافقة مع Flutter 3.9)
+  firebase_core: ^3.3.0
+  firebase_auth: ^5.3.0
+  cloud_firestore: ^5.4.4
+  firebase_storage: ^12.3.4
+
+  # حل تعارض geolocator_web → web
+  web: ^1.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_launcher_icons: ^0.13.1
+  flutter_lints: ^5.0.0
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/images/Appicon.png
+  adaptive_icon_background: "#042c25"
+  remove_alpha_ios: true
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/palms.jpg
+    - assets/images/saaf_logo.png
+    - assets/audio/palm_breeze.mp3
+
+  fonts:
+    - family: NotoSansArabic
+      fonts:
+        - asset: assets/fonts/NotoSansArabic-Regular.ttf
