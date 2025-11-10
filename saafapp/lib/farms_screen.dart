@@ -1,4 +1,3 @@
-// lib/farms_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -109,7 +108,6 @@ class _FarmsList extends StatelessWidget {
     final farmsQuery = FirebaseFirestore.instance
         .collection('farms')
         .where('createdBy', isEqualTo: uid);
-        // ملاحظة: أزلنا orderBy لتفادي الحاجة لـ Index
 
     return StreamBuilder<QuerySnapshot>(
       stream: farmsQuery.snapshots(),
@@ -164,6 +162,12 @@ class _FarmsList extends StatelessWidget {
                 ? (d['createdAt'] as Timestamp).toDate()
                 : null;
 
+            // ✅ حقول التحليل (اختيارية)
+            final status = (d['status'] ?? '').toString();
+            final finalCount = (d['finalCount'] is int) ? d['finalCount'] as int : null;
+            final finalQuality = (d['finalQuality'] is num) ? (d['finalQuality'] as num).toDouble() : null;
+            final errorMessage = (d['errorMessage'] ?? '') as String?;
+
             return FarmCard(
               farmIndex: i,
               title: name.isEmpty ? 'مزرعة بدون اسم' : name,
@@ -171,21 +175,23 @@ class _FarmsList extends StatelessWidget {
               sizeText: size.isEmpty ? null : '$size م²',
               imageURL: imageURL.isNotEmpty ? imageURL : null,
               createdAt: createdAt,
+              // 👇 إضافات التحليل
+              analysisStatus: status.isEmpty ? null : status,
+              analysisCount: finalCount,
+              analysisQuality: finalQuality,
+              analysisError: (errorMessage != null && errorMessage.isNotEmpty) ? errorMessage : null,
               onEdit: () async {
                 await Navigator.pushNamed(
                   context,
                   '/editFarm',
-                  arguments: {
-                    'farmId': doc.id,
-                    'initialData': d,
-                  },
+                  arguments: {'farmId': doc.id, 'initialData': d},
                 );
               },
               onDelete: () async {
                 final ok = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        backgroundColor: const Color.fromARGB(255, 3, 56, 13), // خلفية داكنة
+                        backgroundColor: const Color.fromARGB(255, 3, 56, 13),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(24),
                         ),
@@ -193,7 +199,7 @@ class _FarmsList extends StatelessWidget {
                           'تأكيد الحذف',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.almarai(
-                            color: const Color(0xFFFDCB6E), // secondaryColor
+                            color: const Color(0xFFFDCB6E),
                             fontWeight: FontWeight.w800,
                             fontSize: 22,
                           ),
@@ -221,7 +227,6 @@ class _FarmsList extends StatelessWidget {
                           ),
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              // أحمر تحذيري (بدّليه للذهبي لو تبين نفس زر "متابعة")
                               backgroundColor: const Color(0xFFF44336),
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
@@ -229,10 +234,7 @@ class _FarmsList extends StatelessWidget {
                               ),
                             ),
                             onPressed: () => Navigator.pop(ctx, true),
-                            child: Text(
-                              'حذف',
-                              style: GoogleFonts.almarai(fontWeight: FontWeight.w800),
-                            ),
+                            child: Text('حذف', style: GoogleFonts.almarai(fontWeight: FontWeight.w800)),
                           ),
                         ],
                       ),

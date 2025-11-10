@@ -10,6 +10,11 @@ class FarmCard extends StatelessWidget {
   final String? imageURL;
   final DateTime? createdAt;
 
+  final String? analysisStatus;   // "pending" | "processing" | "done" | "failed" | "error"
+  final int? analysisCount;       // يظهر عند الانتهاء
+  final double? analysisQuality;  // إن وجد
+  final String? analysisError;    // إن وجد
+
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
@@ -21,6 +26,10 @@ class FarmCard extends StatelessWidget {
     this.sizeText,
     this.imageURL,
     this.createdAt,
+    this.analysisStatus,
+    this.analysisCount,
+    this.analysisQuality,
+    this.analysisError,
     this.onEdit,
     this.onDelete,
   });
@@ -43,66 +52,71 @@ class FarmCard extends StatelessWidget {
           BoxShadow(offset: Offset(0, 8), blurRadius: 18, color: Colors.black26),
         ],
       ),
-      child: Row(
-        children: [
-          // صورة المزرعة
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(22),
-              bottomLeft: Radius.circular(22),
-            ),
-            child: SizedBox(
-              width: 200,
-              height: 160,
-              child: (imageURL != null && imageURL!.isNotEmpty)
-                  ? _FarmImage(
-                      url: imageURL!,
-                      width: 200,
-                      height: 160,
-                      key: ValueKey('farm-$farmIndex-${imageURL!}'),
-                    )
-                  : const ColoredBox(
-                      color: Colors.black26,
-                      child: Center(
-                        child: Icon(
-                          Icons.image_not_supported,
-                          color: Colors.white70,
-                          size: 36,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: SizedBox(
+          height: 185, // ✅ طول مريح وثابت
+          child: Row(
+            textDirection: TextDirection.rtl, // ✅ الصورة يمين
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ==== الصورة (يمين) ====
+              SizedBox(
+                width: 150, // ✅ عرض ثابت
+                child: (imageURL != null && imageURL!.isNotEmpty)
+                    ? ClipRRect(
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(22),
+                          bottomRight: Radius.circular(22),
+                        ),
+                        child: _FarmImage(
+                          url: imageURL!,
+                          width: 150,
+                          height: 185, // ✅ يطابق ارتفاع الكرت
+                          key: ValueKey('farm-$farmIndex-${imageURL!}'),
+                        ),
+                      )
+                    : const ColoredBox(
+                        color: Colors.black26,
+                        child: Center(
+                          child: Icon(Icons.image_not_supported, color: Colors.white70, size: 30),
                         ),
                       ),
-                    ),
-            ),
-          ),
+              ),
 
-          // معلومات
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(defaultPadding),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // نصوص
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            color: darkGreenColor,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
+              // ==== المعلومات + الأكشن ====
+              Expanded(
+                child: Padding(
+                  // ✅ بَدّينغ أخف عموديًا لتفادي الزحمة
+                  padding: const EdgeInsets.symmetric(horizontal: defaultPadding, vertical: 10),
+                  child: Row(
+                    children: [
+                      // النصوص
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.location_on, size: 16, color: darkGreenColor),
-                            const SizedBox(width: 4),
-                            Expanded(
+                            Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16, // ✅ أخف شوي
+                                color: darkGreenColor,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: const [
+                                Icon(Icons.location_on, size: 14, color: darkGreenColor),
+                                SizedBox(width: 4),
+                              ],
+                            ),
+                            Padding(
+                              // مساحة لأيقونة الموقع
+                              padding: const EdgeInsets.only(right: 20.0),
                               child: Text(
                                 subtitle,
                                 maxLines: 1,
@@ -110,51 +124,68 @@ class FarmCard extends StatelessWidget {
                                 style: const TextStyle(color: darkGreenColor),
                               ),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            if (sizeText != null) ...[
-                              const Icon(Icons.straighten, size: 16, color: darkGreenColor),
-                              const SizedBox(width: 4),
-                              Text(sizeText!, style: const TextStyle(color: darkGreenColor)),
-                              const SizedBox(width: 12),
-                            ],
-                            if (createdAt != null) ...[
-                              const Icon(Icons.schedule, size: 16, color: darkGreenColor),
-                              const SizedBox(width: 4),
-                              Text(_formatDate(createdAt!), style: const TextStyle(color: darkGreenColor)),
-                            ],
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                            const SizedBox(height: 6),
 
-                  // أكشن
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        onPressed: onEdit,
-                        tooltip: 'تعديل',
-                        icon: const Icon(Icons.edit, color: lightGreenColor),
-                        splashRadius: 18,
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 6,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                if (sizeText != null) ...[
+                                  const Icon(Icons.straighten, size: 14, color: darkGreenColor),
+                                  Text(sizeText!, style: const TextStyle(color: darkGreenColor)),
+                                ],
+                                if (createdAt != null) ...[
+                                  const Icon(Icons.schedule, size: 14, color: darkGreenColor),
+                                  Text(_formatDate(createdAt!), style: const TextStyle(color: darkGreenColor)),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+
+                            if (analysisStatus != null && analysisStatus!.isNotEmpty)
+                              _AnalysisBadge(
+                                status: analysisStatus!,
+                                count: analysisCount,
+                                quality: analysisQuality,
+                                error: analysisError,
+                              ),
+                          ],
+                        ),
                       ),
-                      IconButton(
-                        onPressed: onDelete,
-                        tooltip: 'حذف',
-                        icon: const Icon(Icons.delete_outline, color: prownColor),
-                        splashRadius: 18,
+
+                      const SizedBox(width: 8),
+
+                      // أزرار الأكشن
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton(
+                            onPressed: onEdit,
+                            tooltip: 'تعديل',
+                            icon: const Icon(Icons.edit, color: lightGreenColor, size: 20),
+                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            padding: EdgeInsets.zero,
+                            splashRadius: 18,
+                          ),
+                          const SizedBox(height: 6),
+                          IconButton(
+                            onPressed: onDelete,
+                            tooltip: 'حذف',
+                            icon: const Icon(Icons.delete_outline, color: prownColor, size: 20),
+                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            padding: EdgeInsets.zero,
+                            splashRadius: 18,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -163,6 +194,94 @@ class FarmCard extends StatelessWidget {
     final dd = d.day.toString().padLeft(2, '0');
     final mm = d.month.toString().padLeft(2, '0');
     return '$dd/$mm';
+  }
+}
+
+class _AnalysisBadge extends StatelessWidget {
+  final String status;     // pending | processing | done | failed | error
+  final int? count;
+  final double? quality;
+  final String? error;
+
+  const _AnalysisBadge({
+    required this.status,
+    this.count,
+    this.quality,
+    this.error,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    late final Color bg;
+    late final Color fg;
+    late final Widget content;
+
+    switch (status) {
+      case 'done':
+        bg = const Color(0xFFE6F4EA);
+        fg = const Color(0xFF1E8D5F);
+        content = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle, size: 16, color: Color(0xFF1E8D5F)),
+            const SizedBox(width: 6),
+            Text(
+              (count != null) ? 'عدد النخيل: $count' : 'التحليل مكتمل',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        );
+        break;
+
+      case 'failed':
+      case 'error':
+        bg = const Color(0xFFFFEBEE);
+        fg = const Color(0xFFB00020);
+        content = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 16, color: Color(0xFFB00020)),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                (error == null || error!.isEmpty) ? 'فشل التحليل' : error!,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        );
+        break;
+
+      case 'processing':
+      case 'running':
+      default:
+        bg = const Color(0xFFFFF3E0);
+        fg = const Color(0xFF8D6E63);
+        content = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+            SizedBox(width: 8),
+            Text('جاري التحليل…', style: TextStyle(fontWeight: FontWeight.w700)),
+          ],
+        );
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: fg.withValues(alpha: 0.2)),
+      ),
+      child: DefaultTextStyle(
+        style: TextStyle(color: fg),
+        child: content,
+      ),
+    );
   }
 }
 
@@ -179,11 +298,10 @@ class _FarmImage extends StatelessWidget {
   });
 
   String _fixUrl(String raw) {
- // في هذه الحالة، نكتفي بالـ cleanup الأساسي لتفادي أي مشاكل ترميز (URI encoding)
-var u = raw.replaceAll(RegExp(r'\s+'), '');
-if (u.contains('%252F')) u = Uri.decodeFull(u);
-return u;
-}
+    var u = raw.replaceAll(RegExp(r'\s+'), '');
+    if (u.contains('%252F')) u = Uri.decodeFull(u);
+    return u;
+  }
 
   @override
   Widget build(BuildContext context) {

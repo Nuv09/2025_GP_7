@@ -1,3 +1,6 @@
+// lib/add_farm_page.dart
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
@@ -6,11 +9,12 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart'
-    show Placemark, locationFromAddress, placemarkFromCoordinates;
+    show Placemark, Location, locationFromAddress, placemarkFromCoordinates;
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:uuid/uuid.dart'; // ✅ لِـ session token
 
 // Firebase
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -79,11 +83,24 @@ class _AddFarmPageState extends State<AddFarmPage> {
 
   bool _isSaving = false;
 
+  // === Google Places (Autocomplete + Details) ===
+  // ⚠️ ملاحظة أمنية: يفضّل تمرير المفتاح عبر dart-define وليس هاردكود.
+  // مثال تشغيل: flutter run --dart-define=PLACES_KEY=AIza... (وشيّكي قيود المفتاح في Google Cloud)
+  static const String _placesKeyFromDefine = String.fromEnvironment('PLACES_KEY');
+  static const String _placesKeyHardcoded = 'AIzaSyCEU204FgpLDPx_XvogBcnrMVQ6wCQdu30';
+  String get _placesKey => _placesKeyFromDefine.isNotEmpty ? _placesKeyFromDefine : _placesKeyHardcoded;
+
+  final _uuid = const Uuid();
+  String _sessionToken = '';
+  Timer? _debounce;
+  List<Map<String, dynamic>> _suggestions = [];
+  bool _loadingSuggest = false;
+
   // === أداة تنظيف روابط الصور (إزالة فراغات/أسطر + فك %252F) ===
   String _cleanUrl(String? raw) {
     if (raw == null) return '';
-    var u = raw.replaceAll(RegExp(r'\s+'), ''); // يحذف كل أنواع الفراغات/الأسطر
-    if (u.contains('%252F')) u = Uri.decodeFull(u); // %252F -> %2F
+    var u = raw.replaceAll(RegExp(r'\s+'), '');
+    if (u.contains('%252F')) u = Uri.decodeFull(u);
     return u;
   }
 
@@ -101,6 +118,7 @@ class _AddFarmPageState extends State<AddFarmPage> {
     _farmSizeController.dispose();
     _notesController.dispose();
     _searchCtrl.dispose();
+    _debounce?.cancel(); // ✅ ألغِ الـ debounce
     super.dispose();
   }
 
@@ -124,22 +142,83 @@ class _AddFarmPageState extends State<AddFarmPage> {
     }
   }
 
-  // =================== البحث (Geocoding) ===================
+  // =================== البحث (Geocoding احتياطي) ===================
   Future<void> _searchAndGo() async {
-    final q = _searchCtrl.text.trim();
-    if (q.isEmpty) return;
-    try {
-      final results = await locationFromAddress(q);
-      if (results.isEmpty) return;
-      final loc = results.first;
+    final raw = _searchCtrl.text.trim();
+    if (raw.isEmpty) return;
+
+    // 👇 يسمح بكتابة: "24.7136, 46.6753"
+    final coord = _tryParseLatLng(raw);
+    if (coord != null) {
       await _gCtrl?.animateCamera(
         CameraUpdate.newCameraPosition(
-          CameraPosition(target: LatLng(loc.latitude, loc.longitude), zoom: 14),
+          CameraPosition(target: coord, zoom: 14),
+        ),
+      );
+      return;
+    }
+
+    try {
+      List<Location> results = [];
+
+      // محاولة بالعربية (سعودية)
+      try {
+        results = await locationFromAddress(raw, localeIdentifier: 'ar_SA');
+      } catch (_) {}
+
+      // لو فاضية، جرّب إضافة ", Saudi Arabia"
+      if (results.isEmpty) {
+        try {
+          results = await locationFromAddress(
+            '$raw, Saudi Arabia',
+            localeIdentifier: 'en',
+          );
+        } catch (_) {}
+      }
+
+      if (results.isEmpty) {
+        _showSnackBar('تعذر العثور على الموقع المطلوب', isError: true);
+        return;
+      }
+
+      // لو أكثر من نتيجة، نختار الأقرب لمركز الكاميرا الحالي لزيادة الدقة
+      final current = _initialCamera.target;
+      Location best = results.first;
+      double bestScore = _dist2(LatLng(best.latitude, best.longitude), current);
+      for (final r in results.skip(1)) {
+        final d2 = _dist2(LatLng(r.latitude, r.longitude), current);
+        if (d2 < bestScore) {
+          best = r;
+          bestScore = d2;
+        }
+      }
+
+      await _gCtrl?.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(target: LatLng(best.latitude, best.longitude), zoom: 14),
         ),
       );
     } catch (_) {
       _showSnackBar('تعذر العثور على الموقع المطلوب', isError: true);
     }
+  }
+
+  // =================== Helpers للبحث ===================
+  LatLng? _tryParseLatLng(String s) {
+    final m = RegExp(r'^\s*([+-]?\d+(\.\d+)?)[\s,]+([+-]?\d+(\.\d+)?)\s*$')
+        .firstMatch(s);
+    if (m == null) return null;
+    final lat = double.tryParse(m.group(1)!);
+    final lng = double.tryParse(m.group(3)!);
+    if (lat == null || lng == null) return null;
+    if (lat.abs() > 90 || lng.abs() > 180) return null;
+    return LatLng(lat, lng);
+  }
+
+  double _dist2(LatLng a, LatLng b) {
+    final dx = a.latitude - b.latitude;
+    final dy = a.longitude - b.longitude;
+    return dx * dx + dy * dy; // مسافة تربيعية كافية للمقارنة
   }
 
   // =================== رسم المضلع ===================
@@ -251,17 +330,36 @@ class _AddFarmPageState extends State<AddFarmPage> {
   Future<String?> _reverseRegionFromCentroid() async {
     try {
       final c = _centroid(_polygonPoints);
-      final List<Placemark> p = await placemarkFromCoordinates(
-        c.latitude,
-        c.longitude,
-        localeIdentifier: 'ar',
-      );
+      // نحاول بالعربية (سعودية) أولاً
+      List<Placemark> p = [];
+      try {
+        p = await placemarkFromCoordinates(
+          c.latitude,
+          c.longitude,
+          localeIdentifier: 'ar_SA',
+        );
+      } catch (_) {}
+
+      // إن فشل أو فاضي، نجرب إنجليزي
+      if (p.isEmpty) {
+        try {
+          p = await placemarkFromCoordinates(
+            c.latitude,
+            c.longitude,
+            localeIdentifier: 'en',
+          );
+        } catch (_) {}
+      }
+
       if (p.isEmpty) return null;
-      final main = (p.first.administrativeArea ?? '').trim();
-      final sub = (p.first.subAdministrativeArea ?? '').trim();
-      final locality = (p.first.locality ?? '').trim();
-      return [main, sub, locality]
-          .firstWhere((e) => e.isNotEmpty, orElse: () => '');
+
+      final first = p.first;
+      final main = (first.administrativeArea ?? '').trim();
+      final sub = (first.subAdministrativeArea ?? '').trim();
+      final locality = (first.locality ?? '').trim();
+      final raw =
+          [main, sub, locality].firstWhere((e) => e.isNotEmpty, orElse: () => '');
+      return raw.isEmpty ? null : raw;
     } catch (e) {
       debugPrint('reverse geocoding error: $e');
       return null;
@@ -269,24 +367,64 @@ class _AddFarmPageState extends State<AddFarmPage> {
   }
 
   String _normalize(String s) {
-    final t = s.replaceAll(' ', '').replaceAll('ـ', '').toLowerCase();
+    if (s.isEmpty) return s;
+    // إزالة تشكيل
+    final noTashkeel = s.replaceAll(RegExp(r'[\u064B-\u0652]'), '');
+    // إزالة كلمات عامة والتعريف وبعض الرموز
+    var t = noTashkeel
+        .replaceAll('منطقة', '')
+        .replaceAll('امارة', '')
+        .replaceAll('إمارة', '')
+        .replaceAll('مدينة', '')
+        .replaceAll('محافظة', '')
+        .replaceAll('السعودية', '')
+        .replaceAll('المملكةالعربيةالسعودية', '')
+        .replaceAll('ال', '')
+        .replaceAll('ـ', '')
+        .replaceAll(' ', '')
+        .toLowerCase();
+
+    // خرائط لأسماء شائعة
     final map = {
+      // عربي -> موحّد
+      'مكهالمكرمه': 'مكةالمكرمة',
+      'مكه': 'مكةالمكرمة',
+      'الرياض': 'الرياض',
+      'الشرقيه': 'الشرقية',
+      'المدينهالمنوره': 'المدينةالمنورة',
+      'تبوك': 'تبوك',
+      'حايل': 'حائل',
+      'جازان': 'جازان',
+      'نجران': 'نجران',
+      'الجوف': 'الجوف',
+      'الباحه': 'الباحة',
+      'عسير': 'عسير',
+      'القصيم': 'القصيم',
+      'الحدودالشماليه': 'الحدودالشمالية',
+
+      // إنجليزي -> عربي موحّد
       'riyadh': 'الرياض',
-      'abha': 'أبها',
+      'abha': 'عسير', // أبها مدينة ضمن عسير
       'asir': 'عسير',
       'makkah': 'مكةالمكرمة',
       'mecca': 'مكةالمكرمة',
       'easternprovince': 'الشرقية',
       'alqassim': 'القصيم',
+      'qassim': 'القصيم',
       'madinah': 'المدينةالمنورة',
+      'medina': 'المدينةالمنورة',
       'aljawf': 'الجوف',
+      'jawf': 'الجوف',
       'hail': 'حائل',
       'tabuk': 'تبوك',
       'jazan': 'جازان',
+      'gazaan': 'جازان',
       'najran': 'نجران',
       'albaha': 'الباحة',
+      'baha': 'الباحة',
       'northernborders': 'الحدودالشمالية',
     };
+
     for (final e in map.entries) {
       if (t.contains(e.key)) return e.value;
     }
@@ -400,6 +538,7 @@ class _AddFarmPageState extends State<AddFarmPage> {
   }
 
   // =================== الحفظ ===================
+  // 🔧 ننشئ الوثيقة أولاً، ننتقل لصفحة الانتظار، ثم نرفع الصورة ونستدعي التحليل بشكل غير منتظر.
   Future<void> _submitFarmData() async {
     if (!mounted) return;
 
@@ -450,51 +589,89 @@ class _AddFarmPageState extends State<AddFarmPage> {
           return;
         }
 
-        // رفع الصورة (إن وجدت)
-        String? imageUrl;
-        String? imagePath;
-        if (_imageBytes != null || _farmImage != null) {
-          final ref = _storage
-              .ref()
-              .child(
-                'farm_images/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg',
-              );
-          final meta = SettableMetadata(contentType: 'image/jpeg');
-
-          UploadTask task;
-          if (kIsWeb && _imageBytes != null) {
-            task = ref.putData(_imageBytes!, meta);
-          } else {
-            task = ref.putFile(_farmImage!, meta);
-          }
-
-          await task.timeout(const Duration(seconds: 90));
-          imageUrl = _cleanUrl(await ref.getDownloadURL());
-          imagePath = ref.fullPath;
-        }
-
         final polygonData = _polygonPoints
             .map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList();
 
-        await _db.collection('farms').add({
+        // ✅ ننشئ الوثيقة أولاً بدون انتظار
+        final docRef = await _db.collection('farms').add({
           'farmName': _farmNameController.text.trim(),
           'ownerName': _ownerNameController.text.trim(),
           'farmSize': _farmSizeController.text.trim(),
           'region': _selectedRegion,
           'notes': _notesController.text.trim(),
           'polygon': polygonData,
-          'imageURL': _cleanUrl(imageUrl),
-          'imagePath': imagePath,
+          'imageURL': null,
+          'imagePath': null,
           'createdAt': FieldValue.serverTimestamp(),
           'createdBy': user.uid,
+
+          // حالة التحليل والنتيجة الابتدائية
+          'status': 'pending',
+          'finalCount': 0,
+          'finalQuality': 0.0,
+          'errorMessage': null,
         });
 
+        // ✅ ننتقل فورًا لصفحة الانتظار/التحليل
         if (!mounted) return;
-        Navigator.of(context).pushNamedAndRemoveUntil('/main', (route) => false); // نجاح
+        Navigator.pushReplacementNamed(
+          context,
+          '/analysis',
+          arguments: {'farmId': docRef.id},
+        );
+
+        // ⬇️ بعد التنقل: نرفع الصورة (إن وُجدت) ونحدّث الوثيقة — لا ننتظر
+        Future(() async {
+          try {
+            String? imageUrl;
+            String? imagePath;
+
+            if (_imageBytes != null || _farmImage != null) {
+              final ref = _storage.ref().child(
+                  'farm_images/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg');
+              final meta = SettableMetadata(contentType: 'image/jpeg');
+
+              UploadTask task = (kIsWeb && _imageBytes != null)
+                  ? ref.putData(_imageBytes!, meta)
+                  : ref.putFile(_farmImage!, meta);
+
+              await task.timeout(const Duration(seconds: 90));
+              imageUrl = _cleanUrl(await ref.getDownloadURL());
+              imagePath = ref.fullPath;
+
+              await docRef.update({
+                'imageURL': imageUrl,
+                'imagePath': imagePath,
+              });
+            }
+          } catch (e) {
+            debugPrint('post-nav image upload/update error: $e');
+          }
+        });
+
+        // ⬇️ إطلاق خدمة التحليل — لا ننتظر
+        Future(() async {
+          try {
+            final response = await http.post(
+              Uri.parse(
+                  'https://saaf-analyzer-us-120954850101.us-central1.run.app/analyze'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({'farmId': docRef.id}),
+            );
+            if (response.statusCode != 200) {
+              debugPrint('Analyzer non-200: ${response.statusCode} ${response.body}');
+            }
+          } catch (e) {
+            debugPrint('خطأ في بدء التحليل: $e');
+          }
+        });
+
+        // لا مزيد من setState هنا لأننا غادرنا الصفحة
       } catch (e) {
         _showSnackBar('حدث خطأ أثناء حفظ البيانات: $e', isError: true);
         if (mounted) setState(() => _isSaving = false);
       } finally {
+        // لو ما تنقلنا لأي سبب، أعد الحالة
         if (mounted && Navigator.canPop(context) == false) {
           setState(() => _isSaving = false);
         }
@@ -532,82 +709,178 @@ class _AddFarmPageState extends State<AddFarmPage> {
     );
   }
 
+  // =================== Autocomplete & Details ===================
+  void _onSearchChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      final v = value.trim();
+      if (v.isEmpty) {
+        setState(() => _suggestions = []);
+        return;
+      }
+      if (_placesKey.isEmpty) {
+        debugPrint('No PLACES key configured.');
+        return;
+      }
+      if (_sessionToken.isEmpty) {
+        _sessionToken = _uuid.v4();
+      }
+      _fetchAutocomplete(v);
+    });
+  }
+
+  Future<void> _fetchAutocomplete(String input) async {
+    setState(() => _loadingSuggest = true);
+    try {
+      final uri = Uri.https(
+        'maps.googleapis.com',
+        '/maps/api/place/autocomplete/json',
+        {
+          'input': input,
+          'key': _placesKey,
+          'language': 'ar',
+          'components': 'country:sa', // قصر البحث على السعودية
+          'sessiontoken': _sessionToken,
+        },
+      );
+
+      final res = await http.get(uri);
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      if (data['status'] == 'OK') {
+        final preds = (data['predictions'] as List).cast<Map<String, dynamic>>();
+        setState(() {
+          _suggestions = preds
+              .map((p) => {
+                    'place_id': p['place_id'],
+                    'primary': (p['structured_formatting']?['main_text'] ?? '')
+                        .toString(),
+                    'secondary':
+                        (p['structured_formatting']?['secondary_text'] ?? '')
+                            .toString(),
+                  })
+              .toList();
+        });
+      } else {
+        setState(() => _suggestions = []);
+      }
+    } catch (_) {
+      setState(() => _suggestions = []);
+    } finally {
+      setState(() => _loadingSuggest = false);
+    }
+  }
+
+  Future<void> _goToPlace(String placeId) async {
+    try {
+      final uri = Uri.https(
+        'maps.googleapis.com',
+        '/maps/api/place/details/json',
+        {
+          'place_id': placeId,
+          'key': _placesKey,
+          'fields': 'geometry,name',
+          'language': 'ar',
+          'sessiontoken': _sessionToken,
+        },
+      );
+      final res = await http.get(uri);
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      if (data['status'] == 'OK') {
+        final loc = data['result']['geometry']['location'];
+        final lat = (loc['lat'] as num).toDouble();
+        final lng = (loc['lng'] as num).toDouble();
+
+        await _gCtrl?.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(target: LatLng(lat, lng), zoom: 15),
+          ),
+        );
+
+        // بعد إتمام الجلسة، صفري التوكن واقفلي اللست
+        _sessionToken = '';
+        setState(() => _suggestions = []);
+      }
+    } catch (e) {
+      debugPrint('place details error: $e');
+    }
+  }
+
   // =================== واجهة المستخدم ===================
-  // في ملف add_farm_page.dart
-
-@override
-Widget build(BuildContext context) {
-  return Directionality(
-    textDirection: TextDirection.rtl,
-    child: Scaffold(
-      backgroundColor: darkBackground,
-
-      // 👇🏼 1. استخدام AppBar للزر (هذا يحل مشكلة الزر الطائر)
-      appBar: AppBar(
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
         backgroundColor: darkBackground,
-        elevation: 0,
-        centerTitle: true,
-        automaticallyImplyLeading: false, // نتحكم بالزر الأيمن يدويًا
 
-        // 1. زر الرجوع الدائري (السهم) في اليمين (Leading) - ليتناسب مع LoginScreen
-        leading: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10.0),
-          child: Material(
-            color: Colors.black45, // نفس الخلفية الدائرية لشاشة الدخول
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              // الرجوع إلى الصفحة السابقة
-              onTap: () => Navigator.of(context).pushNamedAndRemoveUntil('/main', (route) => false),
-              child: const Padding(
-                padding: EdgeInsets.all(10),
-                child: Icon(Icons.arrow_back, color: Colors.white),
+        appBar: AppBar(
+          backgroundColor: darkBackground,
+          elevation: 0,
+          centerTitle: true,
+          automaticallyImplyLeading: false,
+          leading: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10.0),
+            child: Material(
+              color: Colors.black45,
+              shape: const CircleBorder(),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: () => Navigator.of(context)
+                    .pushNamedAndRemoveUntil('/main', (route) => false),
+                child: const Padding(
+                  padding: EdgeInsets.all(10),
+                  child: Icon(Icons.arrow_back, color: Colors.white),
+                ),
               ),
+            ),
+          ),
+          title: Text(
+            'إضافة مزرعة جديدة',
+            style: GoogleFonts.almarai(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
 
-        // 2. العنوان في المنتصف
-        title: Text(
-          'إضافة مزرعة جديدة',
-          style: GoogleFonts.almarai(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              16,
+              16,
+              16,
+              16 +
+                  kBottomNavigationBarHeight +
+                  MediaQuery.of(context).viewPadding.bottom +
+                  12,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 10),
+                const SizedBox(height: 10),
+                Center(
+                  child: Icon(
+                    Icons.agriculture_rounded,
+                    color: secondaryColor,
+                    size: 50,
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                _buildFarmForm(),
+                const SizedBox(height: 30),
+                _buildMapSection(),
+                const SizedBox(height: 20),
+                _buildSubmitButton(),
+              ],
+            ),
           ),
         ),
       ),
-      // 👆🏼 نهاية الـ AppBar 👆🏼
-
-      // 2. الـ Body: إزالة الـ Stack الزائد والاعتماد على الـ Padding العادي
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            16,
-            16,
-            16 +
-                kBottomNavigationBarHeight +
-                MediaQuery.of(context).viewPadding.bottom +
-                12,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 10), // فاصل بسيط بعد الـ AppBar
-              _buildFarmForm(),
-              const SizedBox(height: 30),
-              _buildMapSection(),
-              const SizedBox(height: 20),
-              _buildSubmitButton(),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
+    );
+  }
 
   Widget _buildFarmForm() {
     return Container(
@@ -810,6 +1083,7 @@ Widget build(BuildContext context) {
                   myLocationEnabled: true,
                   myLocationButtonEnabled: true,
                 ),
+                // شريط البحث
                 Positioned(
                   top: 12,
                   left: 12,
@@ -827,7 +1101,8 @@ Widget build(BuildContext context) {
                           child: TextField(
                             controller: _searchCtrl,
                             textInputAction: TextInputAction.search,
-                            onSubmitted: (_) => _searchAndGo(),
+                            onChanged: _onSearchChanged, // ✅ Autocomplete
+                            onSubmitted: (_) => _searchAndGo(), // احتياطي Geocoding
                             decoration: InputDecoration(
                               hintText: 'ابحث باسم مكان / عنوان...',
                               hintStyle: GoogleFonts.almarai(
@@ -850,6 +1125,47 @@ Widget build(BuildContext context) {
                       ],
                     ),
                   ),
+                ),
+                // قائمة الاقتراحات
+                Positioned(
+                  top: 70,
+                  left: 12,
+                  right: 12,
+                  child: _suggestions.isEmpty && !_loadingSuggest
+                      ? const SizedBox.shrink()
+                      : Material(
+                          elevation: 6,
+                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.white,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxHeight: 260),
+                            child: _loadingSuggest
+                                ? const Padding(
+                                    padding: EdgeInsets.all(16),
+                                    child: Center(child: CircularProgressIndicator()),
+                                  )
+                                : ListView.separated(
+                                    shrinkWrap: true,
+                                    itemCount: _suggestions.length,
+                                    separatorBuilder: (_, __) => const Divider(height: 1),
+                                    itemBuilder: (ctx, i) {
+                                      final s = _suggestions[i];
+                                      return ListTile(
+                                        leading: const Icon(Icons.place_outlined),
+                                        title: Text(
+                                          s['primary'] ?? '',
+                                          style: GoogleFonts.almarai(fontWeight: FontWeight.w700),
+                                        ),
+                                        subtitle: Text(
+                                          s['secondary'] ?? '',
+                                          style: GoogleFonts.almarai(color: Colors.black54),
+                                        ),
+                                        onTap: () => _goToPlace(s['place_id'] as String),
+                                      );
+                                    },
+                                  ),
+                          ),
+                        ),
                 ),
               ],
             ),

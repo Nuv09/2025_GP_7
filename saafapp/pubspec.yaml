@@ -38,6 +38,14 @@ dependencies:
 
   # حل تعارض geolocator_web → web
   web: ^1.1.1
+  flutter_dotenv: ^6.0.0
+  firebase_app_check: ^0.3.2+10
+
+  # 🎞️ انيميشن لوتي
+  lottie: ^3.1.2
+
+  uuid: ^4.5.1
+
 
 dev_dependencies:
   flutter_test:
@@ -59,6 +67,7 @@ flutter:
     - assets/images/palms.jpg
     - assets/images/saaf_logo.png
     - assets/audio/palm_breeze.mp3
+    - assets/palm_tree_leaf_animation.json  # ✅ ملف اللوتي
 
   fonts:
     - family: NotoSansArabic
