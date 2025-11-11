@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+//hello
 const Color kDeepGreen = Color(0xFF042C25);
 const Color kLightBeige = Color(0xFFFFF6E0);
 const Color kOrange = Color(0xFFEBB974);
@@ -48,19 +49,31 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     if (name.isEmpty || email.isEmpty || p1.isEmpty || p2.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('فضلاً أكمل جميع الحقول', style: GoogleFonts.almarai())),
+        SnackBar(
+          content: Text('فضلاً أكمل جميع الحقول', style: GoogleFonts.almarai()),
+        ),
       );
       return;
     }
     if (p1.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('كلمة المرور يجب أن تكون 6 أحرف على الأقل', style: GoogleFonts.almarai())),
+        SnackBar(
+          content: Text(
+            'كلمة المرور يجب أن تكون 6 أحرف على الأقل',
+            style: GoogleFonts.almarai(),
+          ),
+        ),
       );
       return;
     }
     if (p1 != p2) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تأكيد كلمة المرور غير متطابق', style: GoogleFonts.almarai())),
+        SnackBar(
+          content: Text(
+            'تأكيد كلمة المرور غير متطابق',
+            style: GoogleFonts.almarai(),
+          ),
+        ),
       );
       return;
     }
@@ -68,7 +81,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
     setState(() => _loading = true);
     try {
       // 1️⃣ إنشاء المستخدم في Auth
-      final cred = await _auth.createUserWithEmailAndPassword(email: email, password: p1);
+      final cred = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: p1,
+      );
 
       if (!mounted) return; // ✅ تأكيد بقاء الصفحة
 
@@ -95,10 +111,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تم إنشاء الحساب ✅', style: GoogleFonts.almarai())),
+        SnackBar(
+          content: Text('تم إنشاء الحساب ✅', style: GoogleFonts.almarai()),
+        ),
       );
 
-      Navigator.pop(context); // أو: Navigator.pushReplacementNamed(context, '/main');
+      Navigator.pop(
+        context,
+      ); // أو: Navigator.pushReplacementNamed(context, '/main');
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
 
@@ -124,7 +144,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('حدث خطأ غير متوقع: $e', style: GoogleFonts.almarai())),
+        SnackBar(
+          content: Text('حدث خطأ غير متوقع: $e', style: GoogleFonts.almarai()),
+        ),
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -186,12 +208,27 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
                             child: Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.fromLTRB(18, 22, 18, 16),
+                              padding: const EdgeInsets.fromLTRB(
+                                18,
+                                22,
+                                18,
+                                16,
+                              ),
                               decoration: BoxDecoration(
-                                color: const Color.fromRGBO(255, 255, 255, 0.08),
+                                color: const Color.fromRGBO(
+                                  255,
+                                  255,
+                                  255,
+                                  0.08,
+                                ),
                                 borderRadius: BorderRadius.circular(22),
                                 border: Border.all(
-                                  color: const Color.fromRGBO(255, 255, 255, 0.15),
+                                  color: const Color.fromRGBO(
+                                    255,
+                                    255,
+                                    255,
+                                    0.15,
+                                  ),
                                 ),
                               ),
                               child: Column(
@@ -212,7 +249,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     textAlign: TextAlign.center,
                                     style: GoogleFonts.almarai(
                                       fontSize: 18,
-                                      color: const Color.fromRGBO(255, 246, 224, 0.85),
+                                      color: const Color.fromRGBO(
+                                        255,
+                                        246,
+                                        224,
+                                        0.85,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(height: 18),
@@ -257,7 +299,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   ),
                                   const SizedBox(height: 18),
                                   _SaafButton(
-                                    label: _loading ? '...جاري الإنشاء' : 'إنشاء الحساب',
+                                    label: _loading
+                                        ? '...جاري الإنشاء'
+                                        : 'إنشاء الحساب',
                                     onTap: _loading ? () {} : _signUp,
                                   ),
                                   const SizedBox(height: 12),
@@ -267,7 +311,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                       Text(
                                         'لديك حساب مسبقًا؟ ',
                                         style: GoogleFonts.almarai(
-                                          color: const Color.fromRGBO(255, 246, 224, 0.85),
+                                          color: const Color.fromRGBO(
+                                            255,
+                                            246,
+                                            224,
+                                            0.85,
+                                          ),
                                         ),
                                       ),
                                       TextButton(
@@ -275,13 +324,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                           if (Navigator.canPop(context)) {
                                             Navigator.pop(context);
                                           } else {
-                                            Navigator.pushReplacementNamed(context, '/login');
+                                            Navigator.pushReplacementNamed(
+                                              context,
+                                              '/login',
+                                            );
                                           }
                                         },
                                         style: TextButton.styleFrom(
                                           foregroundColor: kOrange,
                                         ),
-                                        child: Text('سجّل دخولك', style: GoogleFonts.almarai()),
+                                        child: Text(
+                                          'سجّل دخولك',
+                                          style: GoogleFonts.almarai(),
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -376,14 +431,21 @@ class _SaafField extends StatelessWidget {
                 ),
               )
             : null,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color.fromRGBO(255, 255, 255, 0.25)),
+          borderSide: const BorderSide(
+            color: Color.fromRGBO(255, 255, 255, 0.25),
+          ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color.fromRGBO(255, 255, 255, 0.20)),
+          borderSide: const BorderSide(
+            color: Color.fromRGBO(255, 255, 255, 0.20),
+          ),
         ),
         focusedBorder: const OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(14)),
@@ -433,5 +495,3 @@ class _SaafButton extends StatelessWidget {
     );
   }
 }
-
-
