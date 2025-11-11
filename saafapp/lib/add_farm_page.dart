@@ -21,6 +21,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 // ألوان
 const Color primaryColor = Color(0xFF1E8D5F);
 const Color secondaryColor = Color(0xFFFDCB6E);
@@ -83,12 +85,10 @@ class _AddFarmPageState extends State<AddFarmPage> {
 
   bool _isSaving = false;
 
-  // === Google Places (Autocomplete + Details) ===
-  // ⚠️ ملاحظة أمنية: يفضّل تمرير المفتاح عبر dart-define وليس هاردكود.
-  // مثال تشغيل: flutter run --dart-define=PLACES_KEY=AIza... (وشيّكي قيود المفتاح في Google Cloud)
-  static const String _placesKeyFromDefine = String.fromEnvironment('PLACES_KEY');
-  static const String _placesKeyHardcoded = 'AIzaSyCEU204FgpLDPx_XvogBcnrMVQ6wCQdu30';
-  String get _placesKey => _placesKeyFromDefine.isNotEmpty ? _placesKeyFromDefine : _placesKeyHardcoded;
+// === Google Places (Autocomplete + Details) ===
+// ✅ المفتاح الآن يُقرأ من ملف env بدل ما يكون مكتوب في الكود
+late final String _placesKey = dotenv.env['PLACES_KEY'] ?? '';
+
 
   final _uuid = const Uuid();
   String _sessionToken = '';

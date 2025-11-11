@@ -20,6 +20,8 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 
 const Color primaryColor = Color(0xFF1E8D5F);
 const Color secondaryColor = Color(0xFFFDCB6E);
@@ -42,11 +44,9 @@ class _EditFarmPageState extends State<EditFarmPage> {
   // 🔎 البحث
   final _searchCtrl = TextEditingController();
 
-  // Google Places API Key (فضّلي dart-define)
-  static const String _placesKeyFromDefine = String.fromEnvironment('PLACES_KEY');
-  // مبدئيًا نقرأ من dart-define، ولو فاضي نستخدم نفس المفتاح
-  static const String _placesKeyHardcoded = 'AIzaSyCEU204FgpLDPx_XvogBcnrMVQ6wCQdu30';
-  String get _placesKey => _placesKeyFromDefine.isNotEmpty ? _placesKeyFromDefine : _placesKeyHardcoded;
+
+  late final String _placesKey = dotenv.env['PLACES_KEY'] ?? '';
+
 
   // Autocomplete state
   final _uuid = const Uuid();

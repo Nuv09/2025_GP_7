@@ -68,6 +68,7 @@ flutter:
     - assets/images/saaf_logo.png
     - assets/audio/palm_breeze.mp3
     - assets/palm_tree_leaf_animation.json  # ✅ ملف اللوتي
+    - assets/.env
 
   fonts:
     - family: NotoSansArabic

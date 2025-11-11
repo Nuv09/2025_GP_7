@@ -22,15 +22,20 @@ import 'add_farm_page.dart';
 import 'pages/profilepage.dart';
 import 'edit_farm_page.dart';
 import 'pages/analysis_status_page.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // ✅ الحل: تهيئة Firebase بطريقة آمنة
+
+  // ✅ تحميل متغيرات البيئة
+  await dotenv.load(fileName: "assets/.env");
+
+  // ✅ تهيئة Firebase
   await _initializeFirebase();
-  
+
   runApp(const MyApp());
 }
+
 
 // ✅ دالة منفصلة لتهيئة Firebase
 Future<void> _initializeFirebase() async {
@@ -66,7 +71,7 @@ void _initializeAppCheckInBackground() {
         androidProvider:
             kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
         webProvider: ReCaptchaV3Provider(
-          '6LeCJgQsAAAAAItp5qD11GdE0wNEHNGLk22m74wO',
+          dotenv.env['RECAPTCHA_KEY'] ?? '',
         ),
       );
       debugPrint('✅ App Check initialized');
