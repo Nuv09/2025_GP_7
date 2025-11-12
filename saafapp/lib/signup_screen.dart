@@ -55,11 +55,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
       return;
     }
-    if (p1.length < 6) {
+    if (p1.length < 8 || p1.length > 64) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'كلمة المرور يجب أن تكون 6 أحرف على الأقل',
+            'كلمة المرور يجب أن تكون 8 أحرف على الأقل',
             style: GoogleFonts.almarai(),
           ),
         ),

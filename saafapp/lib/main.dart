@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
-
+import 'idle_session.dart';
 // Firebase
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
@@ -25,6 +25,7 @@ import 'pages/analysis_status_page.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future<void> main() async {
+  await dotenv.load(fileName: ".env");
   WidgetsFlutterBinding.ensureInitialized();
 
   // ✅ تحميل متغيرات البيئة
@@ -35,7 +36,6 @@ Future<void> main() async {
 
   runApp(const MyApp());
 }
-
 
 // ✅ دالة منفصلة لتهيئة Firebase
 Future<void> _initializeFirebase() async {
@@ -56,7 +56,6 @@ Future<void> _initializeFirebase() async {
 
     // ✅ تهيئة App Check في الخلفية (بدون انتظار)
     _initializeAppCheckInBackground();
-    
   } catch (e) {
     debugPrint('❌ Firebase initialization error: $e');
     // نكمل التشغيل حتى مع فشل Firebase
@@ -68,11 +67,10 @@ void _initializeAppCheckInBackground() {
   Future.delayed(Duration.zero, () async {
     try {
       await FirebaseAppCheck.instance.activate(
-        androidProvider:
-            kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
-        webProvider: ReCaptchaV3Provider(
-          dotenv.env['RECAPTCHA_KEY'] ?? '',
-        ),
+        androidProvider: kDebugMode
+            ? AndroidProvider.debug
+            : AndroidProvider.playIntegrity,
+        webProvider: ReCaptchaV3Provider(dotenv.env['RECAPTCHA_KEY'] ?? ''),
       );
       debugPrint('✅ App Check initialized');
     } catch (e) {
@@ -123,7 +121,7 @@ class MyApp extends StatelessWidget {
         '/addFarm': (_) => const AddFarmPage(),
         '/editFarm': (_) => const EditFarmPage(),
         '/pages/profilepage': (_) => const ProfilePage(),
-        '/main': (_) => const MainShell(),
+        '/main': (_) => const IdleSessionWrapper(child: MainShell()),
         '/analysis': (ctx) {
           final args = ModalRoute.of(ctx)!.settings.arguments as Map?;
           final farmId = (args?['farmId'] ?? '') as String;
