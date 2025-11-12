@@ -14,7 +14,7 @@ class IdleSessionWrapper extends StatefulWidget {
 
 class _IdleSessionWrapperState extends State<IdleSessionWrapper> {
   // المؤقت: تم ضبطه الآن على دقيقة واحدة للتجربة
-  static const Duration _idleTimeout = Duration(minutes: 1);
+  static const Duration _idleTimeout = Duration(minutes: 60);
   Timer? _timer;
 
   @override
