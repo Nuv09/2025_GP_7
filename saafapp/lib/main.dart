@@ -27,9 +27,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ تحميل متغيرات البيئة
-  await dotenv.load(fileName: "assets/.env");
-
   // ✅ تهيئة Firebase
   await _initializeFirebase();
 
