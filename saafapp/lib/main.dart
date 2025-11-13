@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'idle_session.dart';
+import 'aboutUs.dart';
 // Firebase
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
@@ -143,6 +144,7 @@ class _MainShellState extends State<MainShell> {
     FarmsScreen(), // 0: Home
     AddFarmPage(), // 1: Add
     ProfilePage(), // 2: Profile
+    AboutUsPage(), // 3: About Us
   ];
 
   @override
@@ -160,6 +162,7 @@ class _MainShellState extends State<MainShell> {
           Icon(Icons.home, size: 30, color: goldColor),
           Icon(Icons.add, size: 30, color: goldColor),
           Icon(Icons.person, size: 30, color: goldColor),
+          Icon(Icons.info_outline, size: 30, color: goldColor),
         ],
         onTap: (i) => setState(() => _index = i),
       ),

@@ -1,11 +1,11 @@
-// lib/signup_screen.dart
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:zxcvbn/zxcvbn.dart';
 
-//hello
+// الثوابت
 const Color kDeepGreen = Color(0xFF042C25);
 const Color kLightBeige = Color(0xFFFFF6E0);
 const Color kOrange = Color(0xFFEBB974);
@@ -25,6 +25,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
 
+  // 💡 متغيرات zxcvbn
+  final _zxcvbn = Zxcvbn();
+  int _passwordScore = 0; // 0 (ضعيف جداً) إلى 4 (قوي جداً)
+  String? _passwordWarning; // رسالة التحذير من zxcvbn
+
+  // ⭐️ التعديل 1: حالة الموافقة على الشروط
+  bool _agreeTerms = false;
+
   bool _obscurePass = true;
   bool _obscureConfirm = true;
   bool _loading = false;
@@ -32,13 +40,107 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _auth = FirebaseAuth.instance;
   final _db = FirebaseFirestore.instance;
 
+  // الحد الأدنى المقبول لتقييم كلمة المرور
+  static const int _minAcceptableScore = 2; // متوسطة أو أعلى
+
+  @override
+  void initState() {
+    super.initState();
+    // 💡 إضافة مستمع لتحديث تقييم قوة كلمة المرور فوراً
+    _passCtrl.addListener(_updatePasswordStrength);
+  }
+
   @override
   void dispose() {
+    // 💡 إزالة المستمع قبل التخلص من الـ Widget
+    _passCtrl.removeListener(_updatePasswordStrength);
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _passCtrl.dispose();
     _confirmCtrl.dispose();
     super.dispose();
+  }
+
+  void _showSnack(String msg, {bool isError = true}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          msg,
+          style: GoogleFonts.almarai(
+            color: Colors.white, // ← هنا الصح
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: isError ? Colors.red.shade700 : kDeepGreen,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  // ⭐️ التعديل 2: دالة عرض الشروط والسياسة بالنص الجديد
+  void _showTermsDialog() {
+    // النص الذي حدده المستخدم
+    const String termsContent =
+        'يقتصر استخدامك لسعف على إدارة مزارع النخيل الخاصة بك ومتابعة حالتها، ويُمنع استخدامه لأي أغراض أخرى غير مصرح بها.\n\n'
+        'يتم استخدام بياناتك الشخصية، مثل البريد الإلكتروني، فقط لغرض التسجيل والتواصل المتعلق بخدمات النظام.\n\n'
+        'قد يتم استخدام بيانات المزرعة — بما في ذلك الموقع، حالة النخيل، وصور الأقمار الصناعية — لأغراض تحليلية وتطوير دقة النموذج، وذلك دون أي ربط بهويتك الشخصية.\n\n'
+        'يُحظر مشاركة حسابك أو بيانات الدخول مع أي أطراف أخرى بهدف حماية أمن معلوماتك.\n\n'
+        'قد نقوم بتحديث هذه الشروط في المستقبل، وسيتم إخطارك في حال حدوث تغييرات جوهرية.\n\n'
+        'بالنقر على "أوافق"، فإنك تقر بأنك قرأت هذه الشروط وفهمتها ووافقت عليها.';
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: kLightBeige,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'شروط استخدام سعف',
+            style: GoogleFonts.almarai(
+              color: kDeepGreen,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.right,
+          ),
+          content: SingleChildScrollView(
+            child: Text(
+              termsContent,
+              style: GoogleFonts.almarai(color: kDeepGreen, fontSize: 14),
+              textAlign: TextAlign.right,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('إغلاق', style: GoogleFonts.almarai(color: kOrange)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 💡 دالة لتقييم قوة كلمة المرور وتحديث الحالة (تم التصحيح هنا)
+  void _updatePasswordStrength() {
+    final password = _passCtrl.text;
+    if (password.isEmpty) {
+      setState(() {
+        _passwordScore = 0;
+        _passwordWarning = null;
+      });
+      return;
+    }
+
+    final userInputs = [_nameCtrl.text.trim(), _emailCtrl.text.trim()];
+    final result = _zxcvbn.evaluate(password, userInputs: userInputs);
+
+    setState(() {
+      // ✅ التصحيح: الاعتماد على الإخراج الصحيح وتجنب الـ as int و .warning القسري
+      _passwordScore = result.score as int;
+      _passwordWarning = result.feedback.warning;
+    });
   }
 
   Future<void> _signUp() async {
@@ -48,33 +150,33 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final p2 = _confirmCtrl.text;
 
     if (name.isEmpty || email.isEmpty || p1.isEmpty || p2.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('فضلاً أكمل جميع الحقول', style: GoogleFonts.almarai()),
-        ),
+      _showSnack('فضلاً أكمل جميع الحقول');
+      return;
+    }
+
+    // ⛔️ التحقق من شرط الموافقة الجديد
+    if (!_agreeTerms) {
+      _showSnack(
+        'يجب الموافقة على شروط الخدمة وسياسة الخصوصية للمتابعة.',
+        isError: true,
       );
       return;
     }
-    if (p1.length < 8 || p1.length > 64) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'كلمة المرور يجب أن تكون 8 أحرف على الأقل',
-            style: GoogleFonts.almarai(),
-          ),
-        ),
+
+    // التحقق من قوة كلمة المرور
+    _updatePasswordStrength();
+
+    if (_passwordScore < _minAcceptableScore) {
+      _showSnack(
+        _passwordWarning ??
+            'كلمة المرور ضعيفة جداً. فضلاً اختر كلمة مرور متوسطة القوة أو أعلى (Score 2+).',
+        isError: true,
       );
       return;
     }
+
     if (p1 != p2) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'تأكيد كلمة المرور غير متطابق',
-            style: GoogleFonts.almarai(),
-          ),
-        ),
-      );
+      _showSnack('تأكيد كلمة المرور غير متطابق');
       return;
     }
 
@@ -86,7 +188,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
         password: p1,
       );
 
-      if (!mounted) return; // ✅ تأكيد بقاء الصفحة
+      if (!mounted) return;
+      await cred.user?.reload();
+      await cred.user?.sendEmailVerification();
+      print("📧 تم إرسال بريد تحقق إلى ${cred.user?.email}");
 
       // 2️⃣ تحديث displayName في Auth
       await cred.user?.updateDisplayName(name);
@@ -101,24 +206,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
         'uid': uid,
         'name': name,
         'email': email,
-        'phone': '', // حقول مبدئية (تعدل لاحقاً من صفحة البروفايل)
+        'phone': '',
         'region': '',
         'photoURL': null,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
+        'termsAccepted': true, // ⭐️ تسجيل الموافقة في Firestore
       }, SetOptions(merge: true));
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('تم إنشاء الحساب ✅', style: GoogleFonts.almarai()),
-        ),
+      _showSnack(
+        'تم إنشاء الحساب ✅فضلاً تحقق من بريدك الإلكتروني لإكمال التفعيل',
+        isError: false,
       );
 
-      Navigator.pop(
-        context,
-      ); // أو: Navigator.pushReplacementNamed(context, '/main');
+      Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
 
@@ -138,19 +241,61 @@ class _SignUpScreenState extends State<SignUpScreen> {
           break;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg, style: GoogleFonts.almarai())),
-      );
+      _showSnack(msg, isError: true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('حدث خطأ غير متوقع: $e', style: GoogleFonts.almarai()),
-        ),
-      );
+      _showSnack('حدث خطأ غير متوقع: $e', isError: true);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  // 💡 دالة مساعدة لتحديد لون مؤشر القوة
+  Color _getScoreColor(int score) {
+    switch (score) {
+      case 0:
+        return Colors.red.shade300;
+      case 1:
+        return Colors.orange.shade300;
+      case 2:
+        return Colors.yellow.shade600;
+      case 3:
+        return Colors.lightGreen;
+      case 4:
+        return Colors.green.shade600;
+      default:
+        return Colors.transparent;
+    }
+  }
+
+  // 💡 دالة مساعدة لتحديد نص مؤشر القوة
+  String _getScoreText(int score) {
+    switch (score) {
+      case 0:
+        return _passCtrl.text.isEmpty ? '' : 'ضعيفة جداً';
+      case 1:
+        return 'ضعيفة';
+      case 2:
+        return 'متوسطة';
+      case 3:
+        return 'جيدة';
+      case 4:
+        return 'قوية جداً';
+      default:
+        return '';
+    }
+  }
+
+  // 💡 دالة _softCircle
+  Widget _softCircle(double size, {double opacity = 0.18}) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Color.fromRGBO(255, 246, 224, opacity),
+      ),
+    );
   }
 
   @override
@@ -285,6 +430,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     }),
                                     textInputAction: TextInputAction.next,
                                   ),
+                                  // مؤشر قوة كلمة المرور
+                                  if (_passCtrl.text.isNotEmpty)
+                                    _PasswordStrengthIndicator(
+                                      score: _passwordScore,
+                                      color: _getScoreColor(_passwordScore),
+                                      text: _getScoreText(_passwordScore),
+                                      warning: _passwordWarning,
+                                    ),
                                   const SizedBox(height: 12),
                                   _SaafField(
                                     controller: _confirmCtrl,
@@ -298,6 +451,91 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     textInputAction: TextInputAction.done,
                                   ),
                                   const SizedBox(height: 18),
+
+                                  // ⭐️ إضافة مربع الموافقة على الشروط في الواجهة
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Checkbox(
+                                        value: _agreeTerms,
+                                        onChanged: (v) => setState(
+                                          () => _agreeTerms = v ?? false,
+                                        ),
+                                        activeColor: kOrange,
+                                        checkColor: kDeepGreen,
+                                        side: const BorderSide(
+                                          color: kLightBeige,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 12.0,
+                                          ),
+                                          child: RichText(
+                                            textAlign: TextAlign.right,
+                                            text: TextSpan(
+                                              style: GoogleFonts.almarai(
+                                                color: kLightBeige.withOpacity(
+                                                  0.8,
+                                                ),
+                                                fontSize: 13,
+                                              ),
+                                              children: [
+                                                const TextSpan(
+                                                  text: 'أوافق على ',
+                                                ),
+                                                WidgetSpan(
+                                                  alignment:
+                                                      PlaceholderAlignment
+                                                          .middle,
+                                                  child: InkWell(
+                                                    onTap: _showTermsDialog,
+                                                    child: Text(
+                                                      'شروط الخدمة',
+                                                      style:
+                                                          GoogleFonts.almarai(
+                                                            color: kOrange,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            decoration:
+                                                                TextDecoration
+                                                                    .underline,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                const TextSpan(text: ' و '),
+                                                WidgetSpan(
+                                                  alignment:
+                                                      PlaceholderAlignment
+                                                          .middle,
+                                                  child: InkWell(
+                                                    onTap: _showTermsDialog,
+                                                    child: Text(
+                                                      'سياسة الخصوصية',
+                                                      style:
+                                                          GoogleFonts.almarai(
+                                                            color: kOrange,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            decoration:
+                                                                TextDecoration
+                                                                    .underline,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 18),
+
                                   _SaafButton(
                                     label: _loading
                                         ? '...جاري الإنشاء'
@@ -372,14 +610,65 @@ class _SignUpScreenState extends State<SignUpScreen> {
       ),
     );
   }
+}
 
-  Widget _softCircle(double size, {double opacity = 0.18}) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Color.fromRGBO(255, 246, 224, opacity),
+// 💡 Widget جديد لعرض مؤشر قوة كلمة المرور
+class _PasswordStrengthIndicator extends StatelessWidget {
+  final int score;
+  final Color color;
+  final String text;
+  final String? warning;
+
+  const _PasswordStrengthIndicator({
+    required this.score,
+    required this.color,
+    required this.text,
+    this.warning,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (score == 0 && warning == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: LinearProgressIndicator(
+                  value: score / 4,
+                  backgroundColor: Colors.white54,
+                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                  minHeight: 8,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                text,
+                style: GoogleFonts.almarai(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+          if (warning != null && score < 2)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Text(
+                'تحذير: $warning',
+                style: GoogleFonts.almarai(
+                  color: Colors.red.shade200,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
