@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// 👈 استيراد debugPrint للوضوح
+import 'package:flutter/foundation.dart'
+    show debugPrint; // 👈 استيراد debugPrint للوضوح
 
 class IdleSessionWrapper extends StatefulWidget {
   final Widget child;
@@ -11,59 +12,81 @@ class IdleSessionWrapper extends StatefulWidget {
   State<IdleSessionWrapper> createState() => _IdleSessionWrapperState();
 }
 
-class _IdleSessionWrapperState extends State<IdleSessionWrapper> {
-  // المؤقت: تم ضبطه الآن على دقيقة واحدة للتجربة
+// 🛑 إضافة Mixin WidgetsBindingObserver
+class _IdleSessionWrapperState extends State<IdleSessionWrapper>
+    with WidgetsBindingObserver {
   static const Duration _idleTimeout = Duration(minutes: 60);
   Timer? _timer;
+  bool _loggedOut = false; // لمنع تسجيل الخروج المتعدد
 
   @override
   void initState() {
     super.initState();
-    _startTimer();
+    // 🛑 ربط مراقب دورة حياة التطبيق
+    WidgetsBinding.instance.addObserver(this);
+    _resetTimer();
   }
 
   @override
   void dispose() {
-    _timer?.cancel(); // إلغاء المؤقت عند إغلاق الـ Widget
+    _timer?.cancel();
+    // 🛑 فك ربط المراقب
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
-  // 1. بدأ المؤقت
-  void _startTimer() {
-    _timer?.cancel(); // نلغي أي مؤقت سابق لضمان وجود مؤقت واحد فقط
-    _timer = Timer(_idleTimeout, _onTimeout);
-  }
+  // 🔑 دالة مراقبة حالة التطبيق (الذهاب للخلفية والعودة)
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_loggedOut) return;
 
-  // 2. إعادة ضبط المؤقت
-  void _handleUserInteraction([_]) {
-    if (mounted) {
-      // إعادة تشغيل المؤقت في كل تفاعل
-      _startTimer();
+    if (state == AppLifecycleState.paused) {
+      // ⏸️ التطبيق ذهب للخلفية: إلغاء المؤقت تماماً (لا يُحتسب كخمول)
+      _timer?.cancel();
+      debugPrint('⏸️ ذهب التطبيق للخلفية. تم إلغاء المؤقت.');
+    } else if (state == AppLifecycleState.resumed) {
+      // ▶️ التطبيق عاد للمقدمة: إعادة تشغيل المؤقت من البداية (60 دقيقة)
+      _resetTimer();
+      debugPrint('🔄 عاد التطبيق للمقدمة. تم إعادة تشغيل المؤقت إلى 60 دقيقة.');
     }
   }
 
-  // 3. انتهاء مدة الخمول (دقيقة واحدة)
-  void _onTimeout() async {
-    // 🟢 أوامر طباعة للتحقق من وصولنا إلى هنا 🟢
-    debugPrint('⏳ المؤقت (1 دقيقة) انتهى. جاري تنفيذ عملية تسجيل الخروج...');
+  void _resetTimer() {
+    _timer?.cancel();
+    if (_loggedOut) return;
+    _timer = Timer(_idleTimeout, _logoutUser);
+  }
 
-    // 4. تنفيذ عملية تسجيل الخروج
+  void _handleUserInteraction([_]) {
+    if (!_loggedOut && mounted) {
+      _resetTimer();
+    }
+  }
+
+  Future<void> _logoutUser() async {
+    if (_loggedOut) return;
+    _loggedOut = true;
+    _timer?.cancel();
+
     await FirebaseAuth.instance.signOut();
 
-    debugPrint('✅ تم تسجيل الخروج من Firebase Auth بنجاح');
-
-    // توجيه المستخدم لصفحة تسجيل الدخول (استبدلي '/login' بالـ Route المناسب)
     if (mounted) {
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/login',
+        (route) => false,
+        arguments: {
+          'session_expired': true,
+          'message': 'تم تسجيل خروجك تلقائيًا بعد ساعة من الخمول.',
+        },
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // نستخدم GestureDetector لتغطية الشاشة بأكملها والتقاط أي حركة
     return GestureDetector(
-      onTap: _handleUserInteraction, // يلتقط النقرات
-      onPanDown: _handleUserInteraction, // يلتقط السحب
+      onTap: _handleUserInteraction,
+      onPanDown: _handleUserInteraction,
       behavior: HitTestBehavior.translucent,
       child: widget.child,
     );

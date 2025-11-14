@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "120954850101",
+    "project_id": "saaf-97251",
+    "storage_bucket": "saaf-97251.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:120954850101:android:ce517604b0b03d9e359a7c",
+        "android_client_info": {
+          "package_name": "com.example.saafapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDvc_HOStJGLdB-jaQVy_F97P6kcyke0ps"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
