@@ -53,6 +53,7 @@ dev_dependencies:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1
   flutter_lints: ^5.0.0
+  url_launcher: ^6.3.0
 
 flutter_launcher_icons:
   android: true
@@ -68,6 +69,9 @@ flutter:
     - assets/images/palms.jpg
     - assets/images/saaf_logo.png
     - assets/audio/palm_breeze.mp3
+    - assets/images/about1.png
+    - assets/images/about2.png
+    - assets/images/about3.png
     - assets/palm_tree_leaf_animation.json  # ✅ ملف اللوتي
     
 

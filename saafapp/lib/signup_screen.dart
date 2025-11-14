@@ -191,6 +191,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (!mounted) return;
       await cred.user?.reload();
       await cred.user?.sendEmailVerification();
+      // ignore: avoid_print
       print("📧 تم إرسال بريد تحقق إلى ${cred.user?.email}");
 
       // 2️⃣ تحديث displayName في Auth
@@ -477,9 +478,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                             textAlign: TextAlign.right,
                                             text: TextSpan(
                                               style: GoogleFonts.almarai(
-                                                color: kLightBeige.withOpacity(
-                                                  0.8,
-                                                ),
+                                                color: kLightBeige.withValues(alpha: 0.8),
                                                 fontSize: 13,
                                               ),
                                               children: [

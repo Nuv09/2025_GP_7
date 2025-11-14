@@ -5,7 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'idle_session.dart';
-import 'aboutUs.dart';
+import 'about_us.dart';
 // Firebase
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
