@@ -160,8 +160,8 @@ Widget _buildImageSection(BuildContext context, double maxSize) {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Colors.black.withOpacity(0.15),
-                          Colors.black.withOpacity(0.4),
+                          Colors.black.withValues(alpha: 0.15),
+                          Colors.black.withValues(alpha: 0.4),
                         ],
                       ),
                     ),
@@ -177,7 +177,7 @@ Widget _buildImageSection(BuildContext context, double maxSize) {
                         fontWeight: FontWeight.bold,
                         shadows: [
                           Shadow(
-                            color: Colors.black.withOpacity(0.5),
+                            color: Colors.black.withValues(alpha: 0.5),
                             blurRadius: 6,
                           ),
                         ],
