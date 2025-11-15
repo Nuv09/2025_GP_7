@@ -20,8 +20,8 @@ import 'package:uuid/uuid.dart'; // ✅ لِـ session token
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:saafapp/secrets.dart';
 
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // ألوان
 const Color primaryColor = Color(0xFF1E8D5F);
@@ -85,16 +85,58 @@ class _AddFarmPageState extends State<AddFarmPage> {
 
   bool _isSaving = false;
 
-// === Google Places (Autocomplete + Details) ===
-// ✅ المفتاح الآن يُقرأ من ملف env بدل ما يكون مكتوب في الكود
-late final String _placesKey = dotenv.env['PLACES_KEY'] ?? '';
-
+  // === Google Places (Autocomplete + Details) ===
+  // ⚠️ ملاحظة أمنية: يفضّل تمرير المفتاح عبر dart-define وليس هاردكود.
+  // مثال تشغيل: flutter run --dart-define=PLACES_KEY=AIza... (وشيّكي قيود المفتاح في Google Cloud)
+final String _placesKey = Secrets.placesKey;
 
   final _uuid = const Uuid();
   String _sessionToken = '';
   Timer? _debounce;
   List<Map<String, dynamic>> _suggestions = [];
   bool _loadingSuggest = false;
+
+Future<void> _fetchSuggestions(String input) async {
+  setState(() => _loadingSuggest = true);
+
+  final uri = Uri.https(
+    'maps.googleapis.com',
+    '/maps/api/place/autocomplete/json',
+    {
+      'input': input,
+      'key': _placesKey,
+      'language': 'ar',
+      'sessiontoken': _sessionToken,
+      'components': 'country:sa',
+    },
+  );
+
+  try {
+    final res = await http.get(uri);
+    final data = jsonDecode(res.body);
+
+    if (data['status'] == 'OK') {
+      final preds = data['predictions'] as List;
+      setState(() {
+        _suggestions = preds
+            .map((e) => {
+                  'primary': e['structured_formatting']['main_text'],
+                  'secondary': e['structured_formatting']['secondary_text'],
+                  'place_id': e['place_id'],
+                })
+            .toList();
+      });
+    } else {
+      setState(() => _suggestions = []);
+    }
+  } catch (e) {
+    debugPrint('Autocomplete error: $e');
+    setState(() => _suggestions = []);
+  }
+
+  setState(() => _loadingSuggest = false);
+}
+
 
   // === أداة تنظيف روابط الصور (إزالة فراغات/أسطر + فك %252F) ===
   String _cleanUrl(String? raw) {
@@ -143,65 +185,27 @@ late final String _placesKey = dotenv.env['PLACES_KEY'] ?? '';
   }
 
   // =================== البحث (Geocoding احتياطي) ===================
-  Future<void> _searchAndGo() async {
-    final raw = _searchCtrl.text.trim();
-    if (raw.isEmpty) return;
+Future<void> _searchAndGo() async {
+  final text = _searchCtrl.text.trim();
+  if (text.isEmpty) return;
 
-    // 👇 يسمح بكتابة: "24.7136, 46.6753"
-    final coord = _tryParseLatLng(raw);
-    if (coord != null) {
+  try {
+    final locations = await locationFromAddress(text);
+    if (locations.isNotEmpty) {
+      final loc = locations.first;
       await _gCtrl?.animateCamera(
         CameraUpdate.newCameraPosition(
-          CameraPosition(target: coord, zoom: 14),
+          CameraPosition(
+            target: LatLng(loc.latitude, loc.longitude),
+            zoom: 15,
+          ),
         ),
       );
-      return;
     }
-
-    try {
-      List<Location> results = [];
-
-      // محاولة بالعربية (سعودية)
-      try {
-        results = await locationFromAddress(raw, localeIdentifier: 'ar_SA');
-      } catch (_) {}
-
-      // لو فاضية، جرّب إضافة ", Saudi Arabia"
-      if (results.isEmpty) {
-        try {
-          results = await locationFromAddress(
-            '$raw, Saudi Arabia',
-            localeIdentifier: 'en',
-          );
-        } catch (_) {}
-      }
-
-      if (results.isEmpty) {
-        _showSnackBar('تعذر العثور على الموقع المطلوب', isError: true);
-        return;
-      }
-
-      // لو أكثر من نتيجة، نختار الأقرب لمركز الكاميرا الحالي لزيادة الدقة
-      final current = _initialCamera.target;
-      Location best = results.first;
-      double bestScore = _dist2(LatLng(best.latitude, best.longitude), current);
-      for (final r in results.skip(1)) {
-        final d2 = _dist2(LatLng(r.latitude, r.longitude), current);
-        if (d2 < bestScore) {
-          best = r;
-          bestScore = d2;
-        }
-      }
-
-      await _gCtrl?.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(target: LatLng(best.latitude, best.longitude), zoom: 14),
-        ),
-      );
-    } catch (_) {
-      _showSnackBar('تعذر العثور على الموقع المطلوب', isError: true);
-    }
+  } catch (e) {
+    debugPrint('Search geocoding error: $e');
   }
+}
 
   // =================== Helpers للبحث ===================
   LatLng? _tryParseLatLng(String s) {
@@ -711,23 +715,21 @@ late final String _placesKey = dotenv.env['PLACES_KEY'] ?? '';
 
   // =================== Autocomplete & Details ===================
   void _onSearchChanged(String value) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () {
-      final v = value.trim();
-      if (v.isEmpty) {
-        setState(() => _suggestions = []);
-        return;
-      }
-      if (_placesKey.isEmpty) {
-        debugPrint('No PLACES key configured.');
-        return;
-      }
-      if (_sessionToken.isEmpty) {
-        _sessionToken = _uuid.v4();
-      }
-      _fetchAutocomplete(v);
-    });
-  }
+  if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+  _debounce = Timer(const Duration(milliseconds: 500), () async {
+    if (value.isEmpty) {
+      setState(() => _suggestions = []);
+      return;
+    }
+
+    if (_sessionToken.isEmpty) {
+      _sessionToken = _uuid.v4();
+    }
+
+    await _fetchSuggestions(value);
+  });
+}
 
   Future<void> _fetchAutocomplete(String input) async {
     setState(() => _loadingSuggest = true);

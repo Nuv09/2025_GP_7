@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lottie/lottie.dart';
 
 const Color kDeepGreen = Color(0xFF042C25);
 const Color kLightBeige = Color(0xFFFFF6E0);
@@ -125,12 +124,10 @@ class _LoadingViewState extends State<_LoadingView> {
           SizedBox(
             width: s.width * 0.8,
             height: s.height * 0.45,
-            child: FittedBox(
-              fit: BoxFit.contain,
-              child: Lottie.asset(
-                'assets/palm_tree_leaf_animation.json',
-                repeat: true,
-              ),
+            child: Image.asset(
+              'assets/gif/loading.gif',
+              width: 200,
+              height: 200,
             ),
           ),
           const SizedBox(height: 30),
@@ -176,18 +173,19 @@ class _DoneView extends StatelessWidget {
         children: [
           const Icon(Icons.check_circle, size: 90, color: kOrange),
           const SizedBox(height: 12),
-          Text('النتيجة جاهزة!',
-              style: GoogleFonts.almarai(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-              )),
+          Text(
+            'النتيجة جاهزة!',
+            style: GoogleFonts.almarai(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text('عدد النخيل التقريبي: $count',
-              style: GoogleFonts.almarai(
-                color: Colors.white70,
-                fontSize: 18,
-              )),
+          Text(
+            'عدد النخيل التقريبي: $count',
+            style: GoogleFonts.almarai(color: Colors.white70, fontSize: 18),
+          ),
         ],
       ),
     );
@@ -207,12 +205,14 @@ class _ErrorView extends StatelessWidget {
         children: [
           const Icon(Icons.error_outline, size: 90, color: Colors.redAccent),
           const SizedBox(height: 12),
-          Text('تعذّر إتمام التحليل',
-              style: GoogleFonts.almarai(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-              )),
+          Text(
+            'تعذّر إتمام التحليل',
+            style: GoogleFonts.almarai(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
           const SizedBox(height: 8),
           Text(
             message,

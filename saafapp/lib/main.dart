@@ -1,11 +1,10 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
+import 'package:flutter/foundation.dart' show kDebugMode, debugPrint, kIsWeb;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
-import 'idle_session.dart';
-import 'about_us.dart';
+
 // Firebase
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
@@ -23,27 +22,28 @@ import 'add_farm_page.dart';
 import 'pages/profilepage.dart';
 import 'edit_farm_page.dart';
 import 'pages/analysis_status_page.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'idle_session.dart';
+import 'about_us.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ تهيئة Firebase
+  // تهيئة Firebase
   await _initializeFirebase();
 
   runApp(const MyApp());
 }
 
-// ✅ دالة منفصلة لتهيئة Firebase
+// ======================== Firebase Init ========================
+
 Future<void> _initializeFirebase() async {
   try {
-    // التحقق إذا كان Firebase مهيأ مسبقاً
+    // لو Firebase جاهز مسبقاً
     try {
-      Firebase.app(); // إذا نجح هذا، значит Firebase مهيأ
+      Firebase.app();
       debugPrint('✅ Firebase already initialized');
-      return;
-    } catch (e) {
-      // إذا فشل، نهيئ Firebase
+    } catch (_) {
+      // لو مو جاهز → نهيئه
       debugPrint('🔄 Initializing Firebase...');
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
@@ -51,31 +51,42 @@ Future<void> _initializeFirebase() async {
       debugPrint('✅ Firebase initialized successfully');
     }
 
-    // ✅ تهيئة App Check في الخلفية (بدون انتظار)
+    // تهيئة App Check في الخلفية
     _initializeAppCheckInBackground();
   } catch (e) {
     debugPrint('❌ Firebase initialization error: $e');
-    // نكمل التشغيل حتى مع فشل Firebase
   }
 }
 
-// ✅ تهيئة App Check في الخلفية دون تعطيل التشغيل
+// ======================== App Check ========================
+
 void _initializeAppCheckInBackground() {
   Future.delayed(Duration.zero, () async {
     try {
-      await FirebaseAppCheck.instance.activate(
-        androidProvider: kDebugMode
-            ? AndroidProvider.debug
-            : AndroidProvider.playIntegrity,
-        webProvider: ReCaptchaV3Provider(dotenv.env['RECAPTCHA_KEY'] ?? ''),
-      );
+      if (kIsWeb) {
+        // الويب → نستعمل Recaptcha V3 بدون env
+        await FirebaseAppCheck.instance.activate(
+          webProvider: ReCaptchaV3Provider(
+            "6LeCJgQsAAAAAItp5qD11GdE0wNEHNGLk22m74wO",
+          ),
+        );
+      } else {
+        // الجوال
+        await FirebaseAppCheck.instance.activate(
+          androidProvider:
+              kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+          appleProvider: AppleProvider.appAttest,
+        );
+      }
+
       debugPrint('✅ App Check initialized');
     } catch (e) {
       debugPrint('⚠️ App Check failed: $e');
-      // لا نوقف التطبيق إذا فشل App Check
     }
   });
 }
+
+// ======================== MyApp ========================
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -129,7 +140,8 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// ==================== MainShell ====================
+// ======================== MainShell ========================
+
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -141,10 +153,10 @@ class _MainShellState extends State<MainShell> {
   int _index = 0;
 
   final List<Widget> _pages = const [
-    FarmsScreen(), // 0: Home
-    AddFarmPage(), // 1: Add
-    ProfilePage(), // 2: Profile
-    AboutUsPage(), // 3: About Us
+    FarmsScreen(),
+    AddFarmPage(),
+    ProfilePage(),
+    AboutUsPage(),
   ];
 
   @override

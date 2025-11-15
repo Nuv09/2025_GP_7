@@ -20,7 +20,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:saafapp/secrets.dart';
 
 
 const Color primaryColor = Color(0xFF1E8D5F);
@@ -44,9 +44,7 @@ class _EditFarmPageState extends State<EditFarmPage> {
   // 🔎 البحث
   final _searchCtrl = TextEditingController();
 
-
-  late final String _placesKey = dotenv.env['PLACES_KEY'] ?? '';
-
+final String _placesKey = Secrets.placesKey;
 
   // Autocomplete state
   final _uuid = const Uuid();
