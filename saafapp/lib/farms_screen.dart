@@ -25,10 +25,12 @@ class FarmsScreen extends StatelessWidget {
       automaticallyImplyLeading: false,
       elevation: 0,
       backgroundColor: darkGreenColor,
+       toolbarHeight: 140,
       title: Row(
         textDirection: TextDirection.ltr,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          // زر الإضافة +
           IconButton(
             tooltip: 'إضافة مزرعة',
             onPressed: () async {
@@ -36,7 +38,10 @@ class FarmsScreen extends StatelessWidget {
               if (result == true && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('تمت إضافة المزرعة بنجاح ✅', style: GoogleFonts.almarai()),
+                    content: Text(
+                      'تمت إضافة المزرعة بنجاح ✅',
+                      style: GoogleFonts.almarai(),
+                    ),
                     backgroundColor: Colors.green.shade600,
                   ),
                 );
@@ -44,14 +49,34 @@ class FarmsScreen extends StatelessWidget {
             },
             icon: const Icon(Icons.add, color: Colors.white),
           ),
-          Text(
-            "مزارعي",
-            style: GoogleFonts.almarai(
-              color: whiteColor,
-              fontWeight: FontWeight.w700,
-              fontSize: Theme.of(context).textTheme.titleLarge?.fontSize ?? 20,
-            ),
+
+       //  اللوقو في النص 
+          const Expanded(
+  child: Center(
+    child: _LogoButton(), 
+  ),
+),
+
+
+          // 👇 "مرحباً <الاسم>" عليها الأنيميشن
+          FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            future: FirebaseFirestore.instance
+                .collection('users')
+                .doc(FirebaseAuth.instance.currentUser!.uid)
+                .get(),
+            builder: (context, snapshot) {
+              String username = "مستخدم";
+
+              if (snapshot.hasData && snapshot.data!.data() != null) {
+                final data = snapshot.data!.data()!;
+                username = data['name'] ?? 'مستخدم';
+              }
+
+              return GreetingText(username: username);
+            },
           ),
+
+          // زر تسجيل الخروج
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: Colors.white),
             tooltip: 'تسجيل الخروج',
@@ -60,7 +85,8 @@ class FarmsScreen extends StatelessWidget {
                 await FirebaseAuth.instance.signOut();
               } catch (_) {}
               if (context.mounted) {
-                Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
+                Navigator.of(context)
+                    .pushNamedAndRemoveUntil('/login', (r) => false);
               }
             },
           ),
@@ -68,6 +94,7 @@ class FarmsScreen extends StatelessWidget {
       ),
     );
   }
+
 
   Widget _notLoggedIn(BuildContext context) {
     return Center(
@@ -80,7 +107,8 @@ class FarmsScreen extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'الرجاء تسجيل الدخول لعرض مزارعك',
-              style: GoogleFonts.almarai(color: Colors.white.withValues(alpha: 0.9)),
+              style:
+                  GoogleFonts.almarai(color: Colors.white.withValues(alpha: 0.9)),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -88,7 +116,9 @@ class FarmsScreen extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: darkGreenColor,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: Text('تسجيل الدخول', style: GoogleFonts.almarai()),
             ),
@@ -113,7 +143,8 @@ class _FarmsList extends StatelessWidget {
       stream: farmsQuery.snapshots(),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Colors.white));
+          return const Center(
+              child: CircularProgressIndicator(color: Colors.white));
         }
         if (snap.hasError) {
           final msg = snap.error.toString();
@@ -138,134 +169,303 @@ class _FarmsList extends StatelessWidget {
             return vb.compareTo(va); // الأحدث أولًا
           });
 
+        // لا توجد مزارع
         if (docs.isEmpty) {
-          return Center(
-            child: Text(
-              'لا توجد مزارع بعد. أضف أول مزرعة من زر (+) بالأعلى.',
-              style: GoogleFonts.almarai(color: Colors.white70),
-            ),
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                // 👇 مزارعي شوي لليسار
+                padding: const EdgeInsets.fromLTRB(0, 16, 24, 8),
+                child: Text(
+                  'مزارعي',
+                  style: GoogleFonts.almarai(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize:
+                        Theme.of(context).textTheme.titleLarge?.fontSize ?? 22,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    'لا توجد مزارع بعد. أضف أول مزرعة من زر (+) بالأعلى.',
+                    style: GoogleFonts.almarai(color: Colors.white70),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ],
           );
         }
 
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-          itemCount: docs.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, i) {
-            final doc = docs[i];
-            final d = doc.data() as Map<String, dynamic>;
-            final name = (d['farmName'] ?? '').toString();
-            final region = (d['region'] ?? '').toString();
-            final size = (d['farmSize'] ?? '').toString();
-            final imageURL = (d['imageURL'] ?? d['imageUrl'] ?? '').toString().trim();
-            final createdAt = (d['createdAt'] is Timestamp)
-                ? (d['createdAt'] as Timestamp).toDate()
-                : null;
+        // في مزارع
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(0, 16, 24, 8),
+              child: Text(
+                'مزارعي',
+                style: GoogleFonts.almarai(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize:
+                      Theme.of(context).textTheme.titleLarge?.fontSize ?? 22,
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                itemCount: docs.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, i) {
+                  final doc = docs[i];
+                  final d = doc.data() as Map<String, dynamic>;
+                  final name = (d['farmName'] ?? '').toString();
+                  final region = (d['region'] ?? '').toString();
+                  final size = (d['farmSize'] ?? '').toString();
+                  final imageURL =
+                      (d['imageURL'] ?? d['imageUrl'] ?? '').toString().trim();
+                  final createdAt = (d['createdAt'] is Timestamp)
+                      ? (d['createdAt'] as Timestamp).toDate()
+                      : null;
 
-            // ✅ حقول التحليل (اختيارية)
-            final status = (d['status'] ?? '').toString();
-            final finalCount = (d['finalCount'] is int) ? d['finalCount'] as int : null;
-            final finalQuality = (d['finalQuality'] is num) ? (d['finalQuality'] as num).toDouble() : null;
-            final errorMessage = (d['errorMessage'] ?? '') as String?;
+                  final status = (d['status'] ?? '').toString();
+                  final finalCount =
+                      (d['finalCount'] is int) ? d['finalCount'] as int : null;
+                  final finalQuality = (d['finalQuality'] is num)
+                      ? (d['finalQuality'] as num).toDouble()
+                      : null;
+                  final errorMessage = (d['errorMessage'] ?? '') as String?;
 
-            return FarmCard(
-              farmIndex: i,
-              title: name.isEmpty ? 'مزرعة بدون اسم' : name,
-              subtitle: region.isEmpty ? '—' : region,
-              sizeText: size.isEmpty ? null : '$size م²',
-              imageURL: imageURL.isNotEmpty ? imageURL : null,
-              createdAt: createdAt,
-              // 👇 إضافات التحليل
-              analysisStatus: status.isEmpty ? null : status,
-              analysisCount: finalCount,
-              analysisQuality: finalQuality,
-              analysisError: (errorMessage != null && errorMessage.isNotEmpty) ? errorMessage : null,
-              onEdit: () async {
-                await Navigator.pushNamed(
-                  context,
-                  '/editFarm',
-                  arguments: {'farmId': doc.id, 'initialData': d},
-                );
-              },
-              onDelete: () async {
-                final ok = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        backgroundColor: const Color.fromARGB(255, 3, 56, 13),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        title: Text(
-                          'تأكيد الحذف',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.almarai(
-                            color: const Color(0xFFFDCB6E),
-                            fontWeight: FontWeight.w800,
-                            fontSize: 22,
-                          ),
-                        ),
-                        content: Text(
-                          'هل أنت متأكد من حذف "${name.isEmpty ? 'هذه المزرعة' : name}"؟',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.almarai(
-                            color: const Color(0xFFFDCB6E),
-                            fontSize: 16,
-                            height: 1.5,
-                          ),
-                        ),
-                        actionsAlignment: MainAxisAlignment.center,
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: Text(
-                              'إلغاء',
-                              style: GoogleFonts.almarai(
-                                color: const Color(0xFF777777),
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFF44336),
-                              foregroundColor: Colors.white,
+                  return FarmCard(
+                    farmIndex: i,
+                    title: name.isEmpty ? 'مزرعة بدون اسم' : name,
+                    subtitle: region.isEmpty ? '—' : region,
+                    sizeText: size.isEmpty ? null : '$size م²',
+                    imageURL: imageURL.isNotEmpty ? imageURL : null,
+                    createdAt: createdAt,
+                    analysisStatus: status.isEmpty ? null : status,
+                    analysisCount: finalCount,
+                    analysisQuality: finalQuality,
+                    analysisError:
+                        (errorMessage != null && errorMessage.isNotEmpty)
+                            ? errorMessage
+                            : null,
+                    onEdit: () async {
+                      await Navigator.pushNamed(
+                        context,
+                        '/editFarm',
+                        arguments: {'farmId': doc.id, 'initialData': d},
+                      );
+                    },
+                    onDelete: () async {
+                      final ok = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              backgroundColor:
+                                  const Color.fromARGB(255, 3, 56, 13),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(24),
                               ),
+                              title: Text(
+                                'تأكيد الحذف',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.almarai(
+                                  color: const Color(0xFFFDCB6E),
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 22,
+                                ),
+                              ),
+                              content: Text(
+                                'هل أنت متأكد من حذف "${name.isEmpty ? 'هذه المزرعة' : name}"؟',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.almarai(
+                                  color: const Color(0xFFFDCB6E),
+                                  fontSize: 16,
+                                  height: 1.5,
+                                ),
+                              ),
+                              actionsAlignment: MainAxisAlignment.center,
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: Text(
+                                    'إلغاء',
+                                    style: GoogleFonts.almarai(
+                                      color: const Color(0xFF777777),
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFF44336),
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: Text(
+                                    'حذف',
+                                    style: GoogleFonts.almarai(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: Text('حذف', style: GoogleFonts.almarai(fontWeight: FontWeight.w800)),
-                          ),
-                        ],
-                      ),
-                    ) ??
-                    false;
+                          ) ??
+                          false;
 
-                if (!ok) return;
+                      if (!ok) return;
 
-                try {
-                  await FirebaseFirestore.instance.collection('farms').doc(doc.id).delete();
-                  final url = imageURL;
-                  if (url.isNotEmpty) {
-                    await FirebaseStorage.instance.refFromURL(url).delete();
-                  }
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('تم حذف المزرعة بنجاح ✅')),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('تعذر الحذف: $e')),
-                    );
-                  }
-                }
-              },
-            );
-          },
+                      try {
+                        await FirebaseFirestore.instance
+                            .collection('farms')
+                            .doc(doc.id)
+                            .delete();
+                        final url = imageURL;
+                        if (url.isNotEmpty) {
+                          await FirebaseStorage.instance
+                              .refFromURL(url)
+                              .delete();
+                        }
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('تم حذف المزرعة بنجاح ✅'),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('تعذر الحذف: $e')),
+                          );
+                        }
+                      }
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
         );
       },
+    );
+  }
+}
+ // ستايل الاسم 
+
+class GreetingText extends StatefulWidget {
+  final String username;
+
+  const GreetingText({super.key, required this.username});
+
+  @override
+  State<GreetingText> createState() => _GreetingTextState();
+}
+class _GreetingTextState extends State<GreetingText> with TickerProviderStateMixin{
+  bool _hideGreeting = false; // false = "مرحباً الاسم" ، true = "الاسم" فقط
+
+  @override
+  void initState() {
+    super.initState();
+    // بعد 7 ثواني نخلي "مرحباً" تتحرك يمين وتتلاشى
+    Future.delayed(const Duration(seconds: 7), () {
+      if (!mounted) return;
+      setState(() {
+        _hideGreeting = true;
+      });
+    });
+  }
+  @override
+  Widget build(BuildContext context) {
+    final style = GoogleFonts.almarai(
+      color: whiteColor,
+      fontWeight: FontWeight.w700,
+      fontSize: 18,
+    );
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        //  هنا كلمة "مرحباً" بس
+        AnimatedSize(
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeInOut,
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeInOut,
+            opacity: _hideGreeting ? 0.0 : 1.0,
+            // إذا مختفية نخليها صندوق فاضي عشان عرضها يصير 0
+            child: _hideGreeting
+                ? const SizedBox.shrink()
+                : Text(
+                    'مرحباً ',
+                    style: style,
+                  ),
+          ),
+        ),
+        //  اسم المستخدم ثابت، بس يتحرك تلقائياً مكان "مرحباً"
+        Text(
+          widget.username,
+          style: style,
+        ),
+      ],
+    );
+  }
+}
+
+
+ // ستايل اللوقو 
+
+class _LogoButton extends StatefulWidget {
+  const _LogoButton({super.key});
+
+  @override
+  State<_LogoButton> createState() => _LogoButtonState();
+}
+
+class _LogoButtonState extends State<_LogoButton> {
+  double _scale = 1.0;
+
+  @override
+  Widget build(BuildContext context) {
+    const double logoSize = 150.0; //  حجم اللوقو
+
+    return MouseRegion(
+      onEnter: (_) {
+        setState(() {
+          _scale = 1.12; //  توسع شوي بس
+        });
+      },
+      onExit: (_) {
+        setState(() {
+          _scale = 1.0;
+        });
+      },
+      child: GestureDetector(
+        onTap: () {
+        Navigator.pushNamed(context, '/about');
+        },
+        child: AnimatedScale(
+          scale: _scale,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+          child: Image.asset(
+            'assets/images/saaf_logo.png',
+            height: logoSize,
+            width: logoSize,
+            fit: BoxFit.contain,
+          ),
+        ),
+      ),
     );
   }
 }

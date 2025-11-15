@@ -117,6 +117,7 @@ class MyApp extends StatelessWidget {
         '/farms': (_) => const FarmsScreen(),
         '/addFarm': (_) => const AddFarmPage(),
         '/editFarm': (_) => const EditFarmPage(),
+        '/about': (_) => const AboutUsPage(),
         '/pages/profilepage': (_) => const ProfilePage(),
         '/main': (_) => const IdleSessionWrapper(child: MainShell()),
         '/analysis': (ctx) {

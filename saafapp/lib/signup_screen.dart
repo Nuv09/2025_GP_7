@@ -452,81 +452,41 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     textInputAction: TextInputAction.done,
                                   ),
                                   const SizedBox(height: 18),
-
-                                  // ⭐️ إضافة مربع الموافقة على الشروط في الواجهة
+                                  
                                   Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Checkbox(
                                         value: _agreeTerms,
-                                        onChanged: (v) => setState(
-                                          () => _agreeTerms = v ?? false,
-                                        ),
+                                        onChanged: (v) => setState(() => _agreeTerms = v ?? false),
                                         activeColor: kOrange,
                                         checkColor: kDeepGreen,
-                                        side: const BorderSide(
-                                          color: kLightBeige,
-                                        ),
+                                        side: const BorderSide(color: kLightBeige),
                                       ),
                                       Expanded(
                                         child: Padding(
-                                          padding: const EdgeInsets.only(
-                                            top: 12.0,
-                                          ),
-                                          child: RichText(
-                                            textAlign: TextAlign.right,
-                                            text: TextSpan(
-                                              style: GoogleFonts.almarai(
-                                                color: kLightBeige.withValues(alpha: 0.8),
-                                                fontSize: 13,
+                                          padding: const EdgeInsets.only(top: 12.0),
+                                          child: InkWell(
+                                            onTap: _showTermsDialog, 
+                                            child: RichText(
+                                              textAlign: TextAlign.right,
+                                              text: TextSpan(
+                                                style: GoogleFonts.almarai(
+                                                  color: kLightBeige.withValues(alpha: 0.8),
+                                                  fontSize: 13,
+                                                ),
+                                                children: [
+                                                  const TextSpan(text: 'أوافق على '),
+                                                  TextSpan(
+                                                    text: 'شروط الخدمة وسياسة الخصوصية',
+                                                    style: GoogleFonts.almarai(
+                                                      color: kOrange,
+                                                      fontWeight: FontWeight.bold,
+                                                      decoration: TextDecoration.underline,
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                              children: [
-                                                const TextSpan(
-                                                  text: 'أوافق على ',
-                                                ),
-                                                WidgetSpan(
-                                                  alignment:
-                                                      PlaceholderAlignment
-                                                          .middle,
-                                                  child: InkWell(
-                                                    onTap: _showTermsDialog,
-                                                    child: Text(
-                                                      'شروط الخدمة',
-                                                      style:
-                                                          GoogleFonts.almarai(
-                                                            color: kOrange,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                            decoration:
-                                                                TextDecoration
-                                                                    .underline,
-                                                          ),
-                                                    ),
-                                                  ),
-                                                ),
-                                                const TextSpan(text: ' و '),
-                                                WidgetSpan(
-                                                  alignment:
-                                                      PlaceholderAlignment
-                                                          .middle,
-                                                  child: InkWell(
-                                                    onTap: _showTermsDialog,
-                                                    child: Text(
-                                                      'سياسة الخصوصية',
-                                                      style:
-                                                          GoogleFonts.almarai(
-                                                            color: kOrange,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                            decoration:
-                                                                TextDecoration
-                                                                    .underline,
-                                                          ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
                                             ),
                                           ),
                                         ),
