@@ -11,27 +11,29 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
-// ودجت الصورة الشرطي (ويب/موبايل)
-// تم الإبقاء على saafNetworkImage كدالة لضمان عمل الكود
-Widget saafNetworkImage(
-  String url, {
-  Key? key,
-  double? width,
-  double? height,
-  BoxFit? fit,
-}) {
-  return Image.network(
-    url,
-    key: key,
-    width: width,
-    height: height,
-    fit: fit,
-    errorBuilder: (context, error, stackTrace) => Container(
-      color: Colors.white.withValues(alpha: 0.15), // بديل withOpacity
-      child: const Icon(Icons.broken_image, color: Colors.white70),
-    ),
-  );
-}
+import 'package:saafapp/widgets/saaf_image.dart';
+
+// // ودجت الصورة الشرطي (ويب/موبايل)
+// // تم الإبقاء على saafNetworkImage كدالة لضمان عمل الكود
+// Widget saafNetworkImage(
+//   String url, {
+//   Key? key,
+//   double? width,
+//   double? height,
+//   BoxFit? fit,
+// }) {
+//   return Image.network(
+//     url,
+//     key: key,
+//     width: width,
+//     height: height,
+//     fit: fit,
+//     errorBuilder: (context, error, stackTrace) => Container(
+//       color: Colors.white.withValues(alpha: 0.15), // بديل withOpacity
+//       child: const Icon(Icons.broken_image, color: Colors.white70),
+//     ),
+//   );
+// }
 
 // 🎨 الألوان
 const Color kDeepGreen = Color(0xFF042C25);

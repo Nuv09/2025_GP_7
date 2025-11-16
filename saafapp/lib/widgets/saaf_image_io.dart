@@ -13,6 +13,7 @@ Widget saafNetworkImage(
     width: width,
     height: height,
     fit: fit,
-    errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.white70),
+    errorBuilder: (_, __, ___) =>
+        const Icon(Icons.broken_image, color: Colors.white70),
   );
 }

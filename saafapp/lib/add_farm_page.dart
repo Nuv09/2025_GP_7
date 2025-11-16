@@ -9,7 +9,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart'
-    show Placemark, Location, locationFromAddress, placemarkFromCoordinates;
+    show Placemark, locationFromAddress, placemarkFromCoordinates;
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -208,6 +208,7 @@ Future<void> _searchAndGo() async {
 }
 
   // =================== Helpers للبحث ===================
+  // ignore: unused_element
   LatLng? _tryParseLatLng(String s) {
     final m = RegExp(r'^\s*([+-]?\d+(\.\d+)?)[\s,]+([+-]?\d+(\.\d+)?)\s*$')
         .firstMatch(s);
@@ -218,7 +219,8 @@ Future<void> _searchAndGo() async {
     if (lat.abs() > 90 || lng.abs() > 180) return null;
     return LatLng(lat, lng);
   }
-
+  
+// ignore: unused_element
   double _dist2(LatLng a, LatLng b) {
     final dx = a.latitude - b.latitude;
     final dy = a.longitude - b.longitude;
@@ -731,6 +733,7 @@ Future<void> _searchAndGo() async {
   });
 }
 
+// ignore: unused_element
   Future<void> _fetchAutocomplete(String input) async {
     setState(() => _loadingSuggest = true);
     try {
