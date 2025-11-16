@@ -426,7 +426,7 @@ class _GreetingTextState extends State<GreetingText> with TickerProviderStateMix
  // ستايل اللوقو 
 
 class _LogoButton extends StatefulWidget {
-  const _LogoButton({super.key});
+  const _LogoButton();
 
   @override
   State<_LogoButton> createState() => _LogoButtonState();
