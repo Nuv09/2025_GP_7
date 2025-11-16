@@ -11,6 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   url_launcher: ^6.2.5
+  universal_html: ^2.2.4
 
   # 🗺️ الخرائط والموقع
   http: ^1.1.0
@@ -38,7 +39,6 @@ dependencies:
   firebase_storage: ^12.3.4
 
   # حل تعارض geolocator_web → web
-  web: ^1.1.1
   flutter_dotenv: ^6.0.0
   firebase_app_check: ^0.3.2+10
 
