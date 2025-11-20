@@ -15,6 +15,11 @@ class FarmCard extends StatelessWidget {
   final double? analysisQuality;  // إن وجد
   final String? analysisError;    // إن وجد
 
+  // 🩺 نسب صحة النخيل
+  final double? healthyPct;
+  final double? monitorPct;
+  final double? criticalPct;
+
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
@@ -30,6 +35,9 @@ class FarmCard extends StatelessWidget {
     this.analysisCount,
     this.analysisQuality,
     this.analysisError,
+    this.healthyPct,
+    this.monitorPct,
+    this.criticalPct,
     this.onEdit,
     this.onDelete,
   });
@@ -55,14 +63,14 @@ class FarmCard extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(22),
         child: SizedBox(
-          height: 185, // ✅ طول مريح وثابت
+          height: 195, // زودنا شوي عشان الهيلث
           child: Row(
-            textDirection: TextDirection.rtl, // ✅ الصورة يمين
+            textDirection: TextDirection.rtl,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // ==== الصورة (يمين) ====
               SizedBox(
-                width: 150, // ✅ عرض ثابت
+                width: 150,
                 child: (imageURL != null && imageURL!.isNotEmpty)
                     ? ClipRRect(
                         borderRadius: const BorderRadius.only(
@@ -72,14 +80,15 @@ class FarmCard extends StatelessWidget {
                         child: _FarmImage(
                           url: imageURL!,
                           width: 150,
-                          height: 185, // ✅ يطابق ارتفاع الكرت
+                          height: 195,
                           key: ValueKey('farm-$farmIndex-${imageURL!}'),
                         ),
                       )
                     : const ColoredBox(
                         color: Colors.black26,
                         child: Center(
-                          child: Icon(Icons.image_not_supported, color: Colors.white70, size: 30),
+                          child: Icon(Icons.image_not_supported,
+                              color: Colors.white70, size: 30),
                         ),
                       ),
               ),
@@ -87,8 +96,10 @@ class FarmCard extends StatelessWidget {
               // ==== المعلومات + الأكشن ====
               Expanded(
                 child: Padding(
-                  // ✅ بَدّينغ أخف عموديًا لتفادي الزحمة
-                  padding: const EdgeInsets.symmetric(horizontal: defaultPadding, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: defaultPadding,
+                    vertical: 10,
+                  ),
                   child: Row(
                     children: [
                       // النصوص
@@ -103,19 +114,19 @@ class FarmCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 16, // ✅ أخف شوي
+                                fontSize: 16,
                                 color: darkGreenColor,
                               ),
                             ),
                             const SizedBox(height: 4),
                             Row(
                               children: const [
-                                Icon(Icons.location_on, size: 14, color: darkGreenColor),
+                                Icon(Icons.location_on,
+                                    size: 14, color: darkGreenColor),
                                 SizedBox(width: 4),
                               ],
                             ),
                             Padding(
-                              // مساحة لأيقونة الموقع
                               padding: const EdgeInsets.only(right: 20.0),
                               child: Text(
                                 subtitle,
@@ -132,24 +143,45 @@ class FarmCard extends StatelessWidget {
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 if (sizeText != null) ...[
-                                  const Icon(Icons.straighten, size: 14, color: darkGreenColor),
-                                  Text(sizeText!, style: const TextStyle(color: darkGreenColor)),
+                                  const Icon(Icons.straighten,
+                                      size: 14, color: darkGreenColor),
+                                  Text(
+                                    sizeText!,
+                                    style:
+                                        const TextStyle(color: darkGreenColor),
+                                  ),
                                 ],
                                 if (createdAt != null) ...[
-                                  const Icon(Icons.schedule, size: 14, color: darkGreenColor),
-                                  Text(_formatDate(createdAt!), style: const TextStyle(color: darkGreenColor)),
+                                  const Icon(Icons.schedule,
+                                      size: 14, color: darkGreenColor),
+                                  Text(
+                                    _formatDate(createdAt!),
+                                    style:
+                                        const TextStyle(color: darkGreenColor),
+                                  ),
                                 ],
                               ],
                             ),
                             const SizedBox(height: 8),
 
-                            if (analysisStatus != null && analysisStatus!.isNotEmpty)
+                            if (analysisStatus != null &&
+                                analysisStatus!.isNotEmpty) ...[
                               _AnalysisBadge(
                                 status: analysisStatus!,
                                 count: analysisCount,
                                 quality: analysisQuality,
                                 error: analysisError,
                               ),
+                              const SizedBox(height: 6),
+
+                              // 🩺 ملخّص صحة النخيل تحت عدد النخيل
+                              _HealthSummary(
+                                status: analysisStatus!,
+                                healthyPct: healthyPct,
+                                monitorPct: monitorPct,
+                                criticalPct: criticalPct,
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -163,8 +195,10 @@ class FarmCard extends StatelessWidget {
                           IconButton(
                             onPressed: onEdit,
                             tooltip: 'تعديل',
-                            icon: const Icon(Icons.edit, color: lightGreenColor, size: 20),
-                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            icon: const Icon(Icons.edit,
+                                color: lightGreenColor, size: 20),
+                            constraints: const BoxConstraints(
+                                minWidth: 32, minHeight: 32),
                             padding: EdgeInsets.zero,
                             splashRadius: 18,
                           ),
@@ -172,8 +206,10 @@ class FarmCard extends StatelessWidget {
                           IconButton(
                             onPressed: onDelete,
                             tooltip: 'حذف',
-                            icon: const Icon(Icons.delete_outline, color: prownColor, size: 20),
-                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            icon: const Icon(Icons.delete_outline,
+                                color: prownColor, size: 20),
+                            constraints: const BoxConstraints(
+                                minWidth: 32, minHeight: 32),
                             padding: EdgeInsets.zero,
                             splashRadius: 18,
                           ),
@@ -198,7 +234,7 @@ class FarmCard extends StatelessWidget {
 }
 
 class _AnalysisBadge extends StatelessWidget {
-  final String status;     // pending | processing | done | failed | error
+  final String status; // pending | processing | done | failed | error
   final int? count;
   final double? quality;
   final String? error;
@@ -223,7 +259,8 @@ class _AnalysisBadge extends StatelessWidget {
         content = Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.check_circle, size: 16, color: Color(0xFF1E8D5F)),
+            const Icon(Icons.check_circle,
+                size: 16, color: Color(0xFF1E8D5F)),
             const SizedBox(width: 6),
             Text(
               (count != null) ? 'عدد النخيل: $count' : 'التحليل مكتمل',
@@ -241,7 +278,8 @@ class _AnalysisBadge extends StatelessWidget {
         content = Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 16, color: Color(0xFFB00020)),
+            const Icon(Icons.error_outline,
+                size: 16, color: Color(0xFFB00020)),
             const SizedBox(width: 6),
             Flexible(
               child: Text(
@@ -262,9 +300,14 @@ class _AnalysisBadge extends StatelessWidget {
         content = Row(
           mainAxisSize: MainAxisSize.min,
           children: const [
-            SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+            SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
             SizedBox(width: 8),
-            Text('جاري التحليل…', style: TextStyle(fontWeight: FontWeight.w700)),
+            Text('جاري التحليل…',
+                style: TextStyle(fontWeight: FontWeight.w700)),
           ],
         );
         break;
@@ -281,6 +324,94 @@ class _AnalysisBadge extends StatelessWidget {
         style: TextStyle(color: fg),
         child: content,
       ),
+    );
+  }
+}
+
+// 🩺 ملخّص صحة النخيل تحت البادج
+class _HealthSummary extends StatelessWidget {
+  final String status;
+  final double? healthyPct;
+  final double? monitorPct;
+  final double? criticalPct;
+
+  const _HealthSummary({
+    required this.status,
+    this.healthyPct,
+    this.monitorPct,
+    this.criticalPct,
+  });
+
+  double _clampPct(double? v) {
+    if (v == null || v.isNaN) return 0;
+    if (v < 0) return 0;
+    if (v > 100) return 100;
+    return v;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // نعرض الهيلث فقط إذا التحليل مكتمل وفيه بيانات
+    if (status != 'done') return const SizedBox.shrink();
+    if (healthyPct == null && monitorPct == null && criticalPct == null) {
+      return const SizedBox.shrink();
+    }
+
+    final h = _clampPct(healthyPct);
+    final m = _clampPct(monitorPct);
+    final c = _clampPct(criticalPct);
+
+    Widget chip(Color color, String label, double? value) {
+      final String text =
+          (value == null || value.isNaN) ? '--%' : '${value.toStringAsFixed(1)}%';
+
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.8),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: darkGreenColor,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              text,
+              style: const TextStyle(
+                fontSize: 11,
+                color: darkGreenColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: [
+        chip(const Color(0xFF1E8D5F), 'سليم', h),
+        chip(const Color(0xFFF9A825), 'تحت المراقبة', m),
+        chip(const Color(0xFFB00020), 'حرِج', c),
+      ],
     );
   }
 }
@@ -321,19 +452,22 @@ class _FarmImage extends StatelessWidget {
           child: CircularProgressIndicator(
             strokeWidth: 2.5,
             value: progress.expectedTotalBytes != null
-                ? progress.cumulativeBytesLoaded / (progress.expectedTotalBytes ?? 1)
+                ? progress.cumulativeBytesLoaded /
+                    (progress.expectedTotalBytes ?? 1)
                 : null,
           ),
         );
       },
       errorBuilder: (ctx, error, stack) {
         if (kDebugMode) {
-          debugPrint('[FarmCard][_FarmImage] load error -> $error\nTried URL:\n$fixed');
+          debugPrint(
+              '[FarmCard][_FarmImage] load error -> $error\nTried URL:\n$fixed');
         }
         return const ColoredBox(
           color: Colors.black26,
           child: Center(
-            child: Icon(Icons.broken_image, color: Colors.white70, size: 36),
+            child: Icon(Icons.broken_image,
+                color: Colors.white70, size: 36),
           ),
         );
       },
