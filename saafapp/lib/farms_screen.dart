@@ -25,7 +25,7 @@ class FarmsScreen extends StatelessWidget {
       automaticallyImplyLeading: false,
       elevation: 0,
       backgroundColor: darkGreenColor,
-       toolbarHeight: 140,
+      toolbarHeight: 140,
       title: Row(
         textDirection: TextDirection.ltr,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -50,15 +50,14 @@ class FarmsScreen extends StatelessWidget {
             icon: const Icon(Icons.add, color: Colors.white),
           ),
 
-       //  اللوقو في النص 
+          // اللوقو في النص
           const Expanded(
-  child: Center(
-    child: _LogoButton(), 
-  ),
-),
+            child: Center(
+              child: _LogoButton(),
+            ),
+          ),
 
-
-          // 👇 "مرحباً <الاسم>" عليها الأنيميشن
+          // "مرحباً <الاسم>"
           FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
             future: FirebaseFirestore.instance
                 .collection('users')
@@ -95,7 +94,6 @@ class FarmsScreen extends StatelessWidget {
     );
   }
 
-
   Widget _notLoggedIn(BuildContext context) {
     return Center(
       child: Padding(
@@ -107,8 +105,9 @@ class FarmsScreen extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'الرجاء تسجيل الدخول لعرض مزارعك',
-              style:
-                  GoogleFonts.almarai(color: Colors.white.withValues(alpha: 0.9)),
+              style: GoogleFonts.almarai(
+                color: Colors.white.withValues(alpha: 0.9),
+              ),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -132,6 +131,13 @@ class FarmsScreen extends StatelessWidget {
 class _FarmsList extends StatelessWidget {
   final String uid;
   const _FarmsList({required this.uid});
+
+  double? _asDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v);
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -175,7 +181,6 @@ class _FarmsList extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                // 👇 مزارعي شوي لليسار
                 padding: const EdgeInsets.fromLTRB(0, 16, 24, 8),
                 child: Text(
                   'مزارعي',
@@ -241,6 +246,17 @@ class _FarmsList extends StatelessWidget {
                       : null;
                   final errorMessage = (d['errorMessage'] ?? '') as String?;
 
+                  // 👇 نقرأ الهيلث من Firestore
+                  final healthMap =
+                      d['health'] is Map<String, dynamic> ? d['health'] as Map<String, dynamic> : null;
+
+                  final healthyPct =
+                      healthMap != null ? _asDouble(healthMap['Healthy_Pct']) : null;
+                  final monitorPct =
+                      healthMap != null ? _asDouble(healthMap['Monitor_Pct']) : null;
+                  final criticalPct =
+                      healthMap != null ? _asDouble(healthMap['Critical_Pct']) : null;
+
                   return FarmCard(
                     farmIndex: i,
                     title: name.isEmpty ? 'مزرعة بدون اسم' : name,
@@ -255,6 +271,12 @@ class _FarmsList extends StatelessWidget {
                         (errorMessage != null && errorMessage.isNotEmpty)
                             ? errorMessage
                             : null,
+
+                    // 🩺 نسب صحة النخيل
+                    healthyPct: healthyPct,
+                    monitorPct: monitorPct,
+                    criticalPct: criticalPct,
+
                     onEdit: () async {
                       await Navigator.pushNamed(
                         context,
@@ -360,7 +382,8 @@ class _FarmsList extends StatelessWidget {
     );
   }
 }
- // ستايل الاسم 
+
+// ======================= ستايل الاسم =======================
 
 class GreetingText extends StatefulWidget {
   final String username;
@@ -370,7 +393,9 @@ class GreetingText extends StatefulWidget {
   @override
   State<GreetingText> createState() => _GreetingTextState();
 }
-class _GreetingTextState extends State<GreetingText> with TickerProviderStateMixin{
+
+class _GreetingTextState extends State<GreetingText>
+    with TickerProviderStateMixin {
   bool _hideGreeting = false; // false = "مرحباً الاسم" ، true = "الاسم" فقط
 
   @override
@@ -384,6 +409,7 @@ class _GreetingTextState extends State<GreetingText> with TickerProviderStateMix
       });
     });
   }
+
   @override
   Widget build(BuildContext context) {
     final style = GoogleFonts.almarai(
@@ -395,7 +421,6 @@ class _GreetingTextState extends State<GreetingText> with TickerProviderStateMix
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        //  هنا كلمة "مرحباً" بس
         AnimatedSize(
           duration: const Duration(milliseconds: 600),
           curve: Curves.easeInOut,
@@ -403,7 +428,6 @@ class _GreetingTextState extends State<GreetingText> with TickerProviderStateMix
             duration: const Duration(milliseconds: 600),
             curve: Curves.easeInOut,
             opacity: _hideGreeting ? 0.0 : 1.0,
-            // إذا مختفية نخليها صندوق فاضي عشان عرضها يصير 0
             child: _hideGreeting
                 ? const SizedBox.shrink()
                 : Text(
@@ -412,7 +436,6 @@ class _GreetingTextState extends State<GreetingText> with TickerProviderStateMix
                   ),
           ),
         ),
-        //  اسم المستخدم ثابت، بس يتحرك تلقائياً مكان "مرحباً"
         Text(
           widget.username,
           style: style,
@@ -422,8 +445,7 @@ class _GreetingTextState extends State<GreetingText> with TickerProviderStateMix
   }
 }
 
-
- // ستايل اللوقو 
+// ======================= ستايل اللوقو =======================
 
 class _LogoButton extends StatefulWidget {
   const _LogoButton();
@@ -437,12 +459,12 @@ class _LogoButtonState extends State<_LogoButton> {
 
   @override
   Widget build(BuildContext context) {
-    const double logoSize = 150.0; //  حجم اللوقو
+    const double logoSize = 150.0;
 
     return MouseRegion(
       onEnter: (_) {
         setState(() {
-          _scale = 1.12; //  توسع شوي بس
+          _scale = 1.12;
         });
       },
       onExit: (_) {
@@ -452,7 +474,7 @@ class _LogoButtonState extends State<_LogoButton> {
       },
       child: GestureDetector(
         onTap: () {
-        Navigator.pushNamed(context, '/about');
+          Navigator.pushNamed(context, '/about');
         },
         child: AnimatedScale(
           scale: _scale,
