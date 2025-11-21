@@ -73,8 +73,9 @@ void _initializeAppCheckInBackground() {
       } else {
         // الجوال
         await FirebaseAppCheck.instance.activate(
-          androidProvider:
-              kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+          androidProvider: kDebugMode
+              ? AndroidProvider.debug
+              : AndroidProvider.playIntegrity,
           appleProvider: AppleProvider.appAttest,
         );
       }

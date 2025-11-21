@@ -10,10 +10,11 @@ class FarmCard extends StatelessWidget {
   final String? imageURL;
   final DateTime? createdAt;
 
-  final String? analysisStatus;   // "pending" | "processing" | "done" | "failed" | "error"
-  final int? analysisCount;       // يظهر عند الانتهاء
-  final double? analysisQuality;  // إن وجد
-  final String? analysisError;    // إن وجد
+  final String?
+  analysisStatus; // "pending" | "processing" | "done" | "failed" | "error"
+  final int? analysisCount; // يظهر عند الانتهاء
+  final double? analysisQuality; // إن وجد
+  final String? analysisError; // إن وجد
 
   // 🩺 نسب صحة النخيل
   final double? healthyPct;
@@ -50,14 +51,18 @@ class FarmCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.symmetric(
-        horizontal: defaultPadding,
+        horizontal: 1,
         vertical: defaultPadding / 2,
       ),
       decoration: BoxDecoration(
         color: beige,
         borderRadius: BorderRadius.circular(22),
         boxShadow: const [
-          BoxShadow(offset: Offset(0, 8), blurRadius: 18, color: Colors.black26),
+          BoxShadow(
+            offset: Offset(0, 8),
+            blurRadius: 18,
+            color: Colors.black26,
+          ),
         ],
       ),
       child: ClipRRect(
@@ -69,8 +74,9 @@ class FarmCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // ==== الصورة (يمين) ====
-              SizedBox(
-                width: 150,
+              Flexible(
+                // 👈 تم التعديل هنا
+                flex: 3, // 40% من المساحة
                 child: (imageURL != null && imageURL!.isNotEmpty)
                     ? ClipRRect(
                         borderRadius: const BorderRadius.only(
@@ -79,7 +85,7 @@ class FarmCard extends StatelessWidget {
                         ),
                         child: _FarmImage(
                           url: imageURL!,
-                          width: 150,
+                          width: double.infinity, // لملء الـ Flexible
                           height: 195,
                           key: ValueKey('farm-$farmIndex-${imageURL!}'),
                         ),
@@ -87,18 +93,25 @@ class FarmCard extends StatelessWidget {
                     : const ColoredBox(
                         color: Colors.black26,
                         child: Center(
-                          child: Icon(Icons.image_not_supported,
-                              color: Colors.white70, size: 30),
+                          child: Icon(
+                            Icons.image_not_supported,
+                            color: Colors.white70,
+                            size: 30,
+                          ),
                         ),
                       ),
               ),
 
               // ==== المعلومات + الأكشن ====
               Expanded(
+                flex: 8,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: defaultPadding,
-                    vertical: 10,
+                  padding: const EdgeInsets.only(
+                    right: defaultPadding,
+                    // ✅ اليسار (L): هامش بسيط جداً لزيادة المساحة المتاحة للمحتوى
+                    left: 0,
+                    top: 10,
+                    bottom: 10,
                   ),
                   child: Row(
                     children: [
@@ -121,8 +134,11 @@ class FarmCard extends StatelessWidget {
                             const SizedBox(height: 4),
                             Row(
                               children: const [
-                                Icon(Icons.location_on,
-                                    size: 14, color: darkGreenColor),
+                                Icon(
+                                  Icons.location_on,
+                                  size: 14,
+                                  color: darkGreenColor,
+                                ),
                                 SizedBox(width: 4),
                               ],
                             ),
@@ -143,21 +159,29 @@ class FarmCard extends StatelessWidget {
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 if (sizeText != null) ...[
-                                  const Icon(Icons.straighten,
-                                      size: 14, color: darkGreenColor),
+                                  const Icon(
+                                    Icons.straighten,
+                                    size: 14,
+                                    color: darkGreenColor,
+                                  ),
                                   Text(
                                     sizeText!,
-                                    style:
-                                        const TextStyle(color: darkGreenColor),
+                                    style: const TextStyle(
+                                      color: darkGreenColor,
+                                    ),
                                   ),
                                 ],
                                 if (createdAt != null) ...[
-                                  const Icon(Icons.schedule,
-                                      size: 14, color: darkGreenColor),
+                                  const Icon(
+                                    Icons.schedule,
+                                    size: 14,
+                                    color: darkGreenColor,
+                                  ),
                                   Text(
                                     _formatDate(createdAt!),
-                                    style:
-                                        const TextStyle(color: darkGreenColor),
+                                    style: const TextStyle(
+                                      color: darkGreenColor,
+                                    ),
                                   ),
                                 ],
                               ],
@@ -195,10 +219,15 @@ class FarmCard extends StatelessWidget {
                           IconButton(
                             onPressed: onEdit,
                             tooltip: 'تعديل',
-                            icon: const Icon(Icons.edit,
-                                color: lightGreenColor, size: 20),
+                            icon: const Icon(
+                              Icons.edit,
+                              color: lightGreenColor,
+                              size: 20,
+                            ),
                             constraints: const BoxConstraints(
-                                minWidth: 32, minHeight: 32),
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
                             padding: EdgeInsets.zero,
                             splashRadius: 18,
                           ),
@@ -206,10 +235,15 @@ class FarmCard extends StatelessWidget {
                           IconButton(
                             onPressed: onDelete,
                             tooltip: 'حذف',
-                            icon: const Icon(Icons.delete_outline,
-                                color: prownColor, size: 20),
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              color: prownColor,
+                              size: 20,
+                            ),
                             constraints: const BoxConstraints(
-                                minWidth: 32, minHeight: 32),
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
                             padding: EdgeInsets.zero,
                             splashRadius: 18,
                           ),
@@ -259,8 +293,7 @@ class _AnalysisBadge extends StatelessWidget {
         content = Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.check_circle,
-                size: 16, color: Color(0xFF1E8D5F)),
+            const Icon(Icons.check_circle, size: 16, color: Color(0xFF1E8D5F)),
             const SizedBox(width: 6),
             Text(
               (count != null) ? 'عدد النخيل: $count' : 'التحليل مكتمل',
@@ -278,8 +311,7 @@ class _AnalysisBadge extends StatelessWidget {
         content = Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline,
-                size: 16, color: Color(0xFFB00020)),
+            const Icon(Icons.error_outline, size: 16, color: Color(0xFFB00020)),
             const SizedBox(width: 6),
             Flexible(
               child: Text(
@@ -306,8 +338,10 @@ class _AnalysisBadge extends StatelessWidget {
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
             SizedBox(width: 8),
-            Text('جاري التحليل…',
-                style: TextStyle(fontWeight: FontWeight.w700)),
+            Text(
+              'جاري التحليل…',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ],
         );
         break;
@@ -349,6 +383,34 @@ class _HealthSummary extends StatelessWidget {
     return v;
   }
 
+  // ===============================================
+  // ✅ الدالة المساعدة (Method) لعرض النص المئوي
+  // ===============================================
+  Widget _buildLabel(Color color, String label, double value) {
+    // إظهار النص فقط إذا كانت النسبة أكبر من 1%
+    if (value < 1.0) return const SizedBox.shrink();
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 6,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '$label ${value.toStringAsFixed(0)}%',
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: darkGreenColor,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // نعرض الهيلث فقط إذا التحليل مكتمل وفيه بيانات
@@ -357,61 +419,91 @@ class _HealthSummary extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final h = _clampPct(healthyPct);
-    final m = _clampPct(monitorPct);
-    final c = _clampPct(criticalPct);
+    // تحويل النسب إلى قيمة بين 0 و 1000 لخاصية flex
+    final h = (_clampPct(healthyPct) * 10).toInt();
+    final m = (_clampPct(monitorPct) * 10).toInt();
+    final c = (_clampPct(criticalPct) * 10).toInt();
 
-    Widget chip(Color color, String label, double? value) {
-      final String text =
-          (value == null || value.isNaN) ? '--%' : '${value.toStringAsFixed(1)}%';
+    // الألوان المستخدمة في الشريط (مستمدة من الألوان الأصلية)
+    const Color healthyColor = Color(0xFF1E8D5F); // أخضر
+    const Color monitorColor = Color(0xFFF9A825); // أصفر/برتقالي
+    const Color criticalColor = Color(0xFFB00020); // أحمر
 
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.8),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: darkGreenColor,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              text,
-              style: const TextStyle(
-                fontSize: 11,
-                color: darkGreenColor,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+    final healthBar = LayoutBuilder(
+      builder: (context, constraints) {
+        final barWidth = constraints.maxWidth * 0.80;
+        return SizedBox(
+          width: barWidth, // 👈 ياخذ كل العرض المتاح
+          child: Row(
+            children: [
+              // الأحمر (حرج) - يسار
+              if (c > 0)
+                Expanded(
+                  flex: c,
+                  child: Container(
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: criticalColor,
+                      borderRadius: BorderRadius.only(
+                        topRight: Radius.circular(5),
+                        bottomRight: Radius.circular(5),
+                      ),
+                    ),
+                  ),
+                ),
 
-    return Wrap(
-      spacing: 6,
-      runSpacing: 4,
+              // الأصفر (تحت المراقبة)
+              if (m > 0)
+                Expanded(
+                  flex: m,
+                  child: Container(height: 8, color: monitorColor),
+                ),
+
+              // الأخضر (سليم) - يمين
+              if (h > 0)
+                Expanded(
+                  flex: h,
+                  child: Container(
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: healthyColor,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(5),
+                        bottomLeft: Radius.circular(5),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+
+    // نصوص النسب المئوية (أسفل الشريط)
+    final textLabels = Row(
+      mainAxisAlignment: MainAxisAlignment.start, // 👈 بدل SpaceBetween
+      textDirection: TextDirection.rtl,
       children: [
-        chip(const Color(0xFF1E8D5F), 'سليم', h),
-        chip(const Color(0xFFF9A825), 'تحت المراقبة', m),
-        chip(const Color(0xFFB00020), 'حرِج', c),
+        _buildLabel(criticalColor, 'حرج', _clampPct(criticalPct)),
+        const SizedBox(width: 10),
+        _buildLabel(monitorColor, 'مراقبة', _clampPct(monitorPct)),
+        const SizedBox(width: 10),
+        _buildLabel(healthyColor, 'سليم', _clampPct(healthyPct)),
       ],
+    );
+
+    // تجميع الشريط والنصوص في عمود
+    // تجميع الشريط والنصوص في عمود
+    return Align(
+      alignment:
+          Alignment.centerLeft, // ✅ التعديل: المحاذاة الخارجية إلى اليسار
+      child: Column(
+        // محاذاة العناصر الداخلية لليسار (Start في سياق RTL)
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [healthBar, const SizedBox(height: 8), textLabels],
+      ),
     );
   }
 }
@@ -453,7 +545,7 @@ class _FarmImage extends StatelessWidget {
             strokeWidth: 2.5,
             value: progress.expectedTotalBytes != null
                 ? progress.cumulativeBytesLoaded /
-                    (progress.expectedTotalBytes ?? 1)
+                      (progress.expectedTotalBytes ?? 1)
                 : null,
           ),
         );
@@ -461,13 +553,13 @@ class _FarmImage extends StatelessWidget {
       errorBuilder: (ctx, error, stack) {
         if (kDebugMode) {
           debugPrint(
-              '[FarmCard][_FarmImage] load error -> $error\nTried URL:\n$fixed');
+            '[FarmCard][_FarmImage] load error -> $error\nTried URL:\n$fixed',
+          );
         }
         return const ColoredBox(
           color: Colors.black26,
           child: Center(
-            child: Icon(Icons.broken_image,
-                color: Colors.white70, size: 36),
+            child: Icon(Icons.broken_image, color: Colors.white70, size: 36),
           ),
         );
       },
