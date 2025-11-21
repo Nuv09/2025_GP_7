@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -123,6 +122,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   // 💡 دالة لتقييم قوة كلمة المرور وتحديث الحالة (تم التصحيح هنا)
+  // 💡 دالة لتقييم قوة كلمة المرور وتحديث الحالة (النسخة المصححة)
   void _updatePasswordStrength() {
     final password = _passCtrl.text;
     if (password.isEmpty) {
@@ -137,8 +137,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final result = _zxcvbn.evaluate(password, userInputs: userInputs);
 
     setState(() {
-      // ✅ التصحيح: الاعتماد على الإخراج الصحيح وتجنب الـ as int و .warning القسري
-      _passwordScore = result.score as int;
+      // ✅ التصحيح: ضمان أن القيمة المحصلة هي عدد صحيح
+      _passwordScore = (result.score ?? 0)
+          .toInt(); // استخدم النتيجة مباشرةً أو 0 كقيمة احتياطية
       _passwordWarning = result.feedback.warning;
     });
   }
@@ -351,7 +352,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(22),
                           child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                            filter: const ColorFilter.mode(
+                              Colors.black12,
+                              BlendMode.srcOver,
+                            ),
                             child: Container(
                               width: double.infinity,
                               padding: const EdgeInsets.fromLTRB(
@@ -452,37 +456,51 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     textInputAction: TextInputAction.done,
                                   ),
                                   const SizedBox(height: 18),
-                                  
+
                                   Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Checkbox(
                                         value: _agreeTerms,
-                                        onChanged: (v) => setState(() => _agreeTerms = v ?? false),
+                                        onChanged: (v) => setState(
+                                          () => _agreeTerms = v ?? false,
+                                        ),
                                         activeColor: kOrange,
                                         checkColor: kDeepGreen,
-                                        side: const BorderSide(color: kLightBeige),
+                                        side: const BorderSide(
+                                          color: kLightBeige,
+                                        ),
                                       ),
                                       Expanded(
                                         child: Padding(
-                                          padding: const EdgeInsets.only(top: 12.0),
+                                          padding: const EdgeInsets.only(
+                                            top: 12.0,
+                                          ),
                                           child: InkWell(
-                                            onTap: _showTermsDialog, 
+                                            onTap: _showTermsDialog,
                                             child: RichText(
                                               textAlign: TextAlign.right,
                                               text: TextSpan(
                                                 style: GoogleFonts.almarai(
-                                                  color: kLightBeige.withValues(alpha: 0.8),
+                                                  color: kLightBeige.withValues(
+                                                    alpha: 0.8,
+                                                  ),
                                                   fontSize: 13,
                                                 ),
                                                 children: [
-                                                  const TextSpan(text: 'أوافق على '),
+                                                  const TextSpan(
+                                                    text: 'أوافق على ',
+                                                  ),
                                                   TextSpan(
-                                                    text: 'شروط الخدمة وسياسة الخصوصية',
+                                                    text:
+                                                        'شروط الخدمة وسياسة الخصوصية',
                                                     style: GoogleFonts.almarai(
                                                       color: kOrange,
-                                                      fontWeight: FontWeight.bold,
-                                                      decoration: TextDecoration.underline,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      decoration: TextDecoration
+                                                          .underline,
                                                     ),
                                                   ),
                                                 ],
