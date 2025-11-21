@@ -133,24 +133,30 @@ class FarmCard extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Row(
-                              children: const [
-                                Icon(
+                              // 👈 حذفنا const من الـ Row لكي نتمكن من استخدام subtitle
+                              children: [
+                                const Icon(
+                                  // 👈 الأيقونة
                                   Icons.location_on,
                                   size: 14,
                                   color: darkGreenColor,
                                 ),
-                                SizedBox(width: 4),
+                                const SizedBox(width: 4),
+                                // 👈 النص (اسم المنطقة) بجانب الأيقونة مباشرة
+                                Flexible(
+                                  // نستخدم Flexible أو Expanded لضمان عدم تجاوز النص لحجم الكارت
+                                  child: Text(
+                                    subtitle, // هنا يوجد 'الرياض'
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: darkGreenColor,
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
-                            Padding(
-                              padding: const EdgeInsets.only(right: 20.0),
-                              child: Text(
-                                subtitle,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(color: darkGreenColor),
-                              ),
-                            ),
+                            // 👈 حذفنا عنصر Padding الذي كان يحتوي على النص
                             const SizedBox(height: 6),
 
                             Wrap(
