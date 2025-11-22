@@ -473,9 +473,7 @@ class _LogoButtonState extends State<_LogoButton> {
         });
       },
       child: GestureDetector(
-        onTap: () {
-          Navigator.pushNamed(context, '/about');
-        },
+
         child: AnimatedScale(
           scale: _scale,
           duration: const Duration(milliseconds: 220),
