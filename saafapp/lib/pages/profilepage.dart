@@ -254,7 +254,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _brokenImage() => Container(
         width: 120,
         height: 120,
-        color: Colors.white.withOpacity(0.15),
+        color: Colors.white.withValues(alpha: 0.15),
         alignment: Alignment.center,
         child: const Icon(Icons.person, color: Colors.white70, size: 40),
       );
@@ -701,7 +701,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         borderRadius: BorderRadius.circular(15),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.25), // ✅ تصحيح
+                           color: Colors.black.withValues(alpha: 0.25),
                             blurRadius: 12,
                             offset: const Offset(0, 6),
                           ),
