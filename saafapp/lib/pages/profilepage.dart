@@ -614,9 +614,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       if (v.isEmpty) {
                         return 'الرجاء إدخال الاسم';
                       }
-                      if (v.length < 2) {
-                        return 'الاسم يجب ألا يقل عن حرفين';
-                      }
+                      
                       return null;
                     },
                   ),
@@ -678,6 +676,13 @@ class _ProfilePageState extends State<ProfilePage> {
                         borderSide: BorderSide(color: kAccent, width: 2),
                       ),
                     ),
+
+                     validator: (value) {
+                      if (value == null || value.isEmpty) {
+                          return 'الرجاء اختيار المنطقة';
+                            }
+                              return null;
+                                   },
                     dropdownColor: kDeepGreen,
                     style: GoogleFonts.almarai(color: Colors.white),
                     isExpanded: true,

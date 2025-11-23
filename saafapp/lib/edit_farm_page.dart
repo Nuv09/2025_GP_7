@@ -25,7 +25,7 @@ import 'package:saafapp/secrets.dart';
 
 const Color primaryColor = Color(0xFF1E8D5F);
 const Color secondaryColor = Color(0xFFFDCB6E);
-const Color darkBackground = Color(0xFF0D251D);
+const Color darkBackground = Color(0xFF042C25);
 
 class EditFarmPage extends StatefulWidget {
   const EditFarmPage({super.key});
