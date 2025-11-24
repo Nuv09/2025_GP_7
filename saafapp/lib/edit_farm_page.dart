@@ -388,7 +388,7 @@ final String _placesKey = Secrets.placesKey;
   // تشغيل التحليل على Cloud Run
   Future<void> _startAnalysis(String farmId) async {
     try {
-      final uri = Uri.parse('https://saaf-analyzer-us-120954850101.us-central1.run.app/analyze');
+      final uri = Uri.parse('https://saaf-analyzer-new-120954850101.us-central1.run.app/analyze');
       final res = await http.post(
         uri,
         headers: {'Content-Type': 'application/json'},

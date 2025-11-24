@@ -660,7 +660,7 @@ Future<void> _searchAndGo() async {
           try {
             final response = await http.post(
               Uri.parse(
-                  'https://saaf-analyzer-us-120954850101.us-central1.run.app/analyze'),
+                  'https://saaf-analyzer-new-120954850101.us-central1.run.app/analyze'),
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode({'farmId': docRef.id}),
             );
