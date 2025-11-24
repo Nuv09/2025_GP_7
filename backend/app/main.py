@@ -240,6 +240,7 @@ def analyze():
             finalCount=count_summary["count"],
             finalQuality=count_summary["quality"],
             health=health_result,
+            # result=count_summary,
             errorMessage=None,
         )
 
