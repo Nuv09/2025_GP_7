@@ -239,7 +239,6 @@ def analyze():
             status="done",
             finalCount=count_summary["count"],
             finalQuality=count_summary["quality"],
-            result=count_summary,   # مو كل A/B و best_detections، بس الملخص
             health=health_result,
             errorMessage=None,
         )
