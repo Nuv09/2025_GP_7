@@ -23,6 +23,7 @@ COPY requirements.txt .
 RUN python -m pip install --no-cache-dir -r requirements.txt
 
 # نسخ السورس
+COPY backend ./backend
 COPY backend/app ./app
 RUN mkdir -p /tmp
 
