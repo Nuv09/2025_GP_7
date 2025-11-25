@@ -130,7 +130,6 @@ class _AboutUsPageState extends State<AboutUsPage> {
   }
 
   // ------------------ Text Section -----------------------
-  // ------------------ Text Section -----------------------
 Widget _buildTextSection() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 15),
@@ -183,7 +182,7 @@ Widget _buildTextSection() {
   Widget _buildContactSection() {
     return Column(
       children: [
-        const SizedBox(height: 40),
+        const SizedBox(height: 5),
 
         InkWell(
           onTap: () async {

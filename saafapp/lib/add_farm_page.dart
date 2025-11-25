@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
+import 'package:saafapp/constant.dart';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -437,63 +438,66 @@ Future<void> _searchAndGo() async {
     return t;
   }
 
-  Future<bool> _confirmDialog(String title, String message) async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: const Color.fromARGB(255, 3, 56, 13),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-            ),
-            title: Text(
-              title,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.almarai(
-                color: secondaryColor,
-                fontWeight: FontWeight.w800,
-                fontSize: 22,
-              ),
-            ),
-            content: Text(
-              message,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.almarai(
-                color: secondaryColor,
-                fontSize: 16,
-                height: 1.5,
-              ),
-            ),
-            actionsAlignment: MainAxisAlignment.center,
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(
-                  'إلغاء',
-                  style: GoogleFonts.almarai(
-                    color: const Color(0xFF777777),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: secondaryColor,
-                  foregroundColor: const Color(0xFF042C25),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(
-                  'متابعة',
-                  style: GoogleFonts.almarai(fontWeight: FontWeight.w800),
-                ),
-              ),
-            ],
+ Future<bool> _confirmDialog(String title, String message) async {
+  return await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF042C25), // اللون الجديد للخلفية
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
           ),
-        ) ??
-        false;
-  }
+          title: Text(
+            title,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.almarai(
+              color: const Color(0xFFFFF6E0), // ← اللون الجديد للنص
+              fontWeight: FontWeight.w800,
+              fontSize: 22,
+            ),
+          ),
+          content: Text(
+            message,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.almarai(
+              color: const Color(0xFFFFF6E0), // ← اللون الجديد للنص
+              fontSize: 16,
+              height: 1.5,
+            ),
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(
+                'إلغاء',
+                style: GoogleFonts.almarai(
+                  color: const Color(0xFFFFF6E0), // ← لو تبينه بيج
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: secondaryColor,
+                foregroundColor: const Color(0xFF042C25),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(
+                'متابعة',
+                style: GoogleFonts.almarai(
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF042C25),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ) ??
+      false;
+}
 
   // =================== رفع الصورة (اختياري) ===================
   // ignore: unused_element
@@ -833,20 +837,13 @@ Future<void> _searchAndGo() async {
                 onTap: () => Navigator.of(context)
                     .pushNamedAndRemoveUntil('/main', (route) => false),
                 child: const Padding(
-                  padding: EdgeInsets.all(10),
+                  padding: EdgeInsets.only(right: 7, left: 14),
                   child: Icon(Icons.arrow_back, color: Colors.white),
                 ),
               ),
             ),
           ),
-          title: Text(
-            'إضافة مزرعة جديدة',
-            style: GoogleFonts.almarai(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+          title: Text('إضافة مزرعة جديدة', style: saafPageTitle),
         ),
 
         body: SingleChildScrollView(

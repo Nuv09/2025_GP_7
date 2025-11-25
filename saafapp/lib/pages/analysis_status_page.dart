@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:saafapp/constant.dart';
 
 const Color kDeepGreen = Color(0xFF042C25);
 const Color kLightBeige = Color(0xFFFFF6E0);
@@ -33,14 +34,8 @@ class AnalysisStatusPage extends StatelessWidget {
           backgroundColor: kDeepGreen,
           elevation: 0,
           centerTitle: true,
-          title: Text(
-            'تحليل المزرعة',
-            style: GoogleFonts.almarai(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-              fontSize: 22,
-            ),
-          ),
+          title: Text('تحليل المزرعة', style: saafPageTitle),
+
           leading: IconButton(
             icon: const Icon(Icons.close, color: Colors.white),
             onPressed: () => _goHome(context),

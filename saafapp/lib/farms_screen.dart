@@ -25,7 +25,7 @@ class FarmsScreen extends StatelessWidget {
       automaticallyImplyLeading: false,
       elevation: 0,
       backgroundColor: darkGreenColor,
-      toolbarHeight: 140,
+      toolbarHeight: 80,
       title: Row(
         textDirection: TextDirection.ltr,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -51,11 +51,7 @@ class FarmsScreen extends StatelessWidget {
           ),
 
           // اللوقو في النص
-          const Expanded(
-            child: Center(
-              child: _LogoButton(),
-            ),
-          ),
+          const Expanded(child: Center(child: _LogoButton())),
 
           // "مرحباً <الاسم>"
           FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
@@ -84,8 +80,9 @@ class FarmsScreen extends StatelessWidget {
                 await FirebaseAuth.instance.signOut();
               } catch (_) {}
               if (context.mounted) {
-                Navigator.of(context)
-                    .pushNamedAndRemoveUntil('/login', (r) => false);
+                Navigator.of(
+                  context,
+                ).pushNamedAndRemoveUntil('/login', (r) => false);
               }
             },
           ),
@@ -150,7 +147,8 @@ class _FarmsList extends StatelessWidget {
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(
-              child: CircularProgressIndicator(color: Colors.white));
+            child: CircularProgressIndicator(color: Colors.white),
+          );
         }
         if (snap.hasError) {
           final msg = snap.error.toString();
@@ -181,17 +179,10 @@ class _FarmsList extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(0, 16, 24, 8),
-                child: Text(
-                  'مزارعي',
-                  style: GoogleFonts.almarai(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize:
-                        Theme.of(context).textTheme.titleLarge?.fontSize ?? 22,
-                  ),
-                ),
+                padding: const EdgeInsets.fromLTRB(0, 0, 24, 8),
+                child: Text('مزارعي', style: saafPageTitle),
               ),
+
               Expanded(
                 child: Center(
                   child: Text(
@@ -210,17 +201,10 @@ class _FarmsList extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(0, 16, 24, 8),
-              child: Text(
-                'مزارعي',
-                style: GoogleFonts.almarai(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize:
-                      Theme.of(context).textTheme.titleLarge?.fontSize ?? 22,
-                ),
-              ),
+              padding: const EdgeInsets.fromLTRB(0, 0, 24, 8),
+              child: Text('مزارعي', style: saafPageTitle),
             ),
+
             Expanded(
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
@@ -232,30 +216,36 @@ class _FarmsList extends StatelessWidget {
                   final name = (d['farmName'] ?? '').toString();
                   final region = (d['region'] ?? '').toString();
                   final size = (d['farmSize'] ?? '').toString();
-                  final imageURL =
-                      (d['imageURL'] ?? d['imageUrl'] ?? '').toString().trim();
+                  final imageURL = (d['imageURL'] ?? d['imageUrl'] ?? '')
+                      .toString()
+                      .trim();
                   final createdAt = (d['createdAt'] is Timestamp)
                       ? (d['createdAt'] as Timestamp).toDate()
                       : null;
 
                   final status = (d['status'] ?? '').toString();
-                  final finalCount =
-                      (d['finalCount'] is int) ? d['finalCount'] as int : null;
+                  final finalCount = (d['finalCount'] is int)
+                      ? d['finalCount'] as int
+                      : null;
                   final finalQuality = (d['finalQuality'] is num)
                       ? (d['finalQuality'] as num).toDouble()
                       : null;
                   final errorMessage = (d['errorMessage'] ?? '') as String?;
 
                   // 👇 نقرأ الهيلث من Firestore
-                  final healthMap =
-                      d['health'] is Map<String, dynamic> ? d['health'] as Map<String, dynamic> : null;
+                  final healthMap = d['health'] is Map<String, dynamic>
+                      ? d['health'] as Map<String, dynamic>
+                      : null;
 
-                  final healthyPct =
-                      healthMap != null ? _asDouble(healthMap['Healthy_Pct']) : null;
-                  final monitorPct =
-                      healthMap != null ? _asDouble(healthMap['Monitor_Pct']) : null;
-                  final criticalPct =
-                      healthMap != null ? _asDouble(healthMap['Critical_Pct']) : null;
+                  final healthyPct = healthMap != null
+                      ? _asDouble(healthMap['Healthy_Pct'])
+                      : null;
+                  final monitorPct = healthMap != null
+                      ? _asDouble(healthMap['Monitor_Pct'])
+                      : null;
+                  final criticalPct = healthMap != null
+                      ? _asDouble(healthMap['Critical_Pct'])
+                      : null;
 
                   return FarmCard(
                     farmIndex: i,
@@ -269,8 +259,8 @@ class _FarmsList extends StatelessWidget {
                     analysisQuality: finalQuality,
                     analysisError:
                         (errorMessage != null && errorMessage.isNotEmpty)
-                            ? errorMessage
-                            : null,
+                        ? errorMessage
+                        : null,
 
                     // 🩺 نسب صحة النخيل
                     healthyPct: healthyPct,
@@ -285,11 +275,11 @@ class _FarmsList extends StatelessWidget {
                       );
                     },
                     onDelete: () async {
-                      final ok = await showDialog<bool>(
+                      final ok =
+                          await showDialog<bool>(
                             context: context,
                             builder: (ctx) => AlertDialog(
-                              backgroundColor:
-                                  const Color.fromARGB(255, 3, 56, 13),
+                              backgroundColor: const Color(0xFF042C25),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(24),
                               ),
@@ -297,7 +287,7 @@ class _FarmsList extends StatelessWidget {
                                 'تأكيد الحذف',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.almarai(
-                                  color: const Color(0xFFFDCB6E),
+                                  color: const Color(0xFFFFF6E0),
                                   fontWeight: FontWeight.w800,
                                   fontSize: 22,
                                 ),
@@ -306,7 +296,7 @@ class _FarmsList extends StatelessWidget {
                                 'هل أنت متأكد من حذف "${name.isEmpty ? 'هذه المزرعة' : name}"؟',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.almarai(
-                                  color: const Color(0xFFFDCB6E),
+                                  color: const Color(0xFFFFF6E0),
                                   fontSize: 16,
                                   height: 1.5,
                                 ),
@@ -318,7 +308,7 @@ class _FarmsList extends StatelessWidget {
                                   child: Text(
                                     'إلغاء',
                                     style: GoogleFonts.almarai(
-                                      color: const Color(0xFF777777),
+                                      color: const Color(0xFFFFF6E0),
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
@@ -430,16 +420,10 @@ class _GreetingTextState extends State<GreetingText>
             opacity: _hideGreeting ? 0.0 : 1.0,
             child: _hideGreeting
                 ? const SizedBox.shrink()
-                : Text(
-                    'مرحباً ',
-                    style: style,
-                  ),
+                : Text('مرحباً ', style: style),
           ),
         ),
-        Text(
-          widget.username,
-          style: style,
-        ),
+        Text(widget.username, style: style),
       ],
     );
   }
@@ -473,7 +457,6 @@ class _LogoButtonState extends State<_LogoButton> {
         });
       },
       child: GestureDetector(
-
         child: AnimatedScale(
           scale: _scale,
           duration: const Duration(milliseconds: 220),

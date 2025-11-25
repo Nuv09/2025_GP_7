@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:saafapp/constant.dart';
 
 // ✅ Reverse Geocoding
 import 'package:geocoding/geocoding.dart' show Placemark, placemarkFromCoordinates, Location, locationFromAddress;
@@ -484,39 +485,65 @@ final String _placesKey = Secrets.placesKey;
     return t;
     }
 
-  Future<bool> _confirmDialog(String title, String message) async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: const Color.fromARGB(255, 3, 56, 13),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-            title: Text(title,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.almarai(color: secondaryColor, fontWeight: FontWeight.w800, fontSize: 22)),
-            content: Text(message,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.almarai(color: secondaryColor, fontSize: 16, height: 1.5)),
-            actionsAlignment: MainAxisAlignment.center,
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text('إلغاء',
-                    style: GoogleFonts.almarai(color: const Color(0xFF777777), fontWeight: FontWeight.w700)),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: secondaryColor,
-                  foregroundColor: const Color(0xFF042C25),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text('متابعة', style: GoogleFonts.almarai(fontWeight: FontWeight.w800)),
-              ),
-            ],
+Future<bool> _confirmDialog(String title, String message) async {
+  return await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF042C25), // ← الخلفية المطلوبة
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
           ),
-        ) ??
-        false;
-  }
+          title: Text(
+            title,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.almarai(
+              color: const Color(0xFFFFF6E0), // ← لون النص البيج
+              fontWeight: FontWeight.w800,
+              fontSize: 22,
+            ),
+          ),
+          content: Text(
+            message,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.almarai(
+              color: const Color(0xFFFFF6E0), // ← لون النص البيج
+              fontSize: 16,
+              height: 1.5,
+            ),
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(
+                'إلغاء',
+                style: GoogleFonts.almarai(
+                  color: const Color(0xFFFFF6E0), // ← بيج
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: secondaryColor,
+                foregroundColor: const Color(0xFF042C25),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(
+                'متابعة',
+                style: GoogleFonts.almarai(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ) ??
+      false;
+}
 
   // ======== حفظ التعديلات ========
   Future<void> _updateFarm() async {
@@ -666,20 +693,13 @@ final String _placesKey = Secrets.placesKey;
                 customBorder: const CircleBorder(),
                 onTap: () => Navigator.pop(context),
                 child: const Padding(
-                  padding: EdgeInsets.all(10),
+                  padding: EdgeInsets.only(right: 7, left: 14),
                   child: Icon(Icons.arrow_back, color: Colors.white),
                 ),
               ),
             ),
           ),
-          title: Text(
-            'تعديل المزرعة',
-            style: GoogleFonts.almarai(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-              fontSize: 20,
-            ),
-          ),
+          title: Text('تعديل المزرعة', style: saafPageTitle),
           actions: const [SizedBox(width: 56)],
         ),
 

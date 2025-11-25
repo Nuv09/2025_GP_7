@@ -167,19 +167,51 @@ class _MainShellState extends State<MainShell> {
       extendBody: true,
       body: IndexedStack(index: _index, children: _pages),
       bottomNavigationBar: CurvedNavigationBar(
-        height: 70,
+        height: 65,
         color: beige,
         backgroundColor: darkGreenColor,
         animationDuration: const Duration(milliseconds: 300),
         index: _index,
-        items: const [
-          Icon(Icons.home, size: 30, color: goldColor),
-          Icon(Icons.add, size: 30, color: goldColor),
-          Icon(Icons.person, size: 30, color: goldColor),
-          Icon(Icons.info_outline, size: 30, color: goldColor),
-        ],
+items: [
+  _navItem(Icons.home, "مزارعي", _index == 0),
+  _navItem(Icons.add, "إضافة", _index == 1),
+  _navItem(Icons.person, "ملفي", _index == 2),
+  _navItem(Icons.info_outline, "عن سعف", _index == 3),
+],
+
         onTap: (i) => setState(() => _index = i),
       ),
     );
   }
+}
+Widget _navItem(IconData icon, String label, bool active) {
+  return Padding(
+    padding: const EdgeInsets.only(top: 4), // 🔥 هنا نزلنا العناصر تحت
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          icon,
+          size: active ? 33 : 29,
+          color: goldColor,
+        ),
+
+        AnimatedOpacity(
+          duration: Duration(milliseconds: 200),
+          opacity: active ? 1.0 : 0.0,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            child: Text(
+              label,
+              style: GoogleFonts.cairo(
+                fontWeight: FontWeight.w900, // أثقل خط
+                fontSize: 12,
+                color: goldColor,
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }

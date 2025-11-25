@@ -20,7 +20,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _obscure = true;
-  bool _remember = false;
   bool _loading = false;
 
   final _auth = FirebaseAuth.instance;
@@ -489,37 +488,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Row(
-                                          children: [
-                                            Checkbox(
-                                              value: _remember,
-                                              onChanged: (v) => setState(
-                                                () => _remember = v ?? false,
-                                              ),
-                                              activeColor: kOrange,
-                                              checkColor: kDeepGreen,
-                                              side: const BorderSide(
-                                                color: Color.fromRGBO(
-                                                  255,
-                                                  255,
-                                                  255,
-                                                  0.6,
-                                                ),
-                                              ),
-                                            ),
-                                            Text(
-                                              'تذكرني',
-                                              style: GoogleFonts.almarai(
-                                                color: const Color.fromRGBO(
-                                                  255,
-                                                  246,
-                                                  224,
-                                                  0.9,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
                                         TextButton(
                                           onPressed: _sendResetEmail,
                                           style: TextButton.styleFrom(

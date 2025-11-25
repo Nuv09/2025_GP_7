@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // InputFormatters + Uint8List
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:saafapp/constant.dart';
 
 // Firebase
 import 'package:firebase_auth/firebase_auth.dart';
@@ -127,12 +128,13 @@ class _ProfilePageState extends State<ProfilePage> {
       final doc = await _db.collection('users').doc(u.uid).get();
       final data = doc.data() ?? {};
 
-      final photo = (data['photoURL'] ??
-              data['photoUrl'] ??
-              data['avatar'] ??
-              u.photoURL ??
-              '')
-          .toString();
+      final photo =
+          (data['photoURL'] ??
+                  data['photoUrl'] ??
+                  data['avatar'] ??
+                  u.photoURL ??
+                  '')
+              .toString();
 
       if (!mounted) return;
       setState(() {
@@ -232,32 +234,75 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _clickableAvatar() {
-    final avatar = _avatarWidget();
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        avatar,
-        Positioned.fill(
-          child: Material(
-            type: MaterialType.transparency,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(999),
-              onTap: _pickFromGallery,
-            ),
+Widget _clickableAvatar() {
+  final avatar = _avatarWidget();
+
+  return Stack(
+    alignment: Alignment.center,
+    children: [
+      // الهالة الذهبية الخفيفة حول الصورة
+      Container(
+        width: 128,
+        height: 128,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: kGold.withValues(alpha: 0.30), // هالة خفيفة
+            width: 3,
           ),
         ),
-      ],
-    );
-  }
+      ),
+
+      // الصورة نفسها
+      avatar,
+
+      // زر الكاميرا الصغير في زاوية الصورة
+      Positioned(
+        bottom: 4,
+        right: 4,
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: kGold,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 6,
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.camera_alt_rounded,
+            color: Colors.white,
+            size: 20,
+          ),
+        ),
+      ),
+
+      // ← منطقة الضغط الفعلية
+      Positioned.fill(
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(999),
+            onTap: _pickFromGallery,
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
 
   Widget _brokenImage() => Container(
-        width: 120,
-        height: 120,
-        color: Colors.white.withValues(alpha: 0.15),
-        alignment: Alignment.center,
-        child: const Icon(Icons.person, color: Colors.white70, size: 40),
-      );
+    width: 120,
+    height: 120,
+    color: Colors.white.withValues(alpha: 0.15),
+    alignment: Alignment.center,
+    child: const Icon(Icons.person, color: Colors.white70, size: 40),
+  );
 
   Future<void> _pickFromGallery() async {
     try {
@@ -397,8 +442,10 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<bool> _reauthWithPassword(String password) async {
     final u = _auth.currentUser!;
     try {
-      final cred =
-          EmailAuthProvider.credential(email: u.email!, password: password);
+      final cred = EmailAuthProvider.credential(
+        email: u.email!,
+        password: password,
+      );
       await u.reauthenticateWithCredential(cred);
       return true;
     } on FirebaseAuthException catch (e) {
@@ -420,7 +467,8 @@ class _ProfilePageState extends State<ProfilePage> {
         if (!ok) return false;
       } else {
         _safeToast(
-            'حسابك ليس Email/Password. أعِد تسجيل الدخول بمزوّدك ثم حاول مجددًا.');
+          'حسابك ليس Email/Password. أعِد تسجيل الدخول بمزوّدك ثم حاول مجددًا.',
+        );
         return false;
       }
 
@@ -480,10 +528,7 @@ class _ProfilePageState extends State<ProfilePage> {
         'name': newName,
         'phone': newPhone,
         'region': newRegion,
-        if (newPhoto != null) ...{
-          'photoURL': newPhoto,
-          'photoUrl': newPhoto,
-        },
+        if (newPhoto != null) ...{'photoURL': newPhoto, 'photoUrl': newPhoto},
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
@@ -540,23 +585,19 @@ class _ProfilePageState extends State<ProfilePage> {
             shape: const CircleBorder(),
             child: InkWell(
               customBorder: const CircleBorder(),
-              onTap: () => Navigator.of(context)
-                  .pushNamedAndRemoveUntil('/main', (route) => false),
+              onTap: () => Navigator.of(
+                context,
+              ).pushNamedAndRemoveUntil('/main', (route) => false),
               child: const Padding(
-                padding: EdgeInsets.all(10),
+                padding: EdgeInsets.only(right: 7, left: 14),
                 child: Icon(Icons.arrow_back, color: Colors.white),
               ),
             ),
           ),
         ),
 
-        title: Text(
-          'الملف الشخصي',
-          style: GoogleFonts.almarai(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        title: Text('الملف الشخصي', style: saafPageTitle),
+
 
         actions: [
           IconButton(
@@ -573,14 +614,16 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
 
       body: Container(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 120),
         child: SingleChildScrollView(
           child: Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: const Color.fromARGB(25, 255, 255, 255),
               borderRadius: BorderRadius.circular(25),
-              border: Border.all(color: const Color.fromARGB(51, 255, 255, 255)),
+              border: Border.all(
+                color: const Color.fromARGB(51, 255, 255, 255),
+              ),
               boxShadow: const [
                 BoxShadow(
                   color: Color.fromARGB(51, 0, 0, 0),
@@ -589,7 +632,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ],
             ),
-            child: Form( // ✅ لفّينا الـ Column بـ Form
+            child: Form(
+              // ✅ لفّينا الـ Column بـ Form
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -603,6 +647,27 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 24),
 
+                  // Center(
+                  //   child: SizedBox(
+                  //     width: 120,
+                  //     height: 120,
+                  //     child: _clickableAvatar(),
+                  //   ),
+                  // ),
+                  // const SizedBox(height: 10),
+
+                  // Center(
+                  //   child: Text(
+                  //     'أضِف صورة',
+                  //     style: GoogleFonts.almarai(
+                  //       color: kBeige,
+                  //       fontSize: 14,
+                  //       fontWeight: FontWeight.w600,
+                  //     ),
+                  //   ),
+                  // ),
+                  const SizedBox(height: 24),
+
                   _buildField(
                     controller: _nameCtrl,
                     label: 'الاسم الكامل',
@@ -614,7 +679,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       if (v.isEmpty) {
                         return 'الرجاء إدخال الاسم';
                       }
-                      
+
                       return null;
                     },
                   ),
@@ -668,8 +733,9 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       enabledBorder: const OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(15.0)),
-                        borderSide:
-                            BorderSide(color: Color.fromARGB(76, 253, 203, 110)),
+                        borderSide: BorderSide(
+                          color: Color.fromARGB(76, 253, 203, 110),
+                        ),
                       ),
                       focusedBorder: const OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(15.0)),
@@ -677,12 +743,12 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
 
-                     validator: (value) {
+                    validator: (value) {
                       if (value == null || value.isEmpty) {
-                          return 'الرجاء اختيار المنطقة';
-                            }
-                              return null;
-                                   },
+                        return 'الرجاء اختيار المنطقة';
+                      }
+                      return null;
+                    },
                     dropdownColor: kDeepGreen,
                     style: GoogleFonts.almarai(color: Colors.white),
                     isExpanded: true,
@@ -706,7 +772,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         borderRadius: BorderRadius.circular(15),
                         boxShadow: [
                           BoxShadow(
-                           color: Colors.black.withValues(alpha: 0.25),
+                            color: Colors.black.withValues(alpha: 0.25),
                             blurRadius: 12,
                             offset: const Offset(0, 6),
                           ),
@@ -750,7 +816,8 @@ class _ProfilePageState extends State<ProfilePage> {
     TextInputType keyboardType = TextInputType.text,
     List<TextInputFormatter>? inputFormatters,
   }) {
-    return TextFormField( // ✅ بدل TextField
+    return TextFormField(
+      // ✅ بدل TextField
       controller: controller,
       readOnly: !editing,
       keyboardType: keyboardType,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 //hello
 const darkGreenColor = Color(0xFF042C25);
@@ -9,3 +10,10 @@ const beige = Color.fromARGB(255, 255, 246, 224);
 const prownColor = Color.fromARGB(255, 107, 75, 42);
 
 const defaultPadding = 20.0;
+
+// عنوان الصفحات الموحد
+final TextStyle saafPageTitle = GoogleFonts.almarai(
+  color: Colors.white,
+  fontSize: 26,   // ← الموحد لجميع الصفحات
+  fontWeight: FontWeight.w700,
+);
