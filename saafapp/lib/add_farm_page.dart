@@ -855,7 +855,7 @@ Future<void> _searchAndGo() async {
               16 +
                   kBottomNavigationBarHeight +
                   MediaQuery.of(context).viewPadding.bottom +
-                  12,
+                  40,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
