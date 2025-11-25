@@ -2,7 +2,7 @@
   <img src="https://drive.google.com/uc?export=view&id=1xyQpMNmxZjCvjpjINZa33Q52WQm_0nLf" width="100%">
 </p>
 
-# 🌴 SAAF – Intelligent Palm Tree Health Monitoring Platform  
+# 🌴 SAAF سعف – Intelligent Palm Tree Health Monitoring Platform  
 
 ## 📌 Introduction  
 Palm trees are a vital agricultural and economic resource in Saudi Arabia and the Arab world. However, they face challenges such as **Red Palm Weevil infestations, water stress, and nutrient deficiencies**. Traditional inspection methods are often **time-consuming, costly, and limited in scale**, making early detection difficult.  
