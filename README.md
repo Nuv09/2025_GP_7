@@ -1,4 +1,6 @@
-<img align="right" src="saafapp/assets/images/saaf_logo.png" width="160">
+<p align="center">
+  <img src="https://drive.google.com/uc?export=view&id=1xyQpMNmxZjCvjpjINZa33Q52WQm_0nLf" width="100%">
+</p>
 
 # 🌴 SAAF – Intelligent Palm Tree Health Monitoring Platform  
 
