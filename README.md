@@ -1,3 +1,6 @@
+![SAAF Logo](saafapp/assets/images/saaf_logo.png)
+
+
 # 🌴 SAAF – Intelligent Palm Tree Health Monitoring Platform  
 
 ## 📌 Introduction  
