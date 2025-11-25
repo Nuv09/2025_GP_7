@@ -33,7 +33,9 @@ Palm trees are a vital agricultural and economic resource in Saudi Arabia and th
 
 2. **Backend Setup (Flask):**
 
-   TBD – backend setup steps will be added later
+No local backend setup is required.
+The backend logic is fully deployed on Google Cloud Run.
+Developers only need to update the Cloud Run API URL inside the Flutter app.
 
 4. **Frontend Setup (Flutter):**  
    ```bash
@@ -45,5 +47,5 @@ Palm trees are a vital agricultural and economic resource in Saudi Arabia and th
 
 5. **Database Setup:**
 
-   TBD – backend setup steps will be added later
-
+Add the Firebase configuration files (google-services.json) to the project.
+Once added, Firestore and Storage connect automatically—no additional setup is required.
