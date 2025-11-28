@@ -14,28 +14,23 @@ import gc
 import torch
 from app.common import polygon_centroid
 
-# ===============================================
-# 🔑 ثوابت التحكم في النمذجة (Detection/Inference)
-# ===============================================
-TILE_SIZE = 1024        # حجم الصورة النهائية المطلوبة من التبليط (1024x1024)
-OVERLAP = 0.20          # نسبة التداخل (0.20)
-CONF_THRESHOLD = 0.30   # الحد الأدنى لثقة النموذج (الثقة)
-NMS_IOU_THRESHOLD = 0.70  # قيمة IoU لـ NMS
-MAX_DETECTION_LIMIT = 5000  # الحد الأقصى للاكتشافات لحماية الذاكرة
 
-# إعدادات MapTiler
+TILE_SIZE = 1024        
+OVERLAP = 0.20          
+CONF_THRESHOLD = 0.30   
+NMS_IOU_THRESHOLD = 0.70  
+MAX_DETECTION_LIMIT = 5000  
+
 MAPTILER_KEY = os.environ.get("MAPTILER_KEY")
 TILE_URL = "https://api.maptiler.com/maps/satellite/{zoom}/{x}/{y}.jpg?key={key}"
-TILE_SIZE_MAP = 512     # حجم التبليط الفعلي لـ MapTiler (512x512)
+TILE_SIZE_MAP = 512     
 
-# إعدادات GCS
 DEFAULT_BUCKET = os.environ.get("STORAGE_BUCKET", "saaf-97251.firebasestorage.app")
 MODELS_PREFIX = os.environ.get("REMOTE_MODELS_PREFIX", "models/")
 MODELS_GCS_URI_A = os.environ.get("MODELS_GCS_URI_A")
 MODELS_GCS_URI_B = os.environ.get("MODELS_GCS_URI_B")
 
 
-# -------- أدوات GCS --------
 
 def _gcs() -> storage.Client:
     return storage.Client()
@@ -80,7 +75,6 @@ def _auto_pick_two_pt(bucket: str, prefix: str) -> Tuple[str, str]:
     return pts_sorted[0].name, pts_sorted[1].name
 
 
-# -------- تحميل النموذجين --------
 def load_models_auto():
     if MODELS_GCS_URI_A and MODELS_GCS_URI_B:
         a_bucket, a_blob = _parse_gs_uri(MODELS_GCS_URI_A)
@@ -118,7 +112,6 @@ def load_models_auto():
     )
 
 
-# ===== helpers: retry + safe-open + logging =====
 def _http_get_with_retry(url: str, tries: int = 3, backoff: float = 0.75, timeout: int = 30):
     last = None
     for i in range(tries):
@@ -154,7 +147,6 @@ def _open_fix_to_rgb(raw_bytes: bytes, tag: str):
     return im
 
 
-# -------- أدوات MapTiler (التبليط) --------
 
 def _deg_to_tile(lat: float, lon: float, zoom: int) -> Tuple[int, int]:
     lat_rad = math.radians(lat)
@@ -178,7 +170,6 @@ def _download_and_stitch_tiles(
 
     cx, cy = _deg_to_tile(lat, lon, zoom)
 
-    # نستخدم TILE_SIZE_MAP (512) لحساب عدد المربعات
     tiles_per_side = target_size // TILE_SIZE_MAP
     if tiles_per_side < 1:
         tiles_per_side = 1
@@ -198,19 +189,15 @@ def _download_and_stitch_tiles(
             r = _http_get_with_retry(url, tries=3, backoff=0.75, timeout=60)
             tile_image = Image.open(io.BytesIO(r.content)).convert("RGB")
 
-            # نستخدم TILE_SIZE_MAP للصق
             stitched_image.paste(tile_image, (i * TILE_SIZE_MAP, j * TILE_SIZE_MAP))
 
     return stitched_image.crop((0, 0, target_size, target_size))
 
 
 def get_sat_image_for_farm(farm: Dict[str, Any]) -> str:
-    """
-    يحدد مركز المضلع وينزّل صورة الأقمار الصناعية (باستخدام Tiles) ثم يحفظها.
-    """
+    
     img_url = (farm.get("imageURL") or farm.get("imageUrl") or "").strip()
 
-    # 1) صورة المستخدم (إن وجدت): retry + EXIF + RGB + resize => TILE_SIZE
     if img_url:
         r = _http_get_with_retry(img_url, tries=2, backoff=0.75, timeout=120)
         sha1 = hashlib.sha1(r.content).hexdigest()
@@ -225,14 +212,12 @@ def get_sat_image_for_farm(farm: Dict[str, Any]) -> str:
         logging.info(f"[IMG] saved path={path} source=user")
         return path
 
-    # 2) إذا لم يكن رابط URL متاحاً، استخدم MapTiler Tiles
     poly = farm.get("polygon") or []
     if not poly or len(poly) < 3:
         raise ValueError("Farm polygon is missing or < 3 points")
 
     lat, lon = polygon_centroid(poly)
 
-    # تحميل ودمج المربعات باستخدام TILE_SIZE (1024)
     img = _download_and_stitch_tiles(lat=lat, lon=lon, zoom=18, target_size=TILE_SIZE)
 
     logging.info(f"[SRC] maptiler size={img.size}")
@@ -241,11 +226,9 @@ def get_sat_image_for_farm(farm: Dict[str, Any]) -> str:
     return path
 
 
-# -------- الاستدلال واختيار الأفضل --------
 
 def _yolo_predict(model: YOLO, image_path: str) -> Dict[str, Any]:
     try:
-        # تنظيف الذاكرة قبل البدء
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -287,16 +270,13 @@ def _yolo_predict(model: YOLO, image_path: str) -> Dict[str, Any]:
         return {"detections": dets, "count": len(dets), "score": score}
 
     finally:
-        # تنظيف الذاكرة بعد الانتهاء
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
 
 def run_both_and_pick_best(models, image_path: str) -> Dict[str, Any]:
-    """
-    تشغّل النموذجين A و B وتعيد كل التفاصيل (توافقاً مع الكود القديم).
-    """
+    
     a = _yolo_predict(models["A"], image_path)
     b = _yolo_predict(models["B"], image_path)
     best = a if a["score"] >= b["score"] else b
@@ -310,24 +290,10 @@ def run_both_and_pick_best(models, image_path: str) -> Dict[str, Any]:
     }
 
 
-# ===============================================
-# 🧮 دالة Count مبسّطة لاستخدامها مع الداتابيس
-# ===============================================
+
 
 def count_palms(models, image_path: str) -> Dict[str, Any]:
-    """
-    دالة عالية المستوى تقوم بالعد:
-    - تشغّل النموذجين A و B
-    - تختار الأفضل داخلياً
-    - ترجع فقط القيم اللي نحتاجها للتخزين في الداتابيس أو التقرير
-
-    الشكل النهائي:
-    {
-        "count": <int>,        # عدد النخيل النهائي
-        "quality": <float>,    # جودة العد (score)
-        "model": "A" أو "B"    # أي نموذج تم اختياره
-    }
-    """
+  
     result = run_both_and_pick_best(models, image_path)
 
     return {
