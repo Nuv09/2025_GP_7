@@ -17,39 +17,30 @@ from google.cloud import storage
 
 from app.common import polygon_centroid
 
-# =========================
-# إعدادات عامة
-# =========================
+
 
 PROJECT_ID = os.environ.get("GEE_PROJECT_ID", "saaf-97251")
 OUT_ROOT = os.environ.get("HEALTH_OUT_ROOT", "/tmp/saaf_health")
 os.makedirs(OUT_ROOT, exist_ok=True)
 
-# نطاق التاريخ (آخر 12 شهر تقريبًا)
 TODAY = pd.Timestamp.utcnow().normalize()
 DATE_TO = TODAY
 DATE_FROM = TODAY - pd.Timedelta(weeks=52)
 
-# Sentinel-2 / GEE إعدادات
 S2_COLLECTION = "COPERNICUS/S2_SR_HARMONIZED"
-MAX_CLOUD = 40          # أقصى نسبة غيوم
-RESOLUTION = 10         # دقة S2 بالبكسل (متر)
+MAX_CLOUD = 40          
+RESOLUTION = 10         
 
-# Isolation Forest model (مخزن في GCS كـ joblib)
 IF_MODEL_GS_URI = os.environ.get("IF_MODEL_GS_URI", "")
 
-# ملف المتوسطات المستخدمة لتعبئة NaN في الـ IF (مدرب على ~10M صف)
 IF_MEANS_GS_URI = os.environ.get("IF_MEANS_GS_URI", "")
 
-# قائمة المؤشرات الطيفية الأساسية
 INDEX_COLS_ALL = [
     "NDVI", "GNDVI", "NDRE", "NDRE740", "MTCI",
     "NDMI", "NDWI_Gao", "SIWSI1", "SIWSI2", "SRWI", "NMDI",
 ]
 
-# =========================
-# أدوات GCS لتحميل نموذج IF / الـ means
-# =========================
+
 
 def _gcs() -> storage.Client:
     return storage.Client()
@@ -70,7 +61,6 @@ def _download_gcs_file(gs_uri: str, suffix: str = ".joblib") -> str:
     if not blob.exists():
         raise FileNotFoundError(f"Blob not found: {gs_uri}")
 
-    # ✅ بدل os.mkstemp نستخدم tempfile.mkstemp
     fd, tmp_path = tempfile.mkstemp(suffix=suffix, dir=OUT_ROOT)
     os.close(fd)
     blob.download_to_filename(tmp_path)
@@ -78,13 +68,10 @@ def _download_gcs_file(gs_uri: str, suffix: str = ".joblib") -> str:
 
 
 _IF_MODEL = None
-_IF_FEATURE_MEANS = None  # ⇐ cache لملف المتوسطات
+_IF_FEATURE_MEANS = None  
 
 def get_if_model():
-    """
-    تحميل نموذج Isolation Forest المدرب مرة واحدة من GCS (inference فقط)،
-    مع طباعة سبب الفشل لو صار شيء.
-    """
+    
     global _IF_MODEL
     if _IF_MODEL is not None:
         return _IF_MODEL
@@ -113,11 +100,7 @@ def get_if_model():
 
 
 def get_if_feature_means() -> Dict[str, float]:
-    """
-    تحميل متوسطات الفيتشرز التي تم حسابها من داتا التدريب (≈10M صف)
-    من ملف joblib في GCS (if_feature_means.joblib).
-    ترجع dict: feature_name -> mean_value
-    """
+  
     global _IF_FEATURE_MEANS
     if _IF_FEATURE_MEANS is not None:
         return _IF_FEATURE_MEANS
@@ -128,7 +111,6 @@ def get_if_feature_means() -> Dict[str, float]:
     local_path = _download_gcs_file(IF_MEANS_GS_URI, suffix=".joblib")
     obj = joblib.load(local_path)
 
-    # نتأكد أنه dict بسيط {col: float}
     if isinstance(obj, dict):
         _IF_FEATURE_MEANS = {str(k): float(v) for k, v in obj.items()}
     else:
@@ -138,9 +120,7 @@ def get_if_feature_means() -> Dict[str, float]:
 
     return _IF_FEATURE_MEANS
 
-# =========================
-# تهيئة Earth Engine + جلسة HTTP
-# =========================
+
 
 def _init_ee():
     """
@@ -182,21 +162,14 @@ def week_bins(start: pd.Timestamp, end: pd.Timestamp) -> List[Tuple[pd.Timestamp
         cur = wend
     return weeks
 
-# =========================
-# طقس أسبوعي (Open-Meteo ERA5)
-# =========================
+
 
 def _es_kPa(Tc):
     return 0.6108 * np.exp((17.27 * Tc) / (Tc + 237.3))
 
 @memory.cache
 def _weather_open_meteo(lat: float, lon: float, start_date, end_date):
-    """
-    نفس منطق النوتبوك:
-      - استخدام ERA5
-      - حساب RH/VPD مع fallback من dew point لو RH مش متوفرة
-      - تجميع أسبوعي 7 أيام
-    """
+  
     try:
         url = "https://archive-api.open-meteo.com/v1/era5"
         daily_vars = ",".join([
@@ -226,7 +199,6 @@ def _weather_open_meteo(lat: float, lon: float, start_date, end_date):
         daily = pd.DataFrame(js["daily"])
         daily["date"] = pd.to_datetime(daily["time"]).dt.normalize()
 
-        # RH من العمود لو موجود، وإلا نحسبها من dew point
         if "relative_humidity_2m_mean" in daily.columns:
             daily["rh2m_mean"] = daily["relative_humidity_2m_mean"]
         elif "dew_point_2m_mean" in daily.columns:
@@ -238,7 +210,6 @@ def _weather_open_meteo(lat: float, lon: float, start_date, end_date):
         else:
             daily["rh2m_mean"] = np.nan
 
-        # VPD من T و dew point لو متوفر
         if "dew_point_2m_mean" in daily.columns:
             t_C = daily["temperature_2m_mean"].astype(float)
             d_C = daily["dew_point_2m_mean"].astype(float)
@@ -255,7 +226,6 @@ def _weather_open_meteo(lat: float, lon: float, start_date, end_date):
             "wind_speed_10m_mean": "wind10_ms",
         }).set_index("date")
 
-        # تجميع أسبوعي 7 أيام
         w = daily.resample(
             "7D",
             origin=pd.to_datetime(start_date),
@@ -280,11 +250,7 @@ def _weather_open_meteo(lat: float, lon: float, start_date, end_date):
         return None
 
 def weekly_weather(site: Dict[str, Any]) -> pd.DataFrame:
-    """
-    طقس أسبوعي لمزرعة واحدة، باستخدام مركز المضلع.
-    farm_doc["polygon"] = [{'lat':..,'lng':..}, ...]
-    هنا site["polygon"] = [(lon, lat), ...]
-    """
+ 
     coords = site["polygon"]
     poly_for_centroid = [{"lat": lat, "lng": lon} for (lon, lat) in coords]
     lat, lon = polygon_centroid(poly_for_centroid)
@@ -294,7 +260,6 @@ def weekly_weather(site: Dict[str, Any]) -> pd.DataFrame:
     if om is not None and not om.empty:
         return om
 
-    # فشل الاتصال أو لا توجد بيانات → إطار فارغ بنفس هيكل الأعمدة
     df = pd.DataFrame({
         "date": [w[0].normalize() for w in weeks],
         "precip_mm": np.nan,
@@ -309,16 +274,10 @@ def weekly_weather(site: Dict[str, Any]) -> pd.DataFrame:
     })
     return df
 
-# =========================
-# LST من Landsat عبر GEE
-# =========================
+
 
 def load_week_LST_Landsat_GEE(site: Dict[str, Any], d_from, d_to) -> float:
-    """
-    متوسط حرارة المظلة °C للأسبوع باستخدام Landsat 8/9 ST_B10 من GEE.
-    نفس منطق النوتبوك (scale/offset + فلترة القيم الغريبة)،
-    مع طباعة أسباب رجوع NaN للتشخيص.
-    """
+   
     site_name = site.get("name", "UNKNOWN")
     geom = ee.Geometry.Polygon(site["polygon"])
 
@@ -352,7 +311,6 @@ def load_week_LST_Landsat_GEE(site: Dict[str, Any], d_from, d_to) -> float:
 
     img = ee.Image(col.sort("CLOUD_COVER").first())
 
-    # حاول نطبع ID للصورة للتشخيص (لو متاح)
     img_id = None
     try:
         img_id = img.get("LANDSAT_PRODUCT_ID").getInfo()
@@ -416,15 +374,10 @@ def load_week_LST_Landsat_GEE(site: Dict[str, Any], d_from, d_to) -> float:
     return temp_c
 
 
-# =========================
-# Sentinel-2 GEE → بكسلات أسبوعية
-# =========================
+
 
 def s2_week_pixels_gee(site: Dict[str, Any], wstart: pd.Timestamp, wend: pd.Timestamp) -> pd.DataFrame | None:
-    """
-    تحميل مشهد Sentinel-2 من GEE للأسبوع المحدد، حساب 11 مؤشر طيفي،
-    وأخذ عينة بكسلات (x, y + المؤشرات).
-    """
+  
     site_name = site["name"]
     geom = ee.Geometry.Polygon(site["polygon"])
 
@@ -443,7 +396,6 @@ def s2_week_pixels_gee(site: Dict[str, Any], wstart: pd.Timestamp, wend: pd.Time
     image = ee.Image(col.sort("CLOUDY_PIXEL_PERCENTAGE").first())
     scl = image.select("SCL")
 
-    # نباتات فقط (4,5) واستبعاد سحب 7–11
     valid = scl.eq(4).Or(scl.eq(5))
     clouds = (scl.eq(7)
               .Or(scl.eq(8))
@@ -467,21 +419,18 @@ def s2_week_pixels_gee(site: Dict[str, Any], wstart: pd.Timestamp, wend: pd.Time
     def _ratio(b_hi, b_lo, name):
         return b_hi.subtract(b_lo).divide(b_hi.add(b_lo).add(1e-6)).rename(name)
 
-    # Vegetation / chlorophyll indices
     ndvi     = _ratio(B8,  B4,  "NDVI")
     gndvi    = _ratio(B8,  B3,  "GNDVI")
     ndre     = _ratio(B8,  B5,  "NDRE")
     ndre740  = _ratio(B8,  B6,  "NDRE740")
     mtci     = B8A.subtract(B5).divide(B5.subtract(B4).add(1e-6)).rename("MTCI")
 
-    # Water / moisture indices
     ndmi     = _ratio(B8,  B11, "NDMI")
     ndwi_gg  = _ratio(B8,  B11, "NDWI_Gao")
     siwsi1   = _ratio(B8,  B11, "SIWSI1")
     siwsi2   = _ratio(B8A, B11, "SIWSI2")
     srwi     = B8.divide(B11.add(1e-6)).rename("SRWI")
 
-    # NMDI – نفس معادلة النوتبوك (B8 - (B11 - B12)) / (B8 + (B11 - B12))
     nmdi = (
         B8.subtract(B11.subtract(B12))
           .divide(B8.add(B11.subtract(B12)).add(1e-6))
@@ -522,21 +471,10 @@ def s2_week_pixels_gee(site: Dict[str, Any], wstart: pd.Timestamp, wend: pd.Time
     df["date"] = pd.to_datetime(wstart).normalize()
     return df
 
-# =========================
-# ميّزات زمنية (K-scores, slopes, drops, history)
-# =========================
+
 
 def add_features(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    نفس دالة add_features في النوتبوك تقريبًا، مع:
-      - seasonal mean per month
-      - rolling std
-      - K-scores
-      - slopes
-      - baseline q80
-      - drop_frac + drop_3w
-      - history_weeks لكل بكسل (يستخدم لاحقًا للفلترة)
-    """
+  
     if df.empty:
         return df
 
@@ -546,7 +484,6 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
 
     core_indices = ["NDVI", "NDRE", "NDMI", "SIWSI1"]
 
-    # متوسط موسمي لكل شهر وبكسل
     g_pixel_month = df.groupby(["site", "x", "y", "month"])
     for col in core_indices:
         if col in df.columns:
@@ -561,7 +498,6 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
         if col in df.columns:
             df[f"{col}_std8"] = g_pixel[col].transform(_roll_std)
 
-    # K-score مع fallback
     for col in core_indices:
         if col in df.columns:
             value = df[col].astype(float)
@@ -588,7 +524,6 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
 
             df[f"k_{col}"] = k
 
-    # slopes لـ NDVI و NDMI
     def slope_s_np(x, w=8):
         res = np.full_like(x, np.nan, dtype=float)
         t = np.arange(w)
@@ -610,7 +545,6 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
                 lambda s: pd.Series(slope_s_np(s.values, 8), index=s.index)
             )
 
-    # baseline (q80) لكل بكسل
     def _q80(s):
         arr = s.values.astype(float)
         valid = np.isfinite(arr)
@@ -622,14 +556,12 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
         if col in df.columns:
             df[f"{col}_base"] = g_pixel[col].transform(_q80)
 
-    # نسب الانخفاض عن baseline
     for col in ["NDVI", "NDMI", "SIWSI1"]:
         base_col = f"{col}_base"
         if col in df.columns and base_col in df.columns:
             b = df[base_col]
             df[f"{col}_drop_frac"] = (b - df[col]) / (b + 1e-9)
 
-    # متوسط الانخفاض آخر 3 أسابيع
     if "NDVI_drop_frac" in df.columns:
         df["NDVI_drop_3w"] = g_pixel["NDVI_drop_frac"].transform(
             lambda s: s.rolling(3, min_periods=2).mean()
@@ -644,7 +576,6 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
     else:
         df["NDMI_drop_3w"] = np.nan
 
-    # history_weeks: كم أسبوع عند هذا البكسل فيه أي مؤشر مش NaN
     cnt_weeks = (
         df[INDEX_COLS_ALL].notna().any(axis=1)
     ).groupby([df["site"], df["x"], df["y"]]).sum()
@@ -653,18 +584,9 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
-# =========================
-# Isolation Forest risk (inference فقط)
-# =========================
-def compute_if_risk_inference(all_df: pd.DataFrame) -> pd.DataFrame:
-    """
-    نفس الميزات المستخدمة في التدريب:
-      NDVI, NDRE, NDMI, NMDI, NDWI_Gao, SIWSI1,
-      k_NDVI, k_NDMI, k_SIWSI1, slope8_NDVI, slope8_NDMI
 
-    مع تعبئة NaN بمتوسطات *التدريب* المخزّنة في if_feature_means.joblib
-    وليس من بيانات المزرعة الجديدة، للحفاظ على نفس الـ baseline.
-    """
+def compute_if_risk_inference(all_df: pd.DataFrame) -> pd.DataFrame:
+   
     feats = [
         "NDVI", "NDRE", "NDMI", "NMDI", "NDWI_Gao", "SIWSI1",
         "k_NDVI", "k_NDMI", "k_SIWSI1", "slope8_NDVI", "slope8_NDMI",
@@ -679,26 +601,21 @@ def compute_if_risk_inference(all_df: pd.DataFrame) -> pd.DataFrame:
 
     X = all_df[feats].replace([np.inf, -np.inf], np.nan)
 
-    # نحاول نقرأ متوسطات التدريب من الملف
     try:
-        training_means = get_if_feature_means()  # dict: col -> mean
+        training_means = get_if_feature_means()  
     except Exception:
         training_means = {}
 
-    # نحدد الأعمدة اللي فيها أي قيمة
     col_means_data = X.mean(skipna=True)
     valid_cols = col_means_data[col_means_data.notna()].index.tolist()
     if not valid_cols:
-        # حتى لو ما فيه mean من الداتا، ممكن يكون عندنا means من الملف
-        # نستخدم الأعمدة الموجودة في X والمتاحة في training_means
+        
         fallback_cols = [c for c in X.columns if c in training_means]
         if not fallback_cols:
             return all_df
         valid_cols = fallback_cols
 
-    # نبني Series للـ means بالترتيب:
-    # 1) من training_means لو موجود
-    # 2) وإلا من mean داتا المزرعة
+    
     means_dict: Dict[str, float] = {}
     for col in valid_cols:
         if col in training_means:
@@ -710,7 +627,6 @@ def compute_if_risk_inference(all_df: pd.DataFrame) -> pd.DataFrame:
     X = X[valid_cols]
     X_filled = X.fillna(col_means)
 
-    # ===== DEBUG لطباعة شكل الداتا الداخلة للمودل =====
     print("\n====== DEBUG IF INPUT ======")
     print("Valid feature columns:", valid_cols)
     print("Shape before fill:", X.shape)
@@ -719,7 +635,6 @@ def compute_if_risk_inference(all_df: pd.DataFrame) -> pd.DataFrame:
     print("\nSample AFTER fill:\n", X_filled.head(5))
     print("Describe AFTER fill:\n", X_filled.describe())
     print("====== END DEBUG ======\n")
-    # ================================================
 
     try:
         IF_model = get_if_model()
@@ -731,7 +646,6 @@ def compute_if_risk_inference(all_df: pd.DataFrame) -> pd.DataFrame:
         ) from e
 
 
-    # نحسب الـ risk لكل site
     for site, sdf in all_df.groupby("site"):
         X_site = sdf[valid_cols].replace([np.inf, -np.inf], np.nan).fillna(col_means)
         try:
@@ -744,9 +658,7 @@ def compute_if_risk_inference(all_df: pd.DataFrame) -> pd.DataFrame:
 
     return all_df
 
-# =========================
-# RPW_score + تصنيف البكسلات (نفس النوتبوك)
-# =========================
+
 
 def add_rpw_flags_and_score(
     df: pd.DataFrame,
@@ -756,14 +668,7 @@ def add_rpw_flags_and_score(
     rpw_critical_q: float = 0.95,
     if_risk_q: float = 0.90,
 ) -> pd.DataFrame:
-    """
-    نفس منطق add_rpw_flags_and_score في النوتبوك:
-      - flags مبنية على NDVI/NDRE/NDWI drops + absolute thresholds
-      - water/vigour/thermal components
-      - RPW_score ∈ [0,1]
-      - quantile thresholds للـ monitor/critical
-      - دمج baseline rules + RPW + IF
-    """
+  
     if df.empty:
         df = df.copy()
         df["RPW_score"] = np.nan
@@ -773,7 +678,6 @@ def add_rpw_flags_and_score(
 
     df = df.sort_values(["site", "x", "y", "date"]).copy()
 
-    # 1) data-driven flags لـ NDRE/NDWI
     if "NDRE" in df.columns:
         ndre_thr = df["NDRE"].quantile(ndre_low_q)
         df["flag_NDRE_low"] = df["NDRE"] < ndre_thr
@@ -786,7 +690,6 @@ def add_rpw_flags_and_score(
     else:
         df["flag_NDWI_low"] = False
 
-    # 1-b) قواعد ثابتة من المراجع (NDVI/NDRE/NDWI)
     if "NDVI" in df.columns:
         df["flag_NDVI_below_030"] = df["NDVI"] < 0.30
     else:
@@ -826,7 +729,6 @@ def add_rpw_flags_and_score(
     else:
         df["flag_drop_NDVI005"] = False
 
-    # 2) مكونات RPW (ماء + كلوروفيل + حرارة)
     def minmax(s):
         s = s.astype(float)
         valid = np.isfinite(s)
@@ -835,7 +737,6 @@ def add_rpw_flags_and_score(
         lo, hi = np.nanpercentile(s[valid], 5), np.nanpercentile(s[valid], 95)
         return (s - lo) / (hi - lo + 1e-9)
 
-    # water component
     if "NDMI_drop_frac" in df.columns:
         ndmi_drop_norm = minmax(df["NDMI_drop_frac"].fillna(0.0))
     else:
@@ -850,7 +751,6 @@ def add_rpw_flags_and_score(
     ], axis=1)
     water = water_components.mean(axis=1)
 
-    # vigour component
     if "NDVI_drop_frac" in df.columns:
         ndvi_drop_norm = minmax(df["NDVI_drop_frac"].fillna(0.0))
     else:
@@ -881,7 +781,6 @@ def add_rpw_flags_and_score(
     ], axis=1)
     vigour = vigour_components.mean(axis=1)
 
-    # thermal component
     if "canopy_temp" in df.columns:
         thermal = minmax(df["canopy_temp"])
     elif "lst_canopy_C" in df.columns:
@@ -891,20 +790,17 @@ def add_rpw_flags_and_score(
 
     df["RPW_score"] = (0.5 * water + 0.4 * vigour + 0.1 * thermal).clip(0, 1)
 
-    # Isolation Forest
     if "IF_score" not in df.columns:
         df["IF_score"] = 0.0
     df["IF_score"] = df["IF_score"].fillna(0.0)
 
-    # thresholds
     rpw_valid = df["RPW_score"].replace([np.inf, -np.inf], np.nan).dropna()
     if rpw_valid.empty:
         df["pixel_risk_class"] = "Healthy"
         df["RPW_label_rule"] = "Healthy"
         return df
 
-    # ✨ هنا التعديل الأساسي:
-    # إذا توزيع RPW_score تقريباً ثابت (spread صغير) نتجاهل tails
+    
     rpw_min, rpw_max = rpw_valid.min(), rpw_valid.max()
     spread = rpw_max - rpw_min if np.isfinite(rpw_min) and np.isfinite(rpw_max) else np.nan
     use_rpw_quantiles = bool(np.isfinite(spread) and (spread >= 5e-4))
@@ -914,28 +810,22 @@ def add_rpw_flags_and_score(
         rpw_mon_thr = rpw_valid.quantile(rpw_monitor_q)
         rpw_crit_thr = rpw_valid.quantile(rpw_critical_q)
     else:
-        # ما نستخدم RPW tail لو كله تقريباً نفس القيمة
         rpw_mon_thr = np.inf
         rpw_crit_thr = np.inf
 
-        # IF thresholds
     if_valid = df["IF_score"].replace([np.inf, -np.inf], np.nan).dropna()
     if if_valid.empty:
-        # ما فيه IF مفيد → تجاهله
         if_thr = np.inf
     else:
         if_min, if_max = if_valid.min(), if_valid.max()
         spread_if = if_max - if_min if np.isfinite(if_min) and np.isfinite(if_max) else np.nan
 
-        # إذا توزيع IF_score تقريبًا ثابت (spread صغير جدًا) نعتبره غير مفيد
         if not (np.isfinite(spread_if) and (spread_if >= 5e-4)):
-            # تعطيل IF في التصنيف (ما يدخل لا Monitor ولا Critical)
             if_thr = np.inf
         else:
             if_thr = if_valid.quantile(if_risk_q)
 
 
-    # baseline / RPW / IF masks
     ndvi_drop_frac = df.get("NDVI_drop_frac", pd.Series(0.0, index=df.index)).fillna(0.0)
     ndvi_drop_3w   = df.get("NDVI_drop_3w",   pd.Series(0.0, index=df.index)).fillna(0.0)
     ndmi_drop_frac = df.get("NDMI_drop_frac", pd.Series(0.0, index=df.index)).fillna(0.0)
@@ -965,11 +855,9 @@ def add_rpw_flags_and_score(
         (df["IF_score"] >= if_thr)
     )
 
-    # default
     df["pixel_risk_class"] = "Healthy"
     df["RPW_label_rule"] = "Healthy"
 
-    # Monitor rules
     df.loc[m_mon_baseline, "pixel_risk_class"] = "Monitor"
     df.loc[m_mon_baseline, "RPW_label_rule"] = "Monitor_baseline_drop"
 
@@ -979,7 +867,6 @@ def add_rpw_flags_and_score(
     df.loc[m_mon_if, "pixel_risk_class"] = "Monitor"
     df.loc[m_mon_if, "RPW_label_rule"] = "Monitor_IF_outlier"
 
-    # Critical rules
     df.loc[m_crit_baseline, "pixel_risk_class"] = "Critical"
     df.loc[m_crit_baseline, "RPW_label_rule"] = "Critical_baseline_drop"
 
@@ -991,18 +878,10 @@ def add_rpw_flags_and_score(
 
     return df
 
-# =========================
-# تجميع site-level summary (نفس منطق النوتبوك تقريبًا)
-# =========================
+
 
 def site_summary(dfx: pd.DataFrame) -> Dict[str, Any]:
-    """
-    ملخص للمزرعة:
-      - يحسب النسب للأسبوع الأخير فقط (Healthy/Monitor/Critical)
-      - RPW_score median لآخر 4 أسابيع
-      - إجمالي المطر ومتوسط الحرارة في آخر 4 أسابيع
-    نفس فكرة النوتبوك.
-    """
+   
     dfx = dfx.copy()
     if dfx.empty:
         return {
@@ -1040,21 +919,9 @@ def site_summary(dfx: pd.DataFrame) -> Dict[str, Any]:
         "t_mean": float(dfx_last4.get("t2m_mean", pd.Series([np.nan])).mean()),
     }
 
-# =========================
-# الدالة الرئيسية: تحليل صحة مزرعة واحدة
-# =========================
+
 def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    يأخذ مستند مزرعة من Firestore:
-      farm_doc["polygon"] = [{'lat':..,'lng':..}, ...]
-    ويرجع ملخصًا لنسب الصحة (Healthy/Monitor/Critical) بناءً على:
-      - Sentinel-2 مؤشرات أسبوعية
-      - Landsat LST (حرارة المظلة)
-      - طقس أسبوعي من Open-Meteo
-      - ميزات زمنية (K-score, slopes, baseline, drops)
-      - Isolation Forest (نموذج مدرب مسبقًا)
-      - RPW_score (water + vigour + thermal)
-    """
+
     poly = farm_doc.get("polygon") or []
     if len(poly) < 3:
         raise ValueError("Farm polygon is missing or < 3 points")
@@ -1107,13 +974,10 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
 
     df_all["date"] = pd.to_datetime(df_all["date"]).dt.normalize()
 
-    # 2) ميزات زمنية كاملة (K, slopes, baseline, drops, history_weeks)
     df_all = add_features(df_all)
 
-    # فلترة الصفوف التي لا تحتوي أي مؤشر
     df_all = df_all.dropna(subset=INDEX_COLS_ALL, how="all").copy()
 
-    # فلترة البكسلات ذات التاريخ الكافي (≥ 6 أسابيع) – نفس النوتبوك
     if "history_weeks" in df_all.columns:
         df_all = df_all[df_all["history_weeks"] >= 6].reset_index(drop=True)
 
@@ -1122,16 +986,12 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
             "كل البكسلات المتاحة أقل من 6 أسابيع تاريخ أو لا تحتوي مؤشرات كافية بعد الفلترة"
         )
 
-    # 3) Isolation Forest (inference فقط) مع تعبئة NaN بمتوسطات التدريب
     df_all = compute_if_risk_inference(df_all)
 
-        # 4) RPW_score + تصنيف البكسلات (نفس منطق النوتبوك)
     df_all = add_rpw_flags_and_score(df_all)
 
-    # 5) ملخص المزرعة (آخر أسبوع)
     stats = site_summary(df_all)
 
-    # 👈 نخزن فقط النِسَب الثلاثة
     health_summary = {
         "Healthy_Pct": float(stats.get("Healthy_Pct", 0.0)),
         "Monitor_Pct": float(stats.get("Monitor_Pct", 0.0)),
