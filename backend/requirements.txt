@@ -5,12 +5,10 @@ Pillow==10.4.0
 numpy==1.26.4
 google-cloud-firestore==2.16.0
 google-cloud-storage==2.18.2
-# 👇 هذي تلغي حاجة libGL
 opencv-python-headless==4.10.0.84
 ultralytics==8.3.30
 flask-cors==4.0.0
 
-# ===== لصحّة النخيل / GEE / IF =====
 earthengine-api
 geemap
 pandas
