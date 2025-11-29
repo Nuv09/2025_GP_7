@@ -214,7 +214,7 @@ def analyze():
             finalQuality=count_summary["quality"],
             health=health_result,
             # result=count_summary,
-            errorMessage=None,
+            # errorMessage=None,
         )
 
         return (
