@@ -231,9 +231,13 @@ def analyze():
             200,
         )
 
+    # except Exception as e:
+    #     set_status(farm_id, status="failed", errorMessage=str(e))
+    #     app.logger.exception(f"❌ ERROR during /analyze: {e}")
+    
     except Exception as e:
-        set_status(farm_id, status="failed", errorMessage=str(e))
-        app.logger.exception(f"❌ ERROR during /analyze: {e}")
+        set_status(farm_id, status="failed")  # بدون errorMessage
+        app.logger.exception(f"❌ ERROR during /analyze: {e}")  # يبقى في logs فقط
         return jsonify({"status": "error", "message": str(e)}), 500
 
 

@@ -15,9 +15,16 @@ def get_farm_doc(farm_id: str) -> Optional[Dict[str, Any]]:
         return None
     return doc.to_dict()
 
+# def set_status(farm_id: str, **data):
+#     data.setdefault("status", "pending")
+#     if "errorMessage" not in data:
+#         data["errorMessage"] = None
+#     data["updatedAt"] = firestore.SERVER_TIMESTAMP
+#     _get_db().collection("farms").document(farm_id).set(data, merge=True)
+
 def set_status(farm_id: str, **data):
     data.setdefault("status", "pending")
-    if "errorMessage" not in data:
-        data["errorMessage"] = None
+    data.pop("errorMessage", None)
+    
     data["updatedAt"] = firestore.SERVER_TIMESTAMP
     _get_db().collection("farms").document(farm_id).set(data, merge=True)
