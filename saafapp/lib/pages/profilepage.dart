@@ -240,60 +240,75 @@ Widget _clickableAvatar() {
   return Stack(
     alignment: Alignment.center,
     children: [
-      // الهالة الذهبية الخفيفة حول الصورة
+      // الهالة الذهبية
       Container(
         width: 128,
         height: 128,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(
-            color: kGold.withValues(alpha: 0.30), // هالة خفيفة
+            color: kGold.withValues(alpha: 0.30),
             width: 3,
           ),
         ),
       ),
 
-      // الصورة نفسها
+      // الصورة
       avatar,
 
-      // زر الكاميرا الصغير في زاوية الصورة
+      // زر استبدال الصورة (الكاميرا)
       Positioned(
         bottom: 4,
         right: 4,
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: kGold,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.25),
-                blurRadius: 6,
-              ),
-            ],
-          ),
-          child: const Icon(
-            Icons.camera_alt_rounded,
-            color: Colors.white,
-            size: 20,
+        child: GestureDetector(
+          onTap: _pickFromGallery,
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: kGold,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 6,
+                ),
+              ],
+            ),
+            child: const Icon(Icons.camera_alt_rounded,
+                color: Colors.white, size: 20),
           ),
         ),
       ),
 
-      // ← منطقة الضغط الفعلية
-      Positioned.fill(
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(999),
-            onTap: _pickFromGallery,
+      // زر الحذف ❌ يظهر فقط لو فيه صورة مرفوعة
+      if (avatarPath != null || _pickedBytes != null || _pickedFilePath != null)
+        Positioned(
+          top: 4,
+          left: 4,
+          child: GestureDetector(
+            onTap: _removeAvatar,
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: Colors.redAccent,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    blurRadius: 6,
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.delete, size: 18, color: Colors.white),
+            ),
           ),
         ),
-      ),
     ],
   );
 }
+
 
 
   Widget _brokenImage() => Container(
@@ -331,6 +346,45 @@ Widget _clickableAvatar() {
       _safeToast('خطأ أثناء اختيار الصورة: $e');
     }
   }
+
+  Future<void> _removeAvatar() async {
+  final u = _auth.currentUser;
+  if (u == null) return;
+
+  try {
+    // لو في صورة قديمة من Firebase نحذفها
+    if (avatarPath != null && avatarPath!.startsWith('http')) {
+      try {
+        await _storage.refFromURL(avatarPath!).delete();
+      } catch (_) {}
+    }
+
+    // تحديث Firestore
+    await _db.collection('users').doc(u.uid).set({
+      'photoURL': null,
+      'photoUrl': null,
+      'avatar': null,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    // تحديث Firebase Auth
+    await u.updatePhotoURL(null);
+
+    if (!mounted) return;
+
+    setState(() {
+      avatarPath = null;
+      _pickedBytes = null;
+      _pickedFilePath = null;
+      _avatarRev++;
+    });
+
+    _safeToast("تمت إزالة الصورة بنجاح");
+  } catch (e) {
+    _safeToast("تعذر حذف الصورة: $e");
+  }
+}
+
 
   Future<String?> _uploadAvatar(String uid) async {
     if (_pickedBytes == null && _pickedFilePath == null) return avatarPath;
