@@ -18,7 +18,12 @@ def get_farm_doc(farm_id: str) -> Optional[Dict[str, Any]]:
 
 def set_status(farm_id: str, **data):
     data.setdefault("status", "pending")
-    if "errorMessage" not in data:
-        data["errorMessage"] = None
+    
+    # 🛠️ التعديل هنا: 
+    # إذا كان الحقل موجوداً وقيمته None، أو إذا أردنا التأكد من حذفه عند النجاح
+    if data.get("errorMessage") is None:
+        # استخدام DELETE_FIELD يخبر فايربيس بحذف المفتاح تماماً من الـ Object
+        data["errorMessage"] = firestore.DELETE_FIELD
+    
     data["updatedAt"] = firestore.SERVER_TIMESTAMP
     _get_db().collection("farms").document(farm_id).set(data, merge=True)
