@@ -1,5 +1,3 @@
-// ignore_for_file: avoid_print
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui' show ImageFilter;
@@ -23,14 +21,13 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _loading = false;
 
   final _auth = FirebaseAuth.instance;
-  final _db = FirebaseFirestore.instance; // تهيئة Firestore
+  final _db = FirebaseFirestore.instance;
 
   // الحد الأقصى للمحاولات الفاشلة قبل الحظر الإجباري
   static const int _maxFailedAttempts = 10;
-  // اسم مجموعة البيانات الخاصة بحالة الأمان
+
   static const String _securityCollection = 'security_states';
 
-  // 🔑 دالة didChangeDependencies لقراءة الـ arguments الممررة عبر الـ Route
   bool _didCheckArguments = false;
   @override
   void didChangeDependencies() {
@@ -68,7 +65,7 @@ void _showSnack(
         content: Text(
           msg, 
           style: GoogleFonts.almarai(
-            color: Colors.white, // 👈 هنا تحدد لون النص، تقدر تخليه kLightBeige إذا حاب
+            color: Colors.white, 
 
           ),
         ),
@@ -78,7 +75,7 @@ void _showSnack(
     );
   }
 
-  // 💡 دالة لإعادة تعيين عداد المحاولات الفاشلة في Firestore
+  //  دالة لإعادة تعيين عداد المحاولات الفاشلة في Firestore
   Future<void> _resetFailedAttempts(String email) async {
     final docRef = _db.collection(_securityCollection).doc(email.toLowerCase());
     try {
@@ -87,12 +84,12 @@ void _showSnack(
         'isLocked': false,
       }, SetOptions(merge: true));
     } catch (e) {
-      // تجاهل أخطاء Firestore هنا
-      print('Firestore Error during reset: $e');
+
+      debugPrint('Firestore Error during reset: $e');
     }
   }
 
-  // 💡 دالة لتحديث حالة الحظر والعد في Firestore
+  //  دالة لتحديث حالة الحظر والعد في Firestore
   Future<void> _updateSecurityState(
     String email, {
     bool success = false,
@@ -102,7 +99,7 @@ void _showSnack(
     if (success) {
       await _resetFailedAttempts(email);
     } else {
-      // محاولة فاشلة
+
       try {
         await _db.runTransaction((transaction) async {
           final docSnapshot = await transaction.get(docRef);
@@ -122,7 +119,7 @@ void _showSnack(
           }, SetOptions(merge: true));
         });
 
-        // 🔥 إضافة الكود الجديد هنا ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+
         try {
           final snapshot = await _db
               .collection(_securityCollection)
@@ -131,14 +128,14 @@ void _showSnack(
 
           if ((snapshot.data()?['isLocked'] ?? false) == true) {
             await _auth.sendPasswordResetEmail(email: email);
-            print("🔒 Password reset email sent automatically after lockout.");
+            debugPrint("🔒 Password reset email sent automatically after lockout.");
           }
         } catch (e) {
-          print("Error sending auto-reset email: $e");
+          debugPrint("Error sending auto-reset email: $e");
         }
-        // ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
+
       } catch (e) {
-        print('Firestore Error during update: $e');
+        debugPrint('Firestore Error during update: $e');
       }
     }
   }
@@ -155,7 +152,7 @@ void _showSnack(
 
     setState(() => _loading = true);
 
-    // 🛑 التحقق المسبق من حالة الحظر في Firestore (الحظر القسري)
+
     try {
       final docSnapshot = await _db
           .collection(_securityCollection)
@@ -174,8 +171,8 @@ void _showSnack(
         return;
       }
     } catch (_) {
-      // إذا فشل الاتصال بـ Firestore، نتابع ونعتمد على Rate Limit الخاص بـ Firebase فقط
-      print('Warning: Failed to check Firestore lock status.');
+
+      debugPrint('Warning: Failed to check Firestore lock status.');
     }
 
     try {
@@ -184,7 +181,7 @@ void _showSnack(
         password: pass,
       );
 
-      // 1. نجاح الدخول: إعادة تعيين عداد المحاولات الفاشلة
+
       await _updateSecurityState(email, success: true);
 
       // منطق فحص التحقق من البريد
@@ -200,11 +197,9 @@ void _showSnack(
         return;
       }
 
-      // إذا كان البريد موثقاً:
       Navigator.of(context).pushNamedAndRemoveUntil('/main', (route) => false);
     } on FirebaseAuthException catch (e) {
-      // 2. فشل الدخول: تحديث عداد المحاولات الفاشلة
-      // يتم تحديث العداد فقط في حال أخطاء كلمة المرور/بيانات الاعتماد
+
       if (e.code == 'wrong-password' ||
           e.code == 'invalid-credential' ||
           e.code == 'INVALID_LOGIN_CREDENTIALS') {
@@ -230,7 +225,7 @@ void _showSnack(
               'صيغة البريد الإلكتروني غير صحيحة. تأكدي أن البريد مكتوب بهذا الشكل: example@email.com';
           break;
 
-        case 'too-many-requests': // معالجة Rate Limit من Firebase
+        case 'too-many-requests': 
           msg =
               'تم حظر تسجيل الدخول مؤقتًا بسبب محاولات كثيرة. انتظري قليلاً ثم جربي مجددًا.';
           break;
@@ -240,7 +235,7 @@ void _showSnack(
               'حدث خطأ أثناء تسجيل الدخول. يرجى المحاولة لاحقًا. (كود: ${e.code})';
       }
 
-      // 🚨 هذا هو السطر الذي كان يتأثر ويمنع ظهور الرسالة
+
       _showSnack(messenger, msg, isError: true);
     } catch (_) {
       _showSnack(messenger, 'حدث خطأ غير متوقع');
@@ -332,7 +327,6 @@ void _showSnack(
     try {
       await _auth.sendPasswordResetEmail(email: email);
 
-      // 💡 عند نجاح طلب إعادة التعيين، يتم مسح عداد الحظر
       await _resetFailedAttempts(email);
 
       _showSnack(
@@ -367,7 +361,7 @@ void _showSnack(
         data: Theme.of(context).copyWith(
           textTheme: GoogleFonts.almaraiTextTheme(Theme.of(context).textTheme),
         ),
-        // PopScope للتحكم في الرجوع للخلف
+      
         child: PopScope(
           canPop: false,
           onPopInvokedWithResult: (didPop, result) {
