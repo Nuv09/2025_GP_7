@@ -58,14 +58,20 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _showSnack(
+void _showSnack(
     ScaffoldMessengerState messenger,
     String msg, {
     bool isError = true,
   }) {
     messenger.showSnackBar(
       SnackBar(
-        content: Text(msg, style: GoogleFonts.almarai()),
+        content: Text(
+          msg, 
+          style: GoogleFonts.almarai(
+            color: Colors.white, // 👈 هنا تحدد لون النص، تقدر تخليه kLightBeige إذا حاب
+
+          ),
+        ),
         backgroundColor: isError ? Colors.red.shade700 : kDeepGreen,
         duration: const Duration(seconds: 4),
       ),
