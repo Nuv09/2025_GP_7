@@ -1,0 +1,20 @@
+steps:
+  # 1. بناء الصورة من مجلد الباك اند
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/saaf-97251/cloud-run-source-deploy/2025_gp_7/saaf-analyzer-new:latest', './backend']
+
+  # 2. رفع الصورة للسجل
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/saaf-97251/cloud-run-source-deploy/2025_gp_7/saaf-analyzer-new:latest']
+
+  # 3. النشر الإجباري لإنشاء ريفجن (Revision) جديد
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'saaf-analyzer-new'
+      - '--image'
+      - 'us-central1-docker.pkg.dev/saaf-97251/cloud-run-source-deploy/2025_gp_7/saaf-analyzer-new:latest'
+      - '--region'
+      - 'us-central1'
