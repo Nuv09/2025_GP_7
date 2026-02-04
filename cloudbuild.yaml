@@ -18,3 +18,6 @@ steps:
       - 'us-central1-docker.pkg.dev/saaf-97251/cloud-run-source-deploy/2025_gp_7/saaf-analyzer-new:latest'
       - '--region'
       - 'us-central1'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
