@@ -49,6 +49,8 @@ dependencies:
   uuid: ^4.5.1
   zxcvbn: ^1.0.0
   video_player: ^2.10.1
+  fl_chart: ^1.1.1
+  flutter_map: ^8.2.2
 
 
 dev_dependencies:

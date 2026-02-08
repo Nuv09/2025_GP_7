@@ -49,4 +49,7 @@ class Secrets {
   // مفتاح الجوال فقط
   static const String _mobilePlacesKey =
       "AIzaSyCEU204FgpLDPx_XvogBcnrMVQ6wCQdu30";
+
+  static const String weatherApiKey = "c20bf6e172ae4184888190817260702";
+  static const String mapTilerKey = 'zVvvWEVIvVWnFKBfB4Co';
 }

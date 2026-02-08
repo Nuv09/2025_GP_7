@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:saafapp/constant.dart';
+import 'package:saafapp/dashboard.dart';
 import 'package:saafapp/widgets/farms/farm_card.dart';
 
 class FarmsScreen extends StatelessWidget {
@@ -246,122 +247,130 @@ class _FarmsList extends StatelessWidget {
                   final criticalPct = healthMap != null
                       ? _asDouble(healthMap['Critical_Pct'])
                       : null;
-
-                  return FarmCard(
-                    farmIndex: i,
-                    title: name.isEmpty ? 'مزرعة بدون اسم' : name,
-                    subtitle: region.isEmpty ? '—' : region,
-                    sizeText: size.isEmpty ? null : '$size م²',
-                    imageURL: imageURL.isNotEmpty ? imageURL : null,
-                    createdAt: createdAt,
-                    analysisStatus: status.isEmpty ? null : status,
-                    analysisCount: finalCount,
-                    analysisQuality: finalQuality,
-                    analysisError:
-                        (errorMessage != null && errorMessage.isNotEmpty)
-                        ? errorMessage
-                        : null,
-
-                    // 🩺 نسب صحة النخيل
-                    healthyPct: healthyPct,
-                    monitorPct: monitorPct,
-                    criticalPct: criticalPct,
-
-                    onEdit: () async {
-                      await Navigator.pushNamed(
+                  return GestureDetector(
+                    onTap: () {
+                      // الانتقال لصفحة الداشبورد وتمرير البيانات الأساسية
+                      Navigator.push(
                         context,
-                        '/editFarm',
-                        arguments: {'farmId': doc.id, 'initialData': d},
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              FarmDashboardPage(farmData: d, farmId: doc.id),
+                        ),
                       );
                     },
-                    onDelete: () async {
-                      final ok =
-                          await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              backgroundColor: const Color(0xFF042C25),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(24),
-                              ),
-                              title: Text(
-                                'تأكيد الحذف',
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.almarai(
-                                  color: const Color(0xFFFFF6E0),
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 22,
-                                ),
-                              ),
-                              content: Text(
-                                'هل أنت متأكد من حذف "${name.isEmpty ? 'هذه المزرعة' : name}"؟',
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.almarai(
-                                  color: const Color(0xFFFFF6E0),
-                                  fontSize: 16,
-                                  height: 1.5,
-                                ),
-                              ),
-                              actionsAlignment: MainAxisAlignment.center,
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, false),
-                                  child: Text(
-                                    'إلغاء',
-                                    style: GoogleFonts.almarai(
-                                      color: const Color(0xFFFFF6E0),
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                                ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFF44336),
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  onPressed: () => Navigator.pop(ctx, true),
-                                  child: Text(
-                                    'حذف',
-                                    style: GoogleFonts.almarai(
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ) ??
-                          false;
+                    child: FarmCard(
+                      farmIndex: i,
+                      title: name.isEmpty ? 'مزرعة بدون اسم' : name,
+                      subtitle: region.isEmpty ? '—' : region,
+                      sizeText: size.isEmpty ? null : '$size م²',
+                      imageURL: imageURL.isNotEmpty ? imageURL : null,
+                      createdAt: createdAt,
 
-                      if (!ok) return;
+                      // تم حذف برامترات التحليل والنسب من هنا
+                      onEdit: () async {
+                        await Navigator.pushNamed(
+                          context,
+                          '/editFarm',
+                          arguments: {'farmId': doc.id, 'initialData': d},
+                        );
+                      },
+                      onDelete: () async {
+                        // إظهار نافذة تأكيد الحذف
+                        bool confirmDelete =
+                            await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                backgroundColor: const Color(0xFF042C25),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                title: Text(
+                                  'تأكيد الحذف',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.almarai(
+                                    color: const Color(0xFFFFF6E0),
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 22,
+                                  ),
+                                ),
+                                content: Text(
+                                  'هل أنتِ متأكدة من حذف مزرعة "$name"؟ لا يمكن التراجع عن هذا الإجراء.',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.almarai(
+                                    color: const Color(0xFFFFF6E0),
+                                    fontSize: 16,
+                                    height: 1.5,
+                                  ),
+                                ),
+                                actionsAlignment: MainAxisAlignment.center,
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    child: Text(
+                                      'إلغاء',
+                                      style: GoogleFonts.almarai(
+                                        color: const Color(0xFFFFF6E0),
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFF44336),
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    child: Text(
+                                      'حذف',
+                                      style: GoogleFonts.almarai(
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ) ??
+                            false;
 
-                      try {
-                        await FirebaseFirestore.instance
-                            .collection('farms')
-                            .doc(doc.id)
-                            .delete();
-                        final url = imageURL;
-                        if (url.isNotEmpty) {
-                          await FirebaseStorage.instance
-                              .refFromURL(url)
-                              .delete();
+                        if (confirmDelete) {
+                          try {
+                            // 1. حذف الصورة من Firebase Storage إذا وجدت
+                            if (imageURL.isNotEmpty) {
+                              try {
+                                await FirebaseStorage.instance
+                                    .refFromURL(imageURL)
+                                    .delete();
+                              } catch (e) {
+                                debugPrint("خطأ في حذف الصورة من Storage: $e");
+                              }
+                            }
+
+                            // 2. حذف سجل المزرعة من Firestore
+                            await FirebaseFirestore.instance
+                                .collection('farms')
+                                .doc(doc.id)
+                                .delete();
+
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('تم حذف المزرعة بنجاح ✅'),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('تعذر الحذف: $e')),
+                              );
+                            }
+                          }
                         }
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('تم حذف المزرعة بنجاح ✅'),
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('تعذر الحذف: $e')),
-                          );
-                        }
-                      }
-                    },
+                      },
+                    ),
                   );
                 },
               ),
