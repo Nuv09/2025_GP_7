@@ -35,6 +35,9 @@ IF_MODEL_GS_URI = os.environ.get("IF_MODEL_GS_URI", "")
 
 IF_MEANS_GS_URI = os.environ.get("IF_MEANS_GS_URI", "")
 
+FORECAST_MODEL_GS_URI = os.environ.get("FORECAST_MODEL_GS_URI", "")
+
+
 INDEX_COLS_ALL = [
     "NDVI", "GNDVI", "NDRE", "NDRE740", "MTCI",
     "NDMI", "NDWI_Gao", "SIWSI1", "SIWSI2", "SRWI", "NMDI",
@@ -69,6 +72,8 @@ def _download_gcs_file(gs_uri: str, suffix: str = ".joblib") -> str:
 
 _IF_MODEL = None
 _IF_FEATURE_MEANS = None  
+_FORECAST_MODEL = None
+
 
 def get_if_model():
     
@@ -121,6 +126,25 @@ def get_if_feature_means() -> Dict[str, float]:
     return _IF_FEATURE_MEANS
 
 
+def get_forecast_model():
+    global _FORECAST_MODEL
+    if _FORECAST_MODEL is not None:
+        return _FORECAST_MODEL
+
+    if not FORECAST_MODEL_GS_URI:
+        raise RuntimeError("FORECAST_MODEL_GS_URI غير مضبوط في متغيرات البيئة")
+
+    try:
+        print(f"[FCST] Downloading forecast model from GCS: {FORECAST_MODEL_GS_URI}")
+        local_path = _download_gcs_file(FORECAST_MODEL_GS_URI, suffix=".joblib")
+        print(f"[FCST] Forecast model file downloaded to: {local_path}")
+        _FORECAST_MODEL = joblib.load(local_path)
+        print(f"[FCST] Loaded forecast model OK, type={type(_FORECAST_MODEL)}")
+    except Exception as e:
+        print(f"[FCST] ERROR loading forecast model: {e}")
+        raise
+
+    return _FORECAST_MODEL
 
 def _init_ee():
     """
@@ -918,6 +942,99 @@ def site_summary(dfx: pd.DataFrame) -> Dict[str, Any]:
         "rain_mm": float(dfx_last4.get("precip_mm", pd.Series([0.0])).sum()),
         "t_mean": float(dfx_last4.get("t2m_mean", pd.Series([np.nan])).mean()),
     }
+def decode_class_code(code: float) -> str:
+    if code < 0.5:
+        return "Healthy"
+    elif code < 1.5:
+        return "Monitor"
+    else:
+        return "Critical"
+FORECAST_FEATURES = [
+    "NDVI","GNDVI","NDRE","NDRE740","MTCI","NDMI","NDWI_Gao","SIWSI1","SIWSI2","SRWI","NMDI",
+    "k_NDVI","k_NDRE","k_NDMI","k_SIWSI1",
+    "slope8_NDVI","slope8_NDMI",
+    "NDVI_drop_frac","NDMI_drop_frac","SIWSI1_drop_frac",
+    "NDVI_drop_3w","NDMI_drop_3w",
+    "weekofyear","month",
+    "canopy_temp",
+    "precip_mm","t2m_mean","t2m_max","t2m_min","ssrd_MJ","wind10_ms","vpd_kPa","rh2m_mean",
+    "RPW_score","IF_score",
+]
+
+def forecast_next_week_summary(df_all: pd.DataFrame) -> Dict[str, Any]:
+    if df_all.empty:
+        return {
+            "Healthy_Pct_next": 0.0,
+            "Monitor_Pct_next": 0.0,
+            "Critical_Pct_next": 0.0,
+            "ndvi_delta_next_mean": 0.0,
+            "ndmi_delta_next_mean": 0.0,
+        }
+
+    model = get_forecast_model()
+
+    latest_last = (
+        df_all.sort_values(["site", "x", "y", "date"])
+             .groupby(["site", "x", "y"], as_index=False)
+             .tail(1)
+             .copy()
+    )
+
+    for c in FORECAST_FEATURES:
+        if c not in latest_last.columns:
+            latest_last[c] = np.nan
+
+    X = latest_last[FORECAST_FEATURES].replace([np.inf, -np.inf], np.nan)
+
+    preds = model.predict(X)
+    if preds is None or len(preds) != len(latest_last) or preds.shape[1] != 3:
+        raise RuntimeError(f"شكل مخرجات مودل التوقعات غير متوقع: {getattr(preds, 'shape', None)}")
+
+    latest_last["pred_class_code_next"] = preds[:, 0]
+    latest_last["pred_ndvi_delta_next"] = preds[:, 1]
+    latest_last["pred_ndmi_delta_next"] = preds[:, 2]
+    latest_last["pred_class_next"] = latest_last["pred_class_code_next"].apply(decode_class_code)
+
+    farm_pivot = (
+        latest_last.groupby(["site", "pred_class_next"]).size()
+        .groupby(level=0).apply(lambda s: 100.0 * s / s.sum())
+        .rename("pct")
+        .reset_index()
+        .pivot_table(index="site", columns="pred_class_next", values="pct", fill_value=0.0)
+        .reset_index()
+        .rename(columns={
+            "Healthy": "Healthy_Pct_next",
+            "Monitor": "Monitor_Pct_next",
+            "Critical": "Critical_Pct_next",
+        })
+    )
+
+    delta_agg = latest_last.groupby("site").agg(
+        ndvi_delta_next_mean=("pred_ndvi_delta_next", "mean"),
+        ndmi_delta_next_mean=("pred_ndmi_delta_next", "mean"),
+    ).reset_index()
+
+    out = farm_pivot.merge(delta_agg, on="site", how="left")
+
+    if out.empty:
+        return {
+            "Healthy_Pct_next": 0.0,
+            "Monitor_Pct_next": 0.0,
+            "Critical_Pct_next": 0.0,
+            "ndvi_delta_next_mean": 0.0,
+            "ndmi_delta_next_mean": 0.0,
+        }
+
+    row = out.iloc[0].to_dict()
+    return {
+        "Healthy_Pct_next": float(row.get("Healthy_Pct_next", 0.0)),
+        "Monitor_Pct_next": float(row.get("Monitor_Pct_next", 0.0)),
+        "Critical_Pct_next": float(row.get("Critical_Pct_next", 0.0)),
+        "ndvi_delta_next_mean": float(row.get("ndvi_delta_next_mean", 0.0) or 0.0),
+        "ndmi_delta_next_mean": float(row.get("ndmi_delta_next_mean", 0.0) or 0.0),
+    }
+
+
 
 
 def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any]:
@@ -989,6 +1106,9 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
     df_all = compute_if_risk_inference(df_all)
 
     df_all = add_rpw_flags_and_score(df_all)
+    
+    forecast_summary = forecast_next_week_summary(df_all)
+
 
     stats = site_summary(df_all)
 
@@ -998,5 +1118,9 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
         "Critical_Pct": float(stats.get("Critical_Pct", 0.0)),
     }
 
-    return health_summary
+    return {
+    "current_health": health_summary,
+    "forecast_next_week": forecast_summary,
+}
+
 

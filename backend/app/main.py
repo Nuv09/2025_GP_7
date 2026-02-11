@@ -197,11 +197,12 @@ def analyze():
 
         try:
             health_result = health_mod.analyze_farm_health(farm_id, farm_doc)
+            ch = health_result.get("current_health", {})
             app.logger.info(
                 f"[HEALTH] site={farm_id} "
-                f"H={health_result.get('Healthy_Pct')} "
-                f"M={health_result.get('Monitor_Pct')} "
-                f"C={health_result.get('Critical_Pct')}"
+                f"H={ch.get('Healthy_Pct')} "
+                f"M={ch.get('Monitor_Pct')} "
+                f"C={ch.get('Critical_Pct')}"
             )
         except Exception as he:
             app.logger.exception(f"❌ ERROR during health analysis for farmId={farm_id}: {he}")
