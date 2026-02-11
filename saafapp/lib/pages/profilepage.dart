@@ -6,7 +6,7 @@ import 'package:flutter/services.dart'; // InputFormatters + Uint8List
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:saafapp/constant.dart';
-
+import 'dart:ui';
 // Firebase
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -14,29 +14,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 
 import 'package:saafapp/widgets/saaf_image.dart';
 
-// // ودجت الصورة الشرطي (ويب/موبايل)
-// // تم الإبقاء على saafNetworkImage كدالة لضمان عمل الكود
-// Widget saafNetworkImage(
-//   String url, {
-//   Key? key,
-//   double? width,
-//   double? height,
-//   BoxFit? fit,
-// }) {
-//   return Image.network(
-//     url,
-//     key: key,
-//     width: width,
-//     height: height,
-//     fit: fit,
-//     errorBuilder: (context, error, stackTrace) => Container(
-//       color: Colors.white.withValues(alpha: 0.15), // بديل withOpacity
-//       child: const Icon(Icons.broken_image, color: Colors.white70),
-//     ),
-//   );
-// }
 
-// 🎨 الألوان
 const Color kDeepGreen = Color(0xFF042C25);
 const Color kGold = Color(0xFFEBB974);
 const Color kBeige = Color(0xFFFFF6E0);
@@ -58,7 +36,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // بيانات
   String? name, phone, email, region, avatarPath;
-
+  //String? _authErrorMessage;test 
   // حقول
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
@@ -423,7 +401,7 @@ Widget _clickableAvatar() {
   }
 
   // ===== AlertDialog ملوّن لتأكيد الهوية (كلمة المرور) =====
-  Future<String?> _askForPassword() async {
+  Future<String?> _askForEmailPassword() async {
     final ctrl = TextEditingController();
     return await showDialog<bool>(
       context: context,
@@ -515,7 +493,7 @@ Widget _clickableAvatar() {
     final u = _auth.currentUser!;
     try {
       if (u.providerData.any((p) => p.providerId == 'password')) {
-        final pwd = await _askForPassword();
+        final pwd = await _askForEmailPassword();
         if (pwd == null || pwd.isEmpty) return false;
         final ok = await _reauthWithPassword(pwd);
         if (!ok) return false;
@@ -614,6 +592,236 @@ Widget _clickableAvatar() {
     }
   }
 
+// 1. دالة إظهار نافذة التأكيد
+// 1. نافذة التحذير الأولى )
+  void _showDeleteConfirmation() {
+    showDialog(
+      context: context,
+      builder: (ctx) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF0D2B24).withOpacity(0.4),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+            side: BorderSide(color: Colors.redAccent.withOpacity(0.3)),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.delete_forever_rounded, color: Colors.redAccent, size: 50),
+              const SizedBox(height: 20),
+              Text(
+                'تأكيد حذف الحساب',
+                style: GoogleFonts.almarai(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'سيتم إزالة كافة البيانات المرتبطة بهذا الحساب بشكل نهائي من نظام سعف. \n\n هل ترغب في تأكيد الحذف ؟',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.almarai(color: Colors.white.withOpacity(0.9), fontSize: 14, height: 1.5),
+              ),
+            ],
+          ),
+          actionsPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+          actions: [
+            Row(
+              children: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent.withOpacity(0.8),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _deleteAccountLogic(); // ننتقل للخطوة التالية
+                  },
+                  child: Text('تأكيد الحذف', style: GoogleFonts.almarai(fontWeight: FontWeight.bold)),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text('إلغاء', style: GoogleFonts.almarai(color: Colors.white70)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+
+
+
+
+
+
+  // 2. نافذة طلب كلمة المرور )
+Future<String?> _askForPassword() async {
+  final ctrl = TextEditingController();
+  final userEmail = _auth.currentUser?.email ?? "";
+  String? localError;
+
+  return await showDialog<String>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (context, setDialogState) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF0D2B24).withOpacity(0.2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+            side: BorderSide(color: Colors.white.withOpacity(0.2)),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.lock_person_rounded, color: Color(0xFFFDCB6E), size: 50),
+              const SizedBox(height: 20),
+              Text(
+                'تأكيد الهوية',
+                style: GoogleFonts.almarai(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "يرجى إدخال كلمة المرور الخاصة بالحساب:\n($userEmail)\nلإتمام عملية الحذف.",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.almarai(color: Colors.white.withOpacity(0.9), fontSize: 14, height: 1.5),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: ctrl,
+                obscureText: true,
+                textAlign: TextAlign.right,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'كلمة المرور الحالية',
+                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                  filled: true,
+                  fillColor: Colors.black.withOpacity(0.2),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: const BorderSide(color: kAccent, width: 1.5),
+                  ),
+                ),
+              ),
+
+              // 🔴 رسالة الخطأ داخل النافذة
+              if (localError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 15),
+                  child: Text(
+                    localError!,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.almarai(
+                      color: Colors.redAccent,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: kAccent, foregroundColor: kDeepGreen),
+                  onPressed: () async {
+                    final password = ctrl.text.trim();
+
+                    if (password.isEmpty) {
+                      setDialogState(() => localError = "الرجاء إدخال كلمة المرور");
+                      return;
+                    }
+
+                    try {
+                      AuthCredential credential = EmailAuthProvider.credential(
+                        email: userEmail,
+                        password: password,
+                      );
+
+                      await _auth.currentUser!.reauthenticateWithCredential(credential);
+
+                      Navigator.pop(ctx, password); // نجاح
+                    } on FirebaseAuthException catch (e) {
+                      setDialogState(() {
+                        if (e.code == 'wrong-password') {
+                          localError = "كلمة المرور غير صحيحة";
+                        } else if (e.code == 'network-request-failed') {
+                          localError = "تأكد من اتصالك بالإنترنت";
+                        } else {
+                          localError = "حدث خطأ أمني، حاول مجدداً";
+                        }
+                      });
+                    }
+                  },
+                  child: const Text('تأكيد'),
+                ),
+                const SizedBox(width: 20),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, null),
+                  child: const Text('إلغاء', style: TextStyle(color: Colors.white70)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+
+
+
+
+
+
+
+
+
+  // 3. المنطق البرمجي للحذف النهائي
+Future<void> _deleteAccountLogic() async {
+  final pwd = await _askForPassword();
+
+  if (pwd == null || pwd.isEmpty) return;
+
+  setState(() => _saving = true);
+  try {
+    final u = _auth.currentUser;
+    if (u == null) return;
+
+    final uid = u.uid;
+
+    // حذف المزارع
+    final farmsQuery = await _db.collection('farms').where('createdBy', isEqualTo: uid).get();
+    for (var doc in farmsQuery.docs) {
+      await doc.reference.delete();
+    }
+
+    // حذف البروفايل
+    await _db.collection('users').doc(uid).delete();
+
+    // حذف الحساب نهائي
+    await u.delete();
+
+    _safeToast('تم حذف الحساب وكافة البيانات بنجاح');
+
+    if (mounted) {
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+    }
+  } catch (e) {
+    _safeToast('حدث خطأ غير متوقع أثناء الحذف النهائي');
+  } finally {
+    if (mounted) setState(() => _saving = false);
+  }
+}
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -701,25 +909,7 @@ Widget _clickableAvatar() {
                   ),
                   const SizedBox(height: 24),
 
-                  // Center(
-                  //   child: SizedBox(
-                  //     width: 120,
-                  //     height: 120,
-                  //     child: _clickableAvatar(),
-                  //   ),
-                  // ),
-                  // const SizedBox(height: 10),
-
-                  // Center(
-                  //   child: Text(
-                  //     'أضِف صورة',
-                  //     style: GoogleFonts.almarai(
-                  //       color: kBeige,
-                  //       fontSize: 14,
-                  //       fontWeight: FontWeight.w600,
-                  //     ),
-                  //   ),
-                  // ),
+ 
                   const SizedBox(height: 24),
 
                   _buildField(
@@ -851,6 +1041,23 @@ Widget _clickableAvatar() {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 24),
+
+                      TextButton.icon(
+                             onPressed: _saving ? null : _showDeleteConfirmation,
+                              icon: const Icon(
+                                 Icons.delete_forever,
+                                 color: Colors.redAccent,
+                                ),
+                      label: Text(
+                               'حذف الحساب نهائياً',
+                                style: GoogleFonts.almarai(
+                                 color: Colors.redAccent,
+                                fontWeight: FontWeight.w600,
+                                  decoration: TextDecoration.underline,
+                   ),
+                  ),
+                 ),
                 ],
               ),
             ),

@@ -6,7 +6,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:saafapp/constant.dart';
 import 'package:saafapp/dashboard.dart';
 import 'package:saafapp/widgets/farms/farm_card.dart';
-
+import 'package:saafapp/notifications_page.dart';
 class FarmsScreen extends StatelessWidget {
   const FarmsScreen({super.key});
 
@@ -31,25 +31,58 @@ class FarmsScreen extends StatelessWidget {
         textDirection: TextDirection.ltr,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // زر الإضافة +
-          IconButton(
-            tooltip: 'إضافة مزرعة',
-            onPressed: () async {
-              final result = await Navigator.pushNamed(context, '/addFarm');
-              if (result == true && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'تمت إضافة المزرعة بنجاح ✅',
-                      style: GoogleFonts.almarai(),
+     // زر التنبيهات+
+GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const NotificationsPage()),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(
+                color: goldColor.withOpacity(0.4),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: goldColor.withOpacity(0.1),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                const Icon(
+                  Icons.notifications_active_outlined,
+                  color: Colors.white,
+                  size: 24,
+                ),
+               
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(255, 216, 74, 74),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: darkGreenColor, width: 1),
                     ),
-                    backgroundColor: Colors.green.shade600,
                   ),
-                );
-              }
-            },
-            icon: const Icon(Icons.add, color: Colors.white),
+                ),
+              ],
+            ),
           ),
+        ),
+        // ---------------------------------------------
 
           // اللوقو في النص
           const Expanded(child: Center(child: _LogoButton())),
