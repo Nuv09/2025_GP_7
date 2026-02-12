@@ -600,10 +600,10 @@ Widget _clickableAvatar() {
       builder: (ctx) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: AlertDialog(
-          backgroundColor: const Color(0xFF0D2B24).withOpacity(0.4),
+          backgroundColor: const Color(0xFF0D2B24).withValues(alpha: 0.4),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25),
-            side: BorderSide(color: Colors.redAccent.withOpacity(0.3)),
+            side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.3)),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -618,7 +618,7 @@ Widget _clickableAvatar() {
               Text(
                 'سيتم إزالة كافة البيانات المرتبطة بهذا الحساب بشكل نهائي من نظام سعف. \n\n هل ترغب في تأكيد الحذف ؟',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.almarai(color: Colors.white.withOpacity(0.9), fontSize: 14, height: 1.5),
+                style: GoogleFonts.almarai(color: Colors.white.withValues(alpha: 0.9), fontSize: 14, height: 1.5),
               ),
             ],
           ),
@@ -628,7 +628,7 @@ Widget _clickableAvatar() {
               children: [
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent.withOpacity(0.8),
+                    backgroundColor: Colors.redAccent.withValues(alpha: 0.8),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                   ),
@@ -670,10 +670,10 @@ Future<String?> _askForPassword() async {
       builder: (context, setDialogState) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: AlertDialog(
-          backgroundColor: const Color(0xFF0D2B24).withOpacity(0.2),
+          backgroundColor: const Color(0xFF0D2B24).withValues(alpha: 0.2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25),
-            side: BorderSide(color: Colors.white.withOpacity(0.2)),
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -688,7 +688,7 @@ Future<String?> _askForPassword() async {
               Text(
                 "يرجى إدخال كلمة المرور الخاصة بالحساب:\n($userEmail)\nلإتمام عملية الحذف.",
                 textAlign: TextAlign.center,
-                style: GoogleFonts.almarai(color: Colors.white.withOpacity(0.9), fontSize: 14, height: 1.5),
+                style: GoogleFonts.almarai(color: Colors.white.withValues(alpha: 0.9), fontSize: 14, height: 1.5),
               ),
               const SizedBox(height: 20),
               TextField(
@@ -698,9 +698,9 @@ Future<String?> _askForPassword() async {
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: 'كلمة المرور الحالية',
-                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                  hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
                   filled: true,
-                  fillColor: Colors.black.withOpacity(0.2),
+                  fillColor: Colors.black.withValues(alpha: 0.2),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
@@ -746,6 +746,7 @@ Future<String?> _askForPassword() async {
                       );
 
                       await _auth.currentUser!.reauthenticateWithCredential(credential);
+                      if (!ctx.mounted) return;
 
                       Navigator.pop(ctx, password); // نجاح
                     } on FirebaseAuthException catch (e) {
@@ -787,7 +788,9 @@ Future<String?> _askForPassword() async {
 
   // 3. المنطق البرمجي للحذف النهائي
 Future<void> _deleteAccountLogic() async {
+  final navigator = Navigator.of(context);
   final pwd = await _askForPassword();
+  if (!mounted) return;
 
   if (pwd == null || pwd.isEmpty) return;
 
@@ -813,7 +816,8 @@ Future<void> _deleteAccountLogic() async {
     _safeToast('تم حذف الحساب وكافة البيانات بنجاح');
 
     if (mounted) {
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      navigator.pushNamedAndRemoveUntil('/login', (route) => false);
+
     }
   } catch (e) {
     _safeToast('حدث خطأ غير متوقع أثناء الحذف النهائي');

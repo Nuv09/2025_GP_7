@@ -995,19 +995,23 @@ def forecast_next_week_summary(df_all: pd.DataFrame) -> Dict[str, Any]:
     latest_last["pred_ndmi_delta_next"] = preds[:, 2]
     latest_last["pred_class_next"] = latest_last["pred_class_code_next"].apply(decode_class_code)
 
+    # ✅ FIX: avoid "cannot insert site, already exists"
+    counts = latest_last.groupby(["site", "pred_class_next"]).size()
+    pct = (counts / counts.groupby(level=0).transform("sum")) * 100.0
+
     farm_pivot = (
-        latest_last.groupby(["site", "pred_class_next"]).size()
-        .groupby(level=0).apply(lambda s: 100.0 * s / s.sum())
-        .rename("pct")
-        .reset_index()
-        .pivot_table(index="site", columns="pred_class_next", values="pct", fill_value=0.0)
-        .reset_index()
-        .rename(columns={
-            "Healthy": "Healthy_Pct_next",
-            "Monitor": "Monitor_Pct_next",
-            "Critical": "Critical_Pct_next",
-        })
+        pct.rename("pct")
+           .reset_index()
+           .pivot_table(index="site", columns="pred_class_next", values="pct", fill_value=0.0)
+           .reset_index()
+           .rename(columns={
+               "Healthy": "Healthy_Pct_next",
+               "Monitor": "Monitor_Pct_next",
+               "Critical": "Critical_Pct_next",
+           })
     )
+
+
 
     delta_agg = latest_last.groupby("site").agg(
         ndvi_delta_next_mean=("pred_ndvi_delta_next", "mean"),

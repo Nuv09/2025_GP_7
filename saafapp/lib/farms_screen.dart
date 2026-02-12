@@ -42,15 +42,15 @@ GestureDetector(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(15),
               border: Border.all(
-                color: goldColor.withOpacity(0.4),
+                color: goldColor.withValues(alpha: 0.4),
                 width: 1.5,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: goldColor.withOpacity(0.1),
+                  color: goldColor.withValues(alpha: 0.1),
                   blurRadius: 8,
                   spreadRadius: 1,
                 ),
@@ -220,7 +220,7 @@ class _FarmsList extends StatelessWidget {
               Expanded(
                 child: Center(
                   child: Text(
-                    'لا توجد مزارع بعد. أضف أول مزرعة من زر (+) بالأعلى.',
+                    'لا توجد مزارع بعد. أضف أول مزرعة من زر (+) بالأسفل.',
                     style: GoogleFonts.almarai(color: Colors.white70),
                     textAlign: TextAlign.center,
                   ),
@@ -327,7 +327,7 @@ class _FarmsList extends StatelessWidget {
                                   ),
                                 ),
                                 content: Text(
-                                  'هل أنتِ متأكدة من حذف مزرعة "$name"؟ لا يمكن التراجع عن هذا الإجراء.',
+                                  'هل أنت متأكد من حذف مزرعة "$name"؟ لا يمكن التراجع عن هذا الإجراء.',
                                   textAlign: TextAlign.center,
                                   style: GoogleFonts.almarai(
                                     color: const Color(0xFFFFF6E0),

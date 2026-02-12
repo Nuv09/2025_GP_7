@@ -9,7 +9,6 @@ import 'package:flutter_map/flutter_map.dart'; // سنترك هذه كما هي 
 import 'package:latlong2/latlong.dart'; // سنتركها أيضاً
 
 // خريطة جوجل نعطيها اسماً مستعاراً (gmaps) لكي لا تتدخل في هذه الصفحة
-import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 
 class FarmDashboardPage extends StatefulWidget {
   final Map<String, dynamic> farmData;
@@ -195,7 +194,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
               size: 18,
             ),
             style: IconButton.styleFrom(
-              backgroundColor: Colors.white.withOpacity(0.05),
+              backgroundColor: Colors.white.withValues(alpha: 0.05),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -212,16 +211,16 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
       height: 75,
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
+        color: Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: TabBar(
         controller: _tabController,
         indicator: BoxDecoration(
-          color: goldColor.withOpacity(0.2),
+          color: goldColor.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: goldColor.withOpacity(0.6), width: 1.5),
+          border: Border.all(color: goldColor.withValues(alpha: 0.6), width: 1.5),
         ),
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
@@ -265,7 +264,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -289,7 +288,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
                     polygons: [
                       Polygon(
                         points: points,
-                        color: lightGreenColor.withOpacity(0.15),
+                        color: lightGreenColor.withValues(alpha: 0.15),
                         borderColor: goldColor,
                         borderStrokeWidth: 2.5,
                       ),
@@ -313,7 +312,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.black.withOpacity(0.5), Colors.transparent],
+                  colors: [Colors.black.withValues(alpha: 0.5), Colors.transparent],
                 ),
               ),
               padding: const EdgeInsets.all(20),
@@ -335,9 +334,9 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
               decoration: BoxDecoration(
-                color: darkGreenColor.withOpacity(0.9),
+                color: darkGreenColor.withValues(alpha: 0.9),
                 borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: goldColor.withOpacity(0.4)),
+                border: Border.all(color: goldColor.withValues(alpha: 0.4)),
               ),
               child: _buildMapMiniStat(
                 Icons.square_foot_rounded,
@@ -375,13 +374,14 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
 
   //الحاله
   Widget _buildGeneralInfoSection() {
-    final health = widget.farmData['health'] as Map<String, dynamic>? ?? {};
-    final double healthy =
-        double.tryParse(health['Healthy_Pct']?.toString() ?? '0') ?? 0;
-    final double monitor =
-        double.tryParse(health['Monitor_Pct']?.toString() ?? '0') ?? 0;
-    final double critical =
-        double.tryParse(health['Critical_Pct']?.toString() ?? '0') ?? 0;
+    final healthRoot = (widget.farmData['health'] as Map?)?.cast<String, dynamic>() ?? {};
+    final current = (healthRoot['current_health'] as Map?)?.cast<String, dynamic>() ?? {};
+
+    final double healthy  = double.tryParse("${current['Healthy_Pct']}") ?? (current['Healthy_Pct'] as num?)?.toDouble() ?? 0.0;
+    final double monitor  = double.tryParse("${current['Monitor_Pct']}") ?? (current['Monitor_Pct'] as num?)?.toDouble() ?? 0.0;
+    final double critical = double.tryParse("${current['Critical_Pct']}") ?? (current['Critical_Pct'] as num?)?.toDouble() ?? 0.0;
+
+
     final int totalPalms = widget.farmData['finalCount'] is int
         ? widget.farmData['finalCount']
         : int.tryParse(widget.farmData['finalCount']?.toString() ?? '0') ?? 0;
@@ -406,9 +406,9 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -454,9 +454,9 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         children: [
@@ -520,9 +520,9 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -691,9 +691,118 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
     );
   }
 
-  Widget _buildRecommendationsSection() =>
-      _placeholder("توصيات الذكاء الاصطناعي");
-  Widget _placeholder(String text) => Center(
-    child: Text(text, style: const TextStyle(color: Colors.white24)),
-  );
+      Widget _buildRecommendationsSection() {
+    final Map<String, dynamic> healthRoot =
+    widget.farmData['health'] != null
+        ? (widget.farmData['health'] as Map).cast<String, dynamic>()
+        : widget.farmData.cast<String, dynamic>();
+
+    final Map<String, dynamic> forecast =
+    (healthRoot['forecast_next_week'] is Map)
+        ? (healthRoot['forecast_next_week'] as Map).cast<String, dynamic>()
+        : {};
+    debugPrint("DEBUG healthRoot keys: ${healthRoot.keys}");
+    debugPrint("DEBUG forecast map: $forecast");
+
+
+
+
+    final double hNext = double.tryParse("${forecast['Healthy_Pct_next']}") 
+    ?? (forecast['Healthy_Pct_next'] as num?)?.toDouble() ?? 0.0;
+
+    final double mNext = double.tryParse("${forecast['Monitor_Pct_next']}") 
+    ?? (forecast['Monitor_Pct_next'] as num?)?.toDouble() ?? 0.0;
+
+    final double cNext = double.tryParse("${forecast['Critical_Pct_next']}") 
+    ?? (forecast['Critical_Pct_next'] as num?)?.toDouble() ?? 0.0;
+
+    final double ndviDelta = double.tryParse("${forecast['ndvi_delta_next_mean']}") 
+    ?? (forecast['ndvi_delta_next_mean'] as num?)?.toDouble() ?? 0.0;
+
+    final double ndmiDelta = double.tryParse("${forecast['ndmi_delta_next_mean']}") 
+    ?? (forecast['ndmi_delta_next_mean'] as num?)?.toDouble() ?? 0.0;
+
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "توقع حالة الأسبوع القادم",
+                  style: GoogleFonts.almarai(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _forecastRow("سليم", Colors.greenAccent, hNext),
+                _forecastRow("مشتبه به", Colors.orangeAccent, mNext),
+                _forecastRow("مصاب", Colors.redAccent, cNext),
+                const Divider(color: Colors.white10, height: 30),
+                Text(
+                  "متوسط تغيّر NDVI المتوقع: ${ndviDelta.toStringAsFixed(4)}",
+                  style: GoogleFonts.almarai(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  "متوسط تغيّر NDMI المتوقع: ${ndmiDelta.toStringAsFixed(4)}",
+                  style: GoogleFonts.almarai(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 80),
+        ],
+      ),
+    );
+  }
+
+  Widget _forecastRow(String label, Color color, double val) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            label,
+            style: GoogleFonts.almarai(color: Colors.white70, fontSize: 13),
+          ),
+          const Spacer(),
+          Text(
+            "${val.toStringAsFixed(1)}%",
+            style: GoogleFonts.almarai(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+   
 }

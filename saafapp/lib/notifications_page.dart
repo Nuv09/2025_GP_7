@@ -105,9 +105,9 @@ Widget build(BuildContext context) {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         ),
         child: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 18),
       ),
@@ -119,7 +119,7 @@ Widget build(BuildContext context) {
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.2),
+        color: Colors.black.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(20),
       ),
       child: TabBar(
@@ -127,7 +127,7 @@ Widget build(BuildContext context) {
         indicator: BoxDecoration(
           color: goldColor,
           borderRadius: BorderRadius.circular(15),
-          boxShadow: [BoxShadow(color: goldColor.withOpacity(0.3), blurRadius: 10)],
+          boxShadow: [BoxShadow(color: goldColor.withValues(alpha: 0.3), blurRadius: 10)],
         ),
         labelColor: darkGreenColor,
         unselectedLabelColor: Colors.white54,
@@ -154,9 +154,9 @@ Widget build(BuildContext context) {
           margin: const EdgeInsets.only(bottom: 18),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
+            color: Colors.white.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(25),
-            border: Border.all(color: item['isRead'] ? Colors.transparent : goldColor.withOpacity(0.3)),
+            border: Border.all(color: item['isRead'] ? Colors.transparent : goldColor.withValues(alpha: 0.3)),
           ),
           child: Row(
             children: [
@@ -195,7 +195,7 @@ Widget build(BuildContext context) {
 
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: col.withOpacity(0.1), shape: BoxShape.circle),
+      decoration: BoxDecoration(color: col.withValues(alpha: 0.1), shape: BoxShape.circle),
       child: Icon(icon, color: col, size: 24),
     );
   }
