@@ -942,6 +942,44 @@ def site_summary(dfx: pd.DataFrame) -> Dict[str, Any]:
         "rain_mm": float(dfx_last4.get("precip_mm", pd.Series([0.0])).sum()),
         "t_mean": float(dfx_last4.get("t2m_mean", pd.Series([np.nan])).mean()),
     }
+
+def indices_history_last_weeks(
+    df_all: pd.DataFrame,
+    weeks: int = 5,
+    agg: str = "mean",  # "mean" أو "median"
+) -> List[Dict[str, Any]]:
+    """
+    يرجّع سلسلة زمنية أسبوعية لآخر N أسابيع: NDVI/NDMI/NDRE على مستوى المزرعة.
+    """
+    if df_all.empty or "date" not in df_all.columns:
+        return []
+
+    df = df_all.copy()
+    df["date"] = pd.to_datetime(df["date"]).dt.normalize()
+
+    # نجمع على مستوى (site, date) بدل البكسلات
+    cols = [c for c in ["NDVI", "NDMI", "NDRE"] if c in df.columns]
+    if not cols:
+        return []
+
+    if agg == "median":
+        g = df.groupby(["site", "date"], as_index=False)[cols].median()
+    else:
+        g = df.groupby(["site", "date"], as_index=False)[cols].mean()
+
+    g = g.sort_values("date").tail(weeks)
+
+    out: List[Dict[str, Any]] = []
+    for _, row in g.iterrows():
+        out.append({
+            "date": row["date"].date().isoformat(),
+            "NDVI": float(row.get("NDVI", np.nan)) if np.isfinite(row.get("NDVI", np.nan)) else None,
+            "NDMI": float(row.get("NDMI", np.nan)) if np.isfinite(row.get("NDMI", np.nan)) else None,
+            "NDRE": float(row.get("NDRE", np.nan)) if np.isfinite(row.get("NDRE", np.nan)) else None,
+        })
+    return out
+
+
 def decode_class_code(code: float) -> str:
     if code < 0.5:
         return "Healthy"
@@ -1115,6 +1153,8 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
 
 
     stats = site_summary(df_all)
+    
+
 
     health_summary = {
         "Healthy_Pct": float(stats.get("Healthy_Pct", 0.0)),
@@ -1122,9 +1162,14 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
         "Critical_Pct": float(stats.get("Critical_Pct", 0.0)),
     }
 
+    history_last_month = indices_history_last_weeks(df_all, weeks=5, agg="mean")
+
+
     return {
     "current_health": health_summary,
     "forecast_next_week": forecast_summary,
+    "indices_history_last_month": history_last_month,
 }
+
 
 

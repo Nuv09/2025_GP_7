@@ -515,6 +515,15 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
   }
 
   Widget _buildHistoryChart() {
+  // ✅ قراءة آمنة للبيانات
+  final Map<String, dynamic> healthRoot =
+      (widget.farmData['health'] as Map?)?.cast<String, dynamic>() ?? {};
+
+  final List<dynamic> history =
+      (healthRoot['indices_history_last_month'] as List?) ?? [];
+
+  // ✅ لو ما فيه بيانات
+  if (history.isEmpty) {
     return Container(
       height: 340,
       width: double.infinity,
@@ -524,115 +533,135 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
         borderRadius: BorderRadius.circular(25),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "تطور المؤشرات الحيوية (آخر 5 أشهر)",
-            style: GoogleFonts.almarai(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
+      child: Center(
+        child: Text(
+          "لا توجد بيانات كافية لهذا الشهر",
+          style: GoogleFonts.almarai(color: Colors.white70, fontSize: 13),
+        ),
+      ),
+    );
+  }
+
+  // ✅ تجهيز النقاط
+  final List<FlSpot> ndviSpots = [];
+  final List<FlSpot> ndmiSpots = [];
+  final List<FlSpot> ndreSpots = [];
+
+  for (int i = 0; i < history.length; i++) {
+    final item = (history[i] as Map).cast<String, dynamic>();
+
+    final ndvi = ((item['NDVI'] as num?)?.toDouble() ?? 0.0) * 100;
+    final ndmi = ((item['NDMI'] as num?)?.toDouble() ?? 0.0) * 100;
+    final ndre = ((item['NDRE'] as num?)?.toDouble() ?? 0.0) * 100;
+
+    ndviSpots.add(FlSpot(i.toDouble(), ndvi));
+    ndmiSpots.add(FlSpot(i.toDouble(), ndmi));
+    ndreSpots.add(FlSpot(i.toDouble(), ndre));
+  }
+
+  return Container(
+    height: 340,
+    width: double.infinity,
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.05),
+      borderRadius: BorderRadius.circular(25),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "تطور المؤشرات الحيوية (آخر شهر)",
+          style: GoogleFonts.almarai(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 15),
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: [
+            _buildSimpleLegend(
+              "مؤشر الغطاء النباتي (NDVI)",
+              const Color(0xFF69F0AE),
             ),
-          ),
-          const SizedBox(height: 15),
-          Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            children: [
-              _buildSimpleLegend(
-                "مؤشر الغطاء النباتي (NDVI)",
-                const Color(0xFF69F0AE),
-              ),
-              _buildSimpleLegend("مؤشر رطوبة النبات (NDMI)", Colors.blueAccent),
-              _buildSimpleLegend("مؤشر الكلوروفيل (NDRE)", goldColor),
-            ],
-          ),
-          const SizedBox(height: 25),
-          Expanded(
-            child: LineChart(
-              LineChartData(
-                gridData: const FlGridData(show: false),
-                titlesData: FlTitlesData(
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) {
-                        const months = [
-                          'أكتوبر',
-                          'نوفمبر',
-                          'ديسمبر',
-                          'يناير',
-                          'فبراير',
-                        ];
-                        if (value.toInt() >= 0 &&
-                            value.toInt() < months.length) {
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: Text(
-                              months[value.toInt()],
-                              style: GoogleFonts.almarai(
-                                color: Colors.white38,
-                                fontSize: 10,
-                              ),
+            _buildSimpleLegend("مؤشر رطوبة النبات (NDMI)", Colors.blueAccent),
+            _buildSimpleLegend("مؤشر الكلوروفيل (NDRE)", goldColor),
+          ],
+        ),
+        const SizedBox(height: 25),
+        Expanded(
+          child: LineChart(
+            LineChartData(
+              gridData: const FlGridData(show: false),
+              borderData: FlBorderData(show: false),
+              titlesData: FlTitlesData(
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+
+                // ✅ المحور السفلي: تواريخ (MM-DD)
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    interval: (history.length / 6).ceilToDouble(),
+                    getTitlesWidget: (value, meta) {
+                      final i = value.toInt();
+                      if (i >= 0 && i < history.length) {
+                        final item = (history[i] as Map).cast<String, dynamic>();
+                        final dateStr = item['date'].toString(); // yyyy-mm-dd
+                        final clean = dateStr.split(' ').first; // يشيل الوقت لو موجود
+                        final label = clean.length >= 10 ? clean.substring(5, 10) : clean;
+
+
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            label,
+                            style: GoogleFonts.almarai(
+                              color: Colors.white38,
+                              fontSize: 10,
                             ),
-                          );
-                        }
-                        return const Text('');
-                      },
-                    ),
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
                   ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 35,
-                      getTitlesWidget: (value, meta) => Text(
-                        "${value.toInt()}%",
-                        style: GoogleFonts.almarai(
-                          color: Colors.white38,
-                          fontSize: 10,
-                        ),
+                ),
+
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 35,
+                    getTitlesWidget: (value, meta) => Text(
+                      "${value.toInt()}%",
+                      style: GoogleFonts.almarai(
+                        color: Colors.white38,
+                        fontSize: 10,
                       ),
                     ),
                   ),
                 ),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  _lineData([
-                    const FlSpot(0, 70),
-                    const FlSpot(1, 65),
-                    const FlSpot(2, 75),
-                    const FlSpot(3, 80),
-                    const FlSpot(4, 85),
-                  ], const Color(0xFF69F0AE)),
-                  _lineData([
-                    const FlSpot(0, 50),
-                    const FlSpot(1, 48),
-                    const FlSpot(2, 55),
-                    const FlSpot(3, 52),
-                    const FlSpot(4, 58),
-                  ], Colors.blueAccent),
-                  _lineData([
-                    const FlSpot(0, 40),
-                    const FlSpot(1, 42),
-                    const FlSpot(2, 45),
-                    const FlSpot(3, 48),
-                    const FlSpot(4, 50),
-                  ], goldColor),
-                ],
               ),
+              lineBarsData: [
+                _lineData(ndviSpots, const Color(0xFF69F0AE)),
+                _lineData(ndmiSpots, Colors.blueAccent),
+                _lineData(ndreSpots, goldColor),
+              ],
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildSimpleLegend(String label, Color color) {
     return Row(
@@ -691,7 +720,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
     );
   }
 
-      Widget _buildRecommendationsSection() {
+  Widget _buildRecommendationsSection() {
     final Map<String, dynamic> healthRoot =
     widget.farmData['health'] != null
         ? (widget.farmData['health'] as Map).cast<String, dynamic>()
