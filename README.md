@@ -4,12 +4,12 @@
 
 # 🌴 SAAF سعف – Intelligent Palm Tree Health Monitoring Platform  
 
-## 📌 Introduction  
+## Introduction  
 Palm trees are a vital agricultural and economic resource in Saudi Arabia and the Arab world. However, they face challenges such as **Red Palm Weevil infestations, water stress, and nutrient deficiencies**. Traditional inspection methods are often **time-consuming, costly, and limited in scale**, making early detection difficult.  
 
 **SAAF** is a smart platform that leverages **satellite imagery and Artificial Intelligence (AI)** to monitor palm tree health and provide early detection of potential risks. The system supports farmers and agricultural organizations by reducing losses and improving farm management.  
 
-## 🛠️ Technologies Used  
+## Technologies Used  
 - **Frontend:** Flutter SDK  
 - **Backend:** Python (Flask)  
 - **APIs & Data Sources:** Google Earth Engine, Sentinel Hub API, Sentinel-2 & Landsat-8 satellite imagery  
@@ -17,7 +17,7 @@ Palm trees are a vital agricultural and economic resource in Saudi Arabia and th
 - **Database:** Firebase  
 - **Visualization:** Interactive maps, dashboards, and reports  
 
-## 🚀 Project Features  
+## Project Features  
 - User registration & login
 - Add and manage farms with GPS coordinates  
 - Interactive map to view farm locations and palm health status  
@@ -28,7 +28,7 @@ Palm trees are a vital agricultural and economic resource in Saudi Arabia and th
 - Report generation (PDF/Excel)  
 
 
-## ⚙️ Launching Instructions  
+## Launching Instructions  
 1. **Clone the repository:**  
    ```bash
    git clone https://github.com/Nuv09/2025_GP_7.git
