@@ -220,7 +220,10 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
         indicator: BoxDecoration(
           color: goldColor.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: goldColor.withValues(alpha: 0.6), width: 1.5),
+          border: Border.all(
+            color: goldColor.withValues(alpha: 0.6),
+            width: 1.5,
+          ),
         ),
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
@@ -253,8 +256,10 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
         ? points[0]
         : const LatLng(24.7136, 46.6753);
 
-    // 2. سحب المساحة باستخدام المسمى الصحيح من الداتابيز (farmSize)
-    // تم استخدام farmSize بناءً على بيانات Firestore المرسلة
+    // 2. سحب نقاط الخريطة الصحية (الحقل الجديد من الباكند)
+    final List<dynamic> healthMapPoints = widget.farmData['healthMap'] ?? [];
+
+    // 3. سحب المساحة
     String areaValue = widget.farmData['farmSize']?.toString() ?? 'غير محدد';
 
     return Container(
@@ -283,12 +288,31 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
                       'https://api.maptiler.com/maps/hybrid/{z}/{x}/{y}.jpg?key=${Secrets.mapTilerKey}',
                   userAgentPackageName: 'com.example.saafapp',
                 ),
+
+                // --- الطبقة الجديدة: نقاط الحالة الصحية (البكسلات الملونة) ---
+                CircleLayer(
+                  circles: healthMapPoints.map((point) {
+                    return CircleMarker(
+                      point: LatLng(
+                        (point['lat'] as num).toDouble(),
+                        (point['lng'] as num).toDouble(),
+                      ),
+                      color: _getHealthColor(point['s'] as int),
+                      radius: 8, // نصف القطر بالأمتار ليغطي مساحة البكسل
+                      useRadiusInMeter: true,
+                    );
+                  }).toList(),
+                ),
+
+                // طبقة حدود المزرعة
                 if (points.isNotEmpty)
                   PolygonLayer(
                     polygons: [
                       Polygon(
                         points: points,
-                        color: lightGreenColor.withValues(alpha: 0.15),
+                        color: lightGreenColor.withValues(
+                          alpha: 0.1,
+                        ), // تقليل الشفافية لرؤية النقاط
                         borderColor: goldColor,
                         borderStrokeWidth: 2.5,
                       ),
@@ -312,12 +336,15 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.black.withValues(alpha: 0.5), Colors.transparent],
+                  colors: [
+                    Colors.black.withValues(alpha: 0.5),
+                    Colors.transparent,
+                  ],
                 ),
               ),
               padding: const EdgeInsets.all(20),
               child: Text(
-                "حدود المزرعة الحالية",
+                "خريطة تحليل الصحة النباتية",
                 style: GoogleFonts.almarai(
                   color: Colors.white,
                   fontSize: 13,
@@ -327,7 +354,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
             ),
           ),
 
-          // بطاقة المعلومات - تعرض المساحة فقط بناءً على طلبك
+          // بطاقة المساحة
           Positioned(
             bottom: 20,
             right: 20,
@@ -348,6 +375,20 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
         ],
       ),
     );
+  }
+
+  // دالة مساعدة لتحديد لون النقطة بناءً على الحالة
+  Color _getHealthColor(int status) {
+    switch (status) {
+      case 2:
+        return Colors.red.withOpacity(0.7); // مصاب
+      case 1:
+        return Colors.yellow.withOpacity(0.7); // مراقبة
+      case 0:
+        return Colors.greenAccent.withOpacity(0.7); // سليم
+      default:
+        return Colors.transparent;
+    }
   }
 
   Widget _buildMapMiniStat(IconData icon, String label, String value) {
@@ -374,13 +415,23 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
 
   //الحاله
   Widget _buildGeneralInfoSection() {
-    final healthRoot = (widget.farmData['health'] as Map?)?.cast<String, dynamic>() ?? {};
-    final current = (healthRoot['current_health'] as Map?)?.cast<String, dynamic>() ?? {};
+    final healthRoot =
+        (widget.farmData['health'] as Map?)?.cast<String, dynamic>() ?? {};
+    final current =
+        (healthRoot['current_health'] as Map?)?.cast<String, dynamic>() ?? {};
 
-    final double healthy  = double.tryParse("${current['Healthy_Pct']}") ?? (current['Healthy_Pct'] as num?)?.toDouble() ?? 0.0;
-    final double monitor  = double.tryParse("${current['Monitor_Pct']}") ?? (current['Monitor_Pct'] as num?)?.toDouble() ?? 0.0;
-    final double critical = double.tryParse("${current['Critical_Pct']}") ?? (current['Critical_Pct'] as num?)?.toDouble() ?? 0.0;
-
+    final double healthy =
+        double.tryParse("${current['Healthy_Pct']}") ??
+        (current['Healthy_Pct'] as num?)?.toDouble() ??
+        0.0;
+    final double monitor =
+        double.tryParse("${current['Monitor_Pct']}") ??
+        (current['Monitor_Pct'] as num?)?.toDouble() ??
+        0.0;
+    final double critical =
+        double.tryParse("${current['Critical_Pct']}") ??
+        (current['Critical_Pct'] as num?)?.toDouble() ??
+        0.0;
 
     final int totalPalms = widget.farmData['finalCount'] is int
         ? widget.farmData['finalCount']
@@ -515,15 +566,50 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
   }
 
   Widget _buildHistoryChart() {
-  // ✅ قراءة آمنة للبيانات
-  final Map<String, dynamic> healthRoot =
-      (widget.farmData['health'] as Map?)?.cast<String, dynamic>() ?? {};
+    // ✅ قراءة آمنة للبيانات
+    final Map<String, dynamic> healthRoot =
+        (widget.farmData['health'] as Map?)?.cast<String, dynamic>() ?? {};
 
-  final List<dynamic> history =
-      (healthRoot['indices_history_last_month'] as List?) ?? [];
+    final List<dynamic> history =
+        (healthRoot['indices_history_last_month'] as List?) ?? [];
 
-  // ✅ لو ما فيه بيانات
-  if (history.isEmpty) {
+    // ✅ لو ما فيه بيانات
+    if (history.isEmpty) {
+      return Container(
+        height: 340,
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        child: Center(
+          child: Text(
+            "لا توجد بيانات كافية لهذا الشهر",
+            style: GoogleFonts.almarai(color: Colors.white70, fontSize: 13),
+          ),
+        ),
+      );
+    }
+
+    // ✅ تجهيز النقاط
+    final List<FlSpot> ndviSpots = [];
+    final List<FlSpot> ndmiSpots = [];
+    final List<FlSpot> ndreSpots = [];
+
+    for (int i = 0; i < history.length; i++) {
+      final item = (history[i] as Map).cast<String, dynamic>();
+
+      final ndvi = ((item['NDVI'] as num?)?.toDouble() ?? 0.0) * 100;
+      final ndmi = ((item['NDMI'] as num?)?.toDouble() ?? 0.0) * 100;
+      final ndre = ((item['NDRE'] as num?)?.toDouble() ?? 0.0) * 100;
+
+      ndviSpots.add(FlSpot(i.toDouble(), ndvi));
+      ndmiSpots.add(FlSpot(i.toDouble(), ndmi));
+      ndreSpots.add(FlSpot(i.toDouble(), ndre));
+    }
+
     return Container(
       height: 340,
       width: double.infinity,
@@ -533,135 +619,104 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
         borderRadius: BorderRadius.circular(25),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
-      child: Center(
-        child: Text(
-          "لا توجد بيانات كافية لهذا الشهر",
-          style: GoogleFonts.almarai(color: Colors.white70, fontSize: 13),
-        ),
-      ),
-    );
-  }
-
-  // ✅ تجهيز النقاط
-  final List<FlSpot> ndviSpots = [];
-  final List<FlSpot> ndmiSpots = [];
-  final List<FlSpot> ndreSpots = [];
-
-  for (int i = 0; i < history.length; i++) {
-    final item = (history[i] as Map).cast<String, dynamic>();
-
-    final ndvi = ((item['NDVI'] as num?)?.toDouble() ?? 0.0) * 100;
-    final ndmi = ((item['NDMI'] as num?)?.toDouble() ?? 0.0) * 100;
-    final ndre = ((item['NDRE'] as num?)?.toDouble() ?? 0.0) * 100;
-
-    ndviSpots.add(FlSpot(i.toDouble(), ndvi));
-    ndmiSpots.add(FlSpot(i.toDouble(), ndmi));
-    ndreSpots.add(FlSpot(i.toDouble(), ndre));
-  }
-
-  return Container(
-    height: 340,
-    width: double.infinity,
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.05),
-      borderRadius: BorderRadius.circular(25),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "تطور المؤشرات الحيوية (آخر شهر)",
-          style: GoogleFonts.almarai(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 15),
-        Wrap(
-          spacing: 12,
-          runSpacing: 8,
-          children: [
-            _buildSimpleLegend(
-              "مؤشر الغطاء النباتي (NDVI)",
-              const Color(0xFF69F0AE),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "تطور المؤشرات الحيوية (آخر شهر)",
+            style: GoogleFonts.almarai(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
             ),
-            _buildSimpleLegend("مؤشر رطوبة النبات (NDMI)", Colors.blueAccent),
-            _buildSimpleLegend("مؤشر الكلوروفيل (NDRE)", goldColor),
-          ],
-        ),
-        const SizedBox(height: 25),
-        Expanded(
-          child: LineChart(
-            LineChartData(
-              gridData: const FlGridData(show: false),
-              borderData: FlBorderData(show: false),
-              titlesData: FlTitlesData(
-                rightTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-                topTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-
-                // ✅ المحور السفلي: تواريخ (MM-DD)
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    interval: (history.length / 6).ceilToDouble(),
-                    getTitlesWidget: (value, meta) {
-                      final i = value.toInt();
-                      if (i >= 0 && i < history.length) {
-                        final item = (history[i] as Map).cast<String, dynamic>();
-                        final dateStr = item['date'].toString(); // yyyy-mm-dd
-                        final clean = dateStr.split(' ').first; // يشيل الوقت لو موجود
-                        final label = clean.length >= 10 ? clean.substring(5, 10) : clean;
-
-
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            label,
-                            style: GoogleFonts.almarai(
-                              color: Colors.white38,
-                              fontSize: 10,
-                            ),
-                          ),
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
+          ),
+          const SizedBox(height: 15),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              _buildSimpleLegend(
+                "مؤشر الغطاء النباتي (NDVI)",
+                const Color(0xFF69F0AE),
+              ),
+              _buildSimpleLegend("مؤشر رطوبة النبات (NDMI)", Colors.blueAccent),
+              _buildSimpleLegend("مؤشر الكلوروفيل (NDRE)", goldColor),
+            ],
+          ),
+          const SizedBox(height: 25),
+          Expanded(
+            child: LineChart(
+              LineChartData(
+                gridData: const FlGridData(show: false),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
                   ),
-                ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
 
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 35,
-                    getTitlesWidget: (value, meta) => Text(
-                      "${value.toInt()}%",
-                      style: GoogleFonts.almarai(
-                        color: Colors.white38,
-                        fontSize: 10,
+                  // ✅ المحور السفلي: تواريخ (MM-DD)
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: (history.length / 6).ceilToDouble(),
+                      getTitlesWidget: (value, meta) {
+                        final i = value.toInt();
+                        if (i >= 0 && i < history.length) {
+                          final item = (history[i] as Map)
+                              .cast<String, dynamic>();
+                          final dateStr = item['date'].toString(); // yyyy-mm-dd
+                          final clean = dateStr
+                              .split(' ')
+                              .first; // يشيل الوقت لو موجود
+                          final label = clean.length >= 10
+                              ? clean.substring(5, 10)
+                              : clean;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              label,
+                              style: GoogleFonts.almarai(
+                                color: Colors.white38,
+                                fontSize: 10,
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 35,
+                      getTitlesWidget: (value, meta) => Text(
+                        "${value.toInt()}%",
+                        style: GoogleFonts.almarai(
+                          color: Colors.white38,
+                          fontSize: 10,
+                        ),
                       ),
                     ),
                   ),
                 ),
+                lineBarsData: [
+                  _lineData(ndviSpots, const Color(0xFF69F0AE)),
+                  _lineData(ndmiSpots, Colors.blueAccent),
+                  _lineData(ndreSpots, goldColor),
+                ],
               ),
-              lineBarsData: [
-                _lineData(ndviSpots, const Color(0xFF69F0AE)),
-                _lineData(ndmiSpots, Colors.blueAccent),
-                _lineData(ndreSpots, goldColor),
-              ],
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
   Widget _buildSimpleLegend(String label, Color color) {
     return Row(
@@ -721,36 +776,41 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
   }
 
   Widget _buildRecommendationsSection() {
-    final Map<String, dynamic> healthRoot =
-    widget.farmData['health'] != null
+    final Map<String, dynamic> healthRoot = widget.farmData['health'] != null
         ? (widget.farmData['health'] as Map).cast<String, dynamic>()
         : widget.farmData.cast<String, dynamic>();
 
     final Map<String, dynamic> forecast =
-    (healthRoot['forecast_next_week'] is Map)
+        (healthRoot['forecast_next_week'] is Map)
         ? (healthRoot['forecast_next_week'] as Map).cast<String, dynamic>()
         : {};
     debugPrint("DEBUG healthRoot keys: ${healthRoot.keys}");
     debugPrint("DEBUG forecast map: $forecast");
 
+    final double hNext =
+        double.tryParse("${forecast['Healthy_Pct_next']}") ??
+        (forecast['Healthy_Pct_next'] as num?)?.toDouble() ??
+        0.0;
 
+    final double mNext =
+        double.tryParse("${forecast['Monitor_Pct_next']}") ??
+        (forecast['Monitor_Pct_next'] as num?)?.toDouble() ??
+        0.0;
 
+    final double cNext =
+        double.tryParse("${forecast['Critical_Pct_next']}") ??
+        (forecast['Critical_Pct_next'] as num?)?.toDouble() ??
+        0.0;
 
-    final double hNext = double.tryParse("${forecast['Healthy_Pct_next']}") 
-    ?? (forecast['Healthy_Pct_next'] as num?)?.toDouble() ?? 0.0;
+    final double ndviDelta =
+        double.tryParse("${forecast['ndvi_delta_next_mean']}") ??
+        (forecast['ndvi_delta_next_mean'] as num?)?.toDouble() ??
+        0.0;
 
-    final double mNext = double.tryParse("${forecast['Monitor_Pct_next']}") 
-    ?? (forecast['Monitor_Pct_next'] as num?)?.toDouble() ?? 0.0;
-
-    final double cNext = double.tryParse("${forecast['Critical_Pct_next']}") 
-    ?? (forecast['Critical_Pct_next'] as num?)?.toDouble() ?? 0.0;
-
-    final double ndviDelta = double.tryParse("${forecast['ndvi_delta_next_mean']}") 
-    ?? (forecast['ndvi_delta_next_mean'] as num?)?.toDouble() ?? 0.0;
-
-    final double ndmiDelta = double.tryParse("${forecast['ndmi_delta_next_mean']}") 
-    ?? (forecast['ndmi_delta_next_mean'] as num?)?.toDouble() ?? 0.0;
-
+    final double ndmiDelta =
+        double.tryParse("${forecast['ndmi_delta_next_mean']}") ??
+        (forecast['ndmi_delta_next_mean'] as num?)?.toDouble() ??
+        0.0;
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -832,6 +892,4 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
       ),
     );
   }
-
-   
 }

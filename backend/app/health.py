@@ -473,8 +473,8 @@ def s2_week_pixels_gee(site: Dict[str, Any], wstart: pd.Timestamp, wend: pd.Time
                    .addBands(srwi)
                    .addBands(nmdi))
 
-    coords_img = ee.Image.pixelCoordinates(B8.projection()).select(["x", "y"])
-    full_img = indices_img.addBands(coords_img)
+    lonlat = ee.Image.pixelLonLat()
+    full_img = indices_img.addBands(lonlat)
 
     fc = full_img.sample(
         region=geom,
@@ -1186,22 +1186,22 @@ def get_health_map_points(df_all: pd.DataFrame) -> List[Dict[str, Any]]:
 
     df = df_all.copy()
     
-    # حل مشكلة التعارض: GEE يرسل x/y، ونحن نحتاج lat/lng
-    if 'x' in df.columns:
+    # تحويل مسميات Google Earth Engine إلى المسميات التي يفهمها تطبيق الجوال
+    # المسميات الجديدة ستكون longitude و latitude
+    if 'longitude' in df.columns:
+        df = df.rename(columns={'longitude': 'lng', 'latitude': 'lat'})
+    elif 'x' in df.columns: # خطة بديلة في حال عدم وجود المسميات الجديدة
         df = df.rename(columns={'x': 'lng', 'y': 'lat'})
 
     try:
-        # التجميع بناءً على الإحداثيات بعد إعادة التسمية
+        # التجميع بناءً على الإحداثيات الجديدة
         latest_pixels = df.sort_values('date').groupby(['lat', 'lng']).last().reset_index()
     except KeyError:
-        # خطة احتياطية في حال فشل التسمية لأي سبب
-        latest_pixels = df_all.sort_values('date').groupby(['x', 'y']).last().reset_index()
-        latest_pixels = latest_pixels.rename(columns={'x': 'lng', 'y': 'lat'})
+        return [] # في حال عدم توفر إحداثيات، نرجع قائمة فارغة بأمان
     
     map_points = []
     for _, row in latest_pixels.iterrows():
         status_code = 0 
-        # نستخدم العمود الصحيح لتقييم الحالة (pixel_risk_class)
         risk_val = row.get('pixel_risk_class', 'Healthy')
         
         if risk_val == 'Critical':
@@ -1210,6 +1210,7 @@ def get_health_map_points(df_all: pd.DataFrame) -> List[Dict[str, Any]]:
             status_code = 1
             
         map_points.append({
+            # تقريب الإحداثيات لـ 6 خانات عشرية (دقة عالية كافية للجوال)
             'lat': round(float(row['lat']), 6),
             'lng': round(float(row['lng']), 6),
             's': status_code
