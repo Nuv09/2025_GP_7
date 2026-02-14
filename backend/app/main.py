@@ -208,14 +208,14 @@ def analyze():
             app.logger.exception(f"❌ ERROR during health analysis for farmId={farm_id}: {he}")
             health_result = {"error": str(he)}
 
+        h_map = list(health_result.pop("health_map", []))
         set_status(
             farm_id,
             status="done",
             finalCount=count_summary["count"],
             finalQuality=count_summary["quality"],
-            health=health_result,
-            # سحب قائمة النقاط من النتيجة اللي رجعت من ملف health.py
-            healthMap=health_result.get("health_map", [])
+            health=health_result, # الآن هذا الكائن لا يحتوي على الخريطة بداخله
+            healthMap=h_map      # الخريطة ستكون في هذا الحقل المستقل فقط
             
         )
 
