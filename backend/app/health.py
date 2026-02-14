@@ -1152,10 +1152,10 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
     forecast_summary = forecast_next_week_summary(df_all)
 
 
-    stats = site_summary(df_all)
+# --- نهاية دالة analyze_farm_health ---
     
-
-
+    # 1. حساب الإحصائيات (موجود أصلاً في كودك)
+    stats = site_summary(df_all)
     health_summary = {
         "Healthy_Pct": float(stats.get("Healthy_Pct", 0.0)),
         "Monitor_Pct": float(stats.get("Monitor_Pct", 0.0)),
@@ -1164,12 +1164,41 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
 
     history_last_month = indices_history_last_weeks(df_all, weeks=5, agg="mean")
 
+    # 2. استدعاء الدالة الجديدة (تأكدي من وجودها بالأسفل)
+    health_map = get_health_map_points(df_all)
 
+    # 3. إرجاع كل النتائج في قاموس واحد (Dictionary)
     return {
-    "current_health": health_summary,
-    "forecast_next_week": forecast_summary,
-    "indices_history_last_month": history_last_month,
-}
+        "current_health": health_summary,
+        "forecast_next_week": forecast_summary,
+        "indices_history_last_month": history_last_month,
+        "health_map": health_map  # الحقل الجديد الذي سينتقل للفرونت إند
+    }
 
+# --- تعريف الدالة خارج analyze_farm_health ليكون الكود أنظف وأسهل في القراءة ---
+def get_health_map_points(df_all: pd.DataFrame) -> List[Dict[str, Any]]:
+    """
+    تستخرج نقاط الخريطة الملونة من البيانات المحللة.
+    s: 0 (سليم), 1 (مشتبه به), 2 (مصاب)
+    """
+    if df_all is None or df_all.empty:
+        return []
 
-
+    # نأخذ فقط آخر سجل لكل موقع (بكسل) بناءً على أحدث تاريخ
+    # هذا يضمن أننا نعرض الحالة "الآن" وليس تراكم السنة كاملة فوق بعضها
+    latest_pixels = df_all.sort_values('date').groupby(['lat', 'lng']).last().reset_index()
+    
+    map_points = []
+    for _, row in latest_pixels.iterrows():
+        status_code = 0  # Healthy افتراضياً
+        if row.get('is_critical') == True:
+            status_code = 2  # Critical (أحمر)
+        elif row.get('is_monitor') == True:
+            status_code = 1  # Monitor (أصفر)
+            
+        map_points.append({
+            'lat': round(float(row['lat']), 6),
+            'lng': round(float(row['lng']), 6),
+            's': status_code
+        })
+    return map_points

@@ -214,8 +214,9 @@ def analyze():
             finalCount=count_summary["count"],
             finalQuality=count_summary["quality"],
             health=health_result,
-            # result=count_summary,
-            # errorMessage=None,
+            # سحب قائمة النقاط من النتيجة اللي رجعت من ملف health.py
+            healthMap=health_result.get("health_map", [])
+            
         )
 
         return (
