@@ -473,9 +473,15 @@ def s2_week_pixels_gee(site: Dict[str, Any], wstart: pd.Timestamp, wend: pd.Time
                    .addBands(srwi)
                    .addBands(nmdi))
 
+    # جلب الإحداثيات الجغرافية
     lonlat = ee.Image.pixelLonLat()
-    full_img = indices_img.addBands(lonlat)
-
+    
+    # السر هنا: نعيد تسمية longitude إلى x و latitude إلى y
+    # لكي لا يشعر باقي الكود بأي تغيير ويستمر في الحسابات بشكل سليم
+    coords_img = lonlat.select(['longitude', 'latitude'], ['x', 'y'])
+    
+    full_img = indices_img.addBands(coords_img)
+    
     fc = full_img.sample(
         region=geom,
         scale=RESOLUTION,
