@@ -1152,7 +1152,6 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
     forecast_summary = forecast_next_week_summary(df_all)
 
 
-# --- نهاية دالة analyze_farm_health ---
     
     # 1. حساب الإحصائيات (موجود أصلاً في كودك)
     stats = site_summary(df_all)
@@ -1168,11 +1167,18 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
     health_map = get_health_map_points(df_all)
 
     # 3. إرجاع كل النتائج في قاموس واحد (Dictionary)
+   # تأكدي أن هذه المتغيرات (health_summary, forecast_summary...) تم تعريفها فوق الـ return
+    
     return {
-        "current_health": health_summary,
+        "current_health": {
+            "Healthy_Pct": float(health_summary.get("Healthy_Pct", 0.0)),
+            "Monitor_Pct": float(health_summary.get("Monitor_Pct", 0.0)),
+            "Critical_Pct": float(health_summary.get("Critical_Pct", 0.0)),
+        },
         "forecast_next_week": forecast_summary,
         "indices_history_last_month": history_last_month,
-        "health_map": health_map  # الحقل الجديد الذي سينتقل للفرونت إند
+        # تحويل الـ health_map إلى قائمة صريحة لضمان ظهورها كـ Array [] في Firestore
+        "health_map": list(health_map) 
     }
 
 # --- تعريف الدالة خارج analyze_farm_health ليكون الكود أنظف وأسهل في القراءة ---
@@ -1201,4 +1207,4 @@ def get_health_map_points(df_all: pd.DataFrame) -> List[Dict[str, Any]]:
             'lng': round(float(row['lng']), 6),
             's': status_code
         })
-    return map_points
+    return list(map_points)
