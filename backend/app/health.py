@@ -1154,8 +1154,13 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
 
     
     # 1. حساب الإحصائيات (موجود أصلاً في كودك)
+    # --- الجزء النهائي المضمون لملف health.py ---
+    
+    # 1. حساب الإحصائيات من البيانات الفعلية
     stats = site_summary(df_all)
-    health_summary = {
+    
+    # تجهيز النسب المئوية بدقة (استخدمنا مسميات واضحة لمنع التداخل)
+    processed_health = {
         "Healthy_Pct": float(stats.get("Healthy_Pct", 0.0)),
         "Monitor_Pct": float(stats.get("Monitor_Pct", 0.0)),
         "Critical_Pct": float(stats.get("Critical_Pct", 0.0)),
@@ -1163,48 +1168,50 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
 
     history_last_month = indices_history_last_weeks(df_all, weeks=5, agg="mean")
 
-    # 2. استدعاء الدالة الجديدة (تأكدي من وجودها بالأسفل)
-    health_map = get_health_map_points(df_all)
+    # 2. استدعاء دالة النقاط (التي أصلحنا فيها مشكلة x, y)
+    health_map_data = get_health_map_points(df_all)
 
-    # 3. إرجاع كل النتائج في قاموس واحد (Dictionary)
-   # تأكدي أن هذه المتغيرات (health_summary, forecast_summary...) تم تعريفها فوق الـ return
-    
+    # 3. إرجاع القاموس النهائي المتوافق تماماً مع Firestore وتطبيق الفلاتر
     return {
-        "current_health": {
-            "Healthy_Pct": float(health_summary.get("Healthy_Pct", 0.0)),
-            "Monitor_Pct": float(health_summary.get("Monitor_Pct", 0.0)),
-            "Critical_Pct": float(health_summary.get("Critical_Pct", 0.0)),
-        },
+        "current_health": processed_health,  # ستظهر تحت هذا الاسم في فايربيس
         "forecast_next_week": forecast_summary,
         "indices_history_last_month": history_last_month,
-        # تحويل الـ health_map إلى قائمة صريحة لضمان ظهورها كـ Array [] في Firestore
-        "health_map": list(health_map) 
+        "health_map": list(health_map_data) # نضمن إرسالها كـ Array []
     }
 
-# --- تعريف الدالة خارج analyze_farm_health ليكون الكود أنظف وأسهل في القراءة ---
+# --- دالة استخراج النقاط (المصححة لمسميات GEE) ---
 def get_health_map_points(df_all: pd.DataFrame) -> List[Dict[str, Any]]:
-    """
-    تستخرج نقاط الخريطة الملونة من البيانات المحللة.
-    s: 0 (سليم), 1 (مشتبه به), 2 (مصاب)
-    """
     if df_all is None or df_all.empty:
         return []
 
-    # نأخذ فقط آخر سجل لكل موقع (بكسل) بناءً على أحدث تاريخ
-    # هذا يضمن أننا نعرض الحالة "الآن" وليس تراكم السنة كاملة فوق بعضها
-    latest_pixels = df_all.sort_values('date').groupby(['lat', 'lng']).last().reset_index()
+    df = df_all.copy()
+    
+    # حل مشكلة التعارض: GEE يرسل x/y، ونحن نحتاج lat/lng
+    if 'x' in df.columns:
+        df = df.rename(columns={'x': 'lng', 'y': 'lat'})
+
+    try:
+        # التجميع بناءً على الإحداثيات بعد إعادة التسمية
+        latest_pixels = df.sort_values('date').groupby(['lat', 'lng']).last().reset_index()
+    except KeyError:
+        # خطة احتياطية في حال فشل التسمية لأي سبب
+        latest_pixels = df_all.sort_values('date').groupby(['x', 'y']).last().reset_index()
+        latest_pixels = latest_pixels.rename(columns={'x': 'lng', 'y': 'lat'})
     
     map_points = []
     for _, row in latest_pixels.iterrows():
-        status_code = 0  # Healthy افتراضياً
-        if row.get('is_critical') == True:
-            status_code = 2  # Critical (أحمر)
-        elif row.get('is_monitor') == True:
-            status_code = 1  # Monitor (أصفر)
+        status_code = 0 
+        # نستخدم العمود الصحيح لتقييم الحالة (pixel_risk_class)
+        risk_val = row.get('pixel_risk_class', 'Healthy')
+        
+        if risk_val == 'Critical':
+            status_code = 2
+        elif risk_val == 'Monitor':
+            status_code = 1
             
         map_points.append({
             'lat': round(float(row['lat']), 6),
             'lng': round(float(row['lng']), 6),
             's': status_code
         })
-    return list(map_points)
+    return map_points
