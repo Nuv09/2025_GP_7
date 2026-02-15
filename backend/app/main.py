@@ -239,7 +239,7 @@ def analyze():
         app.logger.exception(f"❌ ERROR during /analyze: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
     
-@app.post("/temp-backfill-lastAnalysisAt")
+@app.get("/temp-backfill-lastAnalysisAt")
 def temp_backfill_last_analysis_at():
     db = firestore.Client()
 
