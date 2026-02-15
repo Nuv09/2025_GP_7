@@ -236,14 +236,13 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
         tabs: const [
           Tab(icon: Icon(Icons.map_outlined), text: "الخريطة"),
           Tab(icon: Icon(Icons.grid_view_rounded), text: "الحالة"),
-          Tab(icon: Icon(Icons.auto_awesome_outlined), text: "توصيات"),
+          Tab(icon: Icon(Icons.auto_awesome_outlined), text: "الوقايه والتنبؤ"),
         ],
       ),
     );
   }
 
   Widget _buildMapSection() {
-    // 1. تحويل نقاط الـ Polygon من الداتابيز
     final List<dynamic> polygonData = widget.farmData['polygon'] ?? [];
     final List<LatLng> points = polygonData.map((point) {
       return LatLng(
@@ -255,11 +254,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
     LatLng center = points.isNotEmpty
         ? points[0]
         : const LatLng(24.7136, 46.6753);
-
-    // 2. سحب نقاط الخريطة الصحية (الحقل الجديد من الباكند)
     final List<dynamic> healthMapPoints = widget.farmData['healthMap'] ?? [];
-
-    // 3. سحب المساحة
     String areaValue = widget.farmData['farmSize']?.toString() ?? 'غير محدد';
 
     return Container(
@@ -269,7 +264,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: Colors.black.withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -277,52 +272,90 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
       ),
       child: Stack(
         children: [
-          // الخريطة
+          // 1. الطبقة الأساسية: الخريطة
           ClipRRect(
             borderRadius: BorderRadius.circular(30),
             child: FlutterMap(
-              options: MapOptions(initialCenter: center, initialZoom: 17.5),
+              options: MapOptions(initialCenter: center, initialZoom: 16),
               children: [
                 TileLayer(
                   urlTemplate:
                       'https://api.maptiler.com/maps/hybrid/{z}/{x}/{y}.jpg?key=${Secrets.mapTilerKey}',
                   userAgentPackageName: 'com.example.saafapp',
                 ),
-
-                // --- الطبقة الجديدة: نقاط الحالة الصحية (البكسلات الملونة) ---
                 CircleLayer(
                   circles: healthMapPoints.map((point) {
+                    final baseColor = _getHealthColor(point['s'] as int);
                     return CircleMarker(
                       point: LatLng(
                         (point['lat'] as num).toDouble(),
                         (point['lng'] as num).toDouble(),
                       ),
-                      color: _getHealthColor(point['s'] as int),
-                      radius: 8, // نصف القطر بالأمتار ليغطي مساحة البكسل
+                      color: baseColor.withOpacity(0.7),
+                      borderColor: baseColor,
+                      borderStrokeWidth: 2,
+                      radius: 7,
                       useRadiusInMeter: true,
                     );
                   }).toList(),
                 ),
-
-                // طبقة حدود المزرعة
-                if (points.isNotEmpty)
-                  PolygonLayer(
-                    polygons: [
-                      Polygon(
-                        points: points,
-                        color: lightGreenColor.withValues(
-                          alpha: 0.1,
-                        ), // تقليل الشفافية لرؤية النقاط
-                        borderColor: goldColor,
-                        borderStrokeWidth: 2.5,
-                      ),
-                    ],
-                  ),
               ],
             ),
           ),
 
-          // تظليل علوي للنص
+          // 2. بطاقات المعلومات العائمة (المفتاح + المساحة)
+          Positioned(
+            bottom: 20,
+            right: 15,
+            left: 15,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // بطاقة مفتاح الألوان بتأثير زجاجي مصحح
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: darkGreenColor.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildMapLegendItem("سليم", Colors.greenAccent),
+                        _buildMapLegendItem("مشتبه به", Colors.orangeAccent),
+                        _buildMapLegendItem("مصاب", Colors.redAccent),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // بطاقة المساحة
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 15,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: darkGreenColor.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: goldColor.withOpacity(0.4)),
+                  ),
+                  child: _buildMapMiniStat(
+                    Icons.square_foot_rounded,
+                    "المساحة",
+                    "$areaValue م²",
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 3. التظليل العلوي للعنوان
           Positioned(
             top: 0,
             left: 0,
@@ -336,15 +369,12 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.5),
-                    Colors.transparent,
-                  ],
+                  colors: [Colors.black.withOpacity(0.5), Colors.transparent],
                 ),
               ),
               padding: const EdgeInsets.all(20),
               child: Text(
-                "خريطة تحليل الصحة النباتية",
+                "تحليل الصحة النباتية",
                 style: GoogleFonts.almarai(
                   color: Colors.white,
                   fontSize: 13,
@@ -353,23 +383,36 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
 
-          // بطاقة المساحة
-          Positioned(
-            bottom: 20,
-            right: 20,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-              decoration: BoxDecoration(
-                color: darkGreenColor.withValues(alpha: 0.9),
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: goldColor.withValues(alpha: 0.4)),
-              ),
-              child: _buildMapMiniStat(
-                Icons.square_foot_rounded,
-                "المساحة",
-                "$areaValue م²",
-              ),
+  // دالة بناء عناصر المفتاح
+  Widget _buildMapLegendItem(String text, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(color: color.withOpacity(0.5), blurRadius: 4),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: GoogleFonts.almarai(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -381,11 +424,21 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
   Color _getHealthColor(int status) {
     switch (status) {
       case 2:
-        return Colors.red.withOpacity(0.7); // مصاب
+        return const Color.fromARGB(87, 244, 67, 54).withOpacity(0.1); // مصاب
       case 1:
-        return Colors.yellow.withOpacity(0.7); // مراقبة
+        return const Color.fromARGB(
+          62,
+          255,
+          235,
+          59,
+        ).withOpacity(0.1); // مراقبة
       case 0:
-        return Colors.greenAccent.withOpacity(0.7); // سليم
+        return const Color.fromARGB(
+          150,
+          105,
+          240,
+          123,
+        ).withOpacity(0.1); // سليم
       default:
         return Colors.transparent;
     }
@@ -447,7 +500,57 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
           _buildHealthStatsCard(totalPalms, healthy, monitor, critical),
           const SizedBox(height: 20),
           _buildHistoryChart(),
-          const SizedBox(height: 80),
+
+          // --- إضافة زر تصدير النتائج هنا في الجهة اليمنى ---
+          const SizedBox(height: 25),
+          Align(
+            alignment: Alignment.centerRight,
+            child: InkWell(
+              onTap: () {
+                // ميزة مستقبلية
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      "ميزة تصدير التقارير ستكون متاحة قريباً",
+                      style: GoogleFonts.almarai(),
+                    ),
+                    backgroundColor: const Color(0xFF0A4D41),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: goldColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(
+                    color: goldColor.withOpacity(0.5),
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "تصدير النتائج",
+                      style: GoogleFonts.almarai(
+                        color: goldColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Icon(Icons.ios_share_rounded, color: goldColor, size: 20),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 100), // مسافة إضافية لراحة التمرير
         ],
       ),
     );
@@ -566,23 +669,21 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
   }
 
   Widget _buildHistoryChart() {
-    // ✅ قراءة آمنة للبيانات
     final Map<String, dynamic> healthRoot =
         (widget.farmData['health'] as Map?)?.cast<String, dynamic>() ?? {};
 
     final List<dynamic> history =
         (healthRoot['indices_history_last_month'] as List?) ?? [];
 
-    // ✅ لو ما فيه بيانات
     if (history.isEmpty) {
       return Container(
         height: 340,
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.05),
+          color: Colors.white.withOpacity(0.05),
           borderRadius: BorderRadius.circular(25),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
         ),
         child: Center(
           child: Text(
@@ -593,95 +694,80 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
       );
     }
 
-    // ✅ تجهيز النقاط
-    final List<FlSpot> ndviSpots = [];
-    final List<FlSpot> ndmiSpots = [];
-    final List<FlSpot> ndreSpots = [];
-
-    for (int i = 0; i < history.length; i++) {
-      final item = (history[i] as Map).cast<String, dynamic>();
-
-      final ndvi = ((item['NDVI'] as num?)?.toDouble() ?? 0.0) * 100;
-      final ndmi = ((item['NDMI'] as num?)?.toDouble() ?? 0.0) * 100;
-      final ndre = ((item['NDRE'] as num?)?.toDouble() ?? 0.0) * 100;
-
-      ndviSpots.add(FlSpot(i.toDouble(), ndvi));
-      ndmiSpots.add(FlSpot(i.toDouble(), ndmi));
-      ndreSpots.add(FlSpot(i.toDouble(), ndre));
-    }
-
     return Container(
-      height: 340,
+      height: 400,
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(10, 25, 20, 20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "تطور المؤشرات الحيوية (آخر شهر)",
-            style: GoogleFonts.almarai(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 15),
+            child: Text(
+              "مقارنة المؤشرات الأسبوعية",
+              style: GoogleFonts.almarai(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
             ),
           ),
-          const SizedBox(height: 15),
-          Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            children: [
-              _buildSimpleLegend(
-                "مؤشر الغطاء النباتي (NDVI)",
-                const Color(0xFF69F0AE),
-              ),
-              _buildSimpleLegend("مؤشر رطوبة النبات (NDMI)", Colors.blueAccent),
-              _buildSimpleLegend("مؤشر الكلوروفيل (NDRE)", goldColor),
-            ],
-          ),
-          const SizedBox(height: 25),
+          const SizedBox(height: 30),
           Expanded(
-            child: LineChart(
-              LineChartData(
-                gridData: const FlGridData(show: false),
-                borderData: FlBorderData(show: false),
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: 100,
+                minY: 0,
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipColor: (group) =>
+                        Colors.blueGrey.withOpacity(0.9),
+                    tooltipPadding: const EdgeInsets.all(8),
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      String suffix = rodIndex == 0
+                          ? "مؤشر الغطاء النباتي"
+                          : rodIndex == 1
+                          ? "مؤشر الرطوبة"
+                          : "مؤشر الكلوروفيل";
+                      return BarTooltipItem(
+                        "$suffix\n${rod.toY.toStringAsFixed(1)}%",
+                        GoogleFonts.almarai(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      );
+                    },
+                  ),
+                ),
                 titlesData: FlTitlesData(
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-
-                  // ✅ المحور السفلي: تواريخ (MM-DD)
+                  show: true,
+                  // --- المحور السفلي (التواريخ MM-DD) ---
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      interval: (history.length / 6).ceilToDouble(),
-                      getTitlesWidget: (value, meta) {
-                        final i = value.toInt();
+                      reservedSize: 40,
+                      getTitlesWidget: (double value, TitleMeta meta) {
+                        int i = value.toInt();
                         if (i >= 0 && i < history.length) {
-                          final item = (history[i] as Map)
-                              .cast<String, dynamic>();
-                          final dateStr = item['date'].toString(); // yyyy-mm-dd
-                          final clean = dateStr
-                              .split(' ')
-                              .first; // يشيل الوقت لو موجود
-                          final label = clean.length >= 10
-                              ? clean.substring(5, 10)
-                              : clean;
-
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 8),
+                          String fullDate = history[i]['date'] as String;
+                          String shortDate = fullDate.substring(5, 10);
+                          return SideTitleWidget(
+                            meta: meta, // تمرير المتغير المطلوب لإصلاح الإيرور
+                            space: 10,
                             child: Text(
-                              label,
+                              shortDate,
                               style: GoogleFonts.almarai(
-                                color: Colors.white38,
-                                fontSize: 10,
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           );
@@ -690,28 +776,94 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
                       },
                     ),
                   ),
-
+                  // --- المحور الجانبي (النسب المئوية) ---
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 35,
-                      getTitlesWidget: (value, meta) => Text(
-                        "${value.toInt()}%",
-                        style: GoogleFonts.almarai(
-                          color: Colors.white38,
-                          fontSize: 10,
-                        ),
-                      ),
+                      reservedSize: 50,
+                      interval: 20,
+                      getTitlesWidget: (double value, TitleMeta meta) {
+                        return SideTitleWidget(
+                          meta: meta, // تمرير المتغير المطلوب لإصلاح الإيرور
+                          space: 8,
+                          child: Text(
+                            "${value.toInt()}%",
+                            style: GoogleFonts.almarai(
+                              color: Colors.white70,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                 ),
-                lineBarsData: [
-                  _lineData(ndviSpots, const Color(0xFF69F0AE)),
-                  _lineData(ndmiSpots, Colors.blueAccent),
-                  _lineData(ndreSpots, goldColor),
-                ],
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: 20,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: Colors.white.withOpacity(0.08),
+                    strokeWidth: 1,
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: List.generate(history.length, (i) {
+                  final item = history[i] as Map;
+                  return BarChartGroupData(
+                    x: i,
+                    barsSpace: 4,
+                    barRods: [
+                      BarChartRodData(
+                        toY: ((item['NDVI'] as num?)?.toDouble() ?? 0.0) * 100,
+                        color: const Color(0xFF69F0AE),
+                        width: 8,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(4),
+                        ),
+                      ),
+                      BarChartRodData(
+                        toY: ((item['NDMI'] as num?)?.toDouble() ?? 0.0) * 100,
+                        color: Colors.blueAccent,
+                        width: 8,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(4),
+                        ),
+                      ),
+                      BarChartRodData(
+                        toY: ((item['NDRE'] as num?)?.toDouble() ?? 0.0) * 100,
+                        color: goldColor,
+                        width: 8,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(4),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
               ),
             ),
+          ),
+          const SizedBox(height: 25),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildSimpleLegend(
+                "مؤشر الغطاء النباتي",
+                const Color(0xFF69F0AE),
+              ),
+              const SizedBox(width: 20),
+              _buildSimpleLegend("مؤشر الرطوبه", Colors.blueAccent),
+              const SizedBox(width: 20),
+              _buildSimpleLegend("مؤشر الكلوروفيل", goldColor),
+            ],
           ),
         ],
       ),
@@ -784,39 +936,26 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
         (healthRoot['forecast_next_week'] is Map)
         ? (healthRoot['forecast_next_week'] as Map).cast<String, dynamic>()
         : {};
-    debugPrint("DEBUG healthRoot keys: ${healthRoot.keys}");
-    debugPrint("DEBUG forecast map: $forecast");
 
     final double hNext =
-        double.tryParse("${forecast['Healthy_Pct_next']}") ??
-        (forecast['Healthy_Pct_next'] as num?)?.toDouble() ??
-        0.0;
-
+        double.tryParse("${forecast['Healthy_Pct_next']}") ?? 0.0;
     final double mNext =
-        double.tryParse("${forecast['Monitor_Pct_next']}") ??
-        (forecast['Monitor_Pct_next'] as num?)?.toDouble() ??
-        0.0;
-
+        double.tryParse("${forecast['Monitor_Pct_next']}") ?? 0.0;
     final double cNext =
-        double.tryParse("${forecast['Critical_Pct_next']}") ??
-        (forecast['Critical_Pct_next'] as num?)?.toDouble() ??
-        0.0;
+        double.tryParse("${forecast['Critical_Pct_next']}") ?? 0.0;
 
+    // جلب قيم التغير المتوقع
     final double ndviDelta =
-        double.tryParse("${forecast['ndvi_delta_next_mean']}") ??
-        (forecast['ndvi_delta_next_mean'] as num?)?.toDouble() ??
-        0.0;
-
+        double.tryParse("${forecast['ndvi_delta_next_mean']}") ?? 0.0;
     final double ndmiDelta =
-        double.tryParse("${forecast['ndmi_delta_next_mean']}") ??
-        (forecast['ndmi_delta_next_mean'] as num?)?.toDouble() ??
-        0.0;
+        double.tryParse("${forecast['ndmi_delta_next_mean']}") ?? 0.0;
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Column(
         children: [
+          // 1. كرت توقعات توزيع الحالة الصحية
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -829,7 +968,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "توقع حالة الأسبوع القادم",
+                  "توقعات توزيع الحالة الصحية (الأسبوع القادم)",
                   style: GoogleFonts.almarai(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -837,31 +976,130 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
                   ),
                 ),
                 const SizedBox(height: 14),
-                _forecastRow("سليم", Colors.greenAccent, hNext),
-                _forecastRow("مشتبه به", Colors.orangeAccent, mNext),
-                _forecastRow("مصاب", Colors.redAccent, cNext),
-                const Divider(color: Colors.white10, height: 30),
-                Text(
-                  "متوسط تغيّر NDVI المتوقع: ${ndviDelta.toStringAsFixed(4)}",
-                  style: GoogleFonts.almarai(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  "متوسط تغيّر NDMI المتوقع: ${ndmiDelta.toStringAsFixed(4)}",
-                  style: GoogleFonts.almarai(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
-                ),
+                _forecastRow("مستقر", Colors.greenAccent, hNext),
+                _forecastRow("قيد المراقبة", Colors.orangeAccent, mNext),
+                _forecastRow("حرج (خطر إصابة)", Colors.redAccent, cNext),
               ],
             ),
           ),
+
+          const SizedBox(height: 20),
+
+          // 2. كرت التحليل الفيزيولوجي المتوقع مع النسب المئوية
+          _buildPhysiologicalTrendCard(ndviDelta, ndmiDelta),
+
           const SizedBox(height: 80),
         ],
       ),
+    );
+  }
+
+  Widget _buildPhysiologicalTrendCard(double ndviDelta, double ndmiDelta) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "تحليل المؤشرات الحيوية المتوقع",
+            style: GoogleFonts.almarai(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              // مؤشر كثافة الخضرة (NDVI)
+              Expanded(
+                child: _buildTrendIndicator(
+                  "كثافة الخضرة",
+                  ndviDelta,
+                  Icons.spa_rounded,
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 50,
+                color: Colors.white.withValues(alpha: 0.1),
+              ),
+              // مؤشر مستوى الارتواء (NDMI)
+              Expanded(
+                child: _buildTrendIndicator(
+                  "مستوى الارتواء",
+                  ndmiDelta,
+                  Icons.opacity_rounded,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrendIndicator(String label, double delta, IconData icon) {
+    bool isPositive = delta >= 0;
+    // استقرار الحالة إذا كان التغير أقل من 0.1%
+    bool isStable = delta.abs() < 0.001;
+
+    // حساب النسبة المئوية للتغير
+    String percentage = (delta.abs() * 100).toStringAsFixed(1);
+
+    String statusText;
+    if (isStable) {
+      statusText = "مستقر";
+    } else {
+      if (label == "كثافة الخضرة") {
+        statusText = isPositive ? "نمو متزايد" : "ذبول محتمل";
+      } else {
+        statusText = isPositive ? "ارتواء جيد" : "إجهاد مائي";
+      }
+    }
+
+    return Column(
+      children: [
+        Icon(icon, color: goldColor.withValues(alpha: 0.7), size: 24),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: GoogleFonts.almarai(color: Colors.white70, fontSize: 12),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isStable
+                  ? Icons.horizontal_rule_rounded
+                  : (isPositive
+                        ? Icons.arrow_upward_rounded
+                        : Icons.arrow_downward_rounded),
+              color: isStable
+                  ? Colors.blueGrey
+                  : (isPositive ? Colors.greenAccent : Colors.redAccent),
+              size: 16,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              isStable ? statusText : "$statusText ($percentage%)",
+              style: GoogleFonts.almarai(
+                color: isStable
+                    ? Colors.blueGrey
+                    : (isPositive ? Colors.greenAccent : Colors.redAccent),
+                fontWeight: FontWeight.bold,
+                fontSize: 11, // صغرنا الخط قليلاً ليتناسب مع النسبة
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 

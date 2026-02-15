@@ -481,7 +481,7 @@ def s2_week_pixels_gee(site: Dict[str, Any], wstart: pd.Timestamp, wend: pd.Time
     coords_img = lonlat.select(['longitude', 'latitude'], ['x', 'y'])
     
     full_img = indices_img.addBands(coords_img)
-    
+
     fc = full_img.sample(
         region=geom,
         scale=RESOLUTION,
@@ -1192,31 +1192,25 @@ def get_health_map_points(df_all: pd.DataFrame) -> List[Dict[str, Any]]:
 
     df = df_all.copy()
     
-    # تحويل مسميات Google Earth Engine إلى المسميات التي يفهمها تطبيق الجوال
-    # المسميات الجديدة ستكون longitude و latitude
-    if 'longitude' in df.columns:
-        df = df.rename(columns={'longitude': 'lng', 'latitude': 'lat'})
-    elif 'x' in df.columns: # خطة بديلة في حال عدم وجود المسميات الجديدة
+    # نحول المسميات من x/y إلى lng/lat فقط عند إرسالها للجوال
+    if 'x' in df.columns:
         df = df.rename(columns={'x': 'lng', 'y': 'lat'})
 
     try:
-        # التجميع بناءً على الإحداثيات الجديدة
+        # التجميع بناءً على الإحداثيات (التي أصبحت الآن درجات حقيقية)
         latest_pixels = df.sort_values('date').groupby(['lat', 'lng']).last().reset_index()
     except KeyError:
-        return [] # في حال عدم توفر إحداثيات، نرجع قائمة فارغة بأمان
+        return []
     
     map_points = []
     for _, row in latest_pixels.iterrows():
         status_code = 0 
         risk_val = row.get('pixel_risk_class', 'Healthy')
         
-        if risk_val == 'Critical':
-            status_code = 2
-        elif risk_val == 'Monitor':
-            status_code = 1
+        if risk_val == 'Critical': status_code = 2
+        elif risk_val == 'Monitor': status_code = 1
             
         map_points.append({
-            # تقريب الإحداثيات لـ 6 خانات عشرية (دقة عالية كافية للجوال)
             'lat': round(float(row['lat']), 6),
             'lng': round(float(row['lng']), 6),
             's': status_code
