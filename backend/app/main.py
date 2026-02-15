@@ -239,43 +239,6 @@ def analyze():
         app.logger.exception(f"❌ ERROR during /analyze: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
     
-@app.get("/temp-backfill-lastAnalysisAt")
-def temp_backfill_last_analysis_at():
-    db = firestore.Client()
-
-    updated = []
-    skipped = []
-    missing_createdAt = []
-
-    farms = db.collection("farms").stream()
-
-    for doc in farms:
-        data = doc.to_dict() or {}
-        farm_id = doc.id
-
-        # إذا موجود already لا نلمسه
-        if data.get("lastAnalysisAt") is not None:
-            skipped.append(farm_id)
-            continue
-
-        created = data.get("createdAt")  # موجود عندكم بالفرونت
-        if created is None:
-            missing_createdAt.append(farm_id)
-            continue
-
-        # نخلي آخر تحليل = تاريخ الإضافة
-        doc.reference.update({"lastAnalysisAt": created})
-        updated.append(farm_id)
-
-    return jsonify({
-        "ok": True,
-        "updatedCount": len(updated),
-        "skippedCount": len(skipped),
-        "missingCreatedAtCount": len(missing_createdAt),
-        "missingCreatedAtIds": missing_createdAt[:20]
-    }), 200
-
-    
     
 
 from datetime import datetime, timedelta
