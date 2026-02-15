@@ -215,7 +215,8 @@ def analyze():
             finalCount=count_summary["count"],
             finalQuality=count_summary["quality"],
             health=health_result, # الآن هذا الكائن لا يحتوي على الخريطة بداخله
-            healthMap=h_map      # الخريطة ستكون في هذا الحقل المستقل فقط
+            healthMap=h_map,
+            lastAnalysisAt=firestore.SERVER_TIMESTAMP      # الخريطة ستكون في هذا الحقل المستقل فقط
             
         )
 
@@ -238,6 +239,68 @@ def analyze():
         app.logger.exception(f"❌ ERROR during /analyze: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+from datetime import datetime, timedelta
+
+@app.post("/scheduled-update")
+def scheduled_update():
+
+    db = firestore.Client()
+    farms = db.collection("farms").stream()
+
+    now = datetime.utcnow()
+
+    updated = []
+    skipped = []
+
+    for doc in farms:
+        farm = doc.to_dict() or {}
+        farm_id = doc.id
+
+        last = farm.get("lastAnalysisAt")
+
+        if last is None:
+            needs_update = True
+        else:
+            last_dt = last.replace(tzinfo=None)
+            needs_update = (now - last_dt) >= timedelta(days=6)
+
+        if not needs_update:
+            skipped.append(farm_id)
+            continue
+
+        try:
+            from app import inference as inf
+            from app import health as health_mod
+
+            models, _ = get_models_once()
+
+            img_path = inf.get_sat_image_for_farm(farm)
+            picked = inf.run_both_and_pick_best(models, img_path)
+
+            health_result = health_mod.analyze_farm_health(farm_id, farm)
+            h_map = list(health_result.pop("health_map", []))
+
+
+            set_status(
+                farm_id,
+                status="done",
+                finalCount=int(picked["count"]),
+                finalQuality=float(picked["score"]),
+                health=health_result,
+                healthMap=h_map,  # 👈 هذا السطر الناقص
+                lastAnalysisAt=firestore.SERVER_TIMESTAMP
+            )
+
+
+            updated.append(farm_id)
+
+        except Exception as e:
+            set_status(farm_id, status="failed", errorMessage=str(e))
+
+    return jsonify({
+        "updated": updated,
+        "skipped": skipped
+    }), 200
 
 
 if __name__ == "__main__":
