@@ -243,9 +243,14 @@ from datetime import datetime, timedelta
 
 @app.post("/scheduled-update")
 def scheduled_update():
-
     db = firestore.Client()
-    farms = db.collection("farms").stream()
+    
+    farms = (
+    db.collection("farms")
+      .order_by("lastAnalysisAt")
+      .limit(8)
+      .stream()
+    )
 
     now = datetime.utcnow()
 
