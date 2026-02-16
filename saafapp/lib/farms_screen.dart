@@ -173,6 +173,28 @@ class _FarmsList extends StatelessWidget {
     return null;
   }
 
+  String _formatDateOnly(dynamic raw) {
+  if (raw == null) return "—";
+
+  try {
+    DateTime dt;
+
+    if (raw is Timestamp) {
+      dt = raw.toDate();
+    } else if (raw is int) {
+      dt = DateTime.fromMillisecondsSinceEpoch(raw);
+    } else if (raw is String) {
+      return raw.length >= 10 ? raw.substring(0, 10) : raw;
+    } else {
+      return "—";
+    }
+
+    return "${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}";
+  } catch (_) {
+    return "—";
+  }
+} 
+
   // دالة إظهار النافذة المنبثقة للتحليل بدلاً من السنيك بار
   void _showProcessingDialog(
     BuildContext context,
@@ -317,6 +339,9 @@ class _FarmsList extends StatelessWidget {
                       : null;
 
                   final status = (d['status'] ?? 'pending').toString();
+                  final lastAnalysisAt = d['lastAnalysisAt'];
+                  final lastDate = _formatDateOnly(lastAnalysisAt);
+
 
                   return GestureDetector(
                     onTap: () {
@@ -432,6 +457,27 @@ class _FarmsList extends StatelessWidget {
                             }
                           },
                         ),
+                          if (lastDate != "—")
+      Positioned(
+        right: 25,
+        top: 60,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.6),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: goldColor.withOpacity(0.4)),
+          ),
+          child: Text(
+            "آخر تحديث: $lastDate",
+            style: GoogleFonts.almarai(
+              color: goldColor,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
 
                         if (status == 'pending' || status == 'running')
                           Positioned(

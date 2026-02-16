@@ -1029,6 +1029,7 @@ def forecast_next_week_summary(df_all: pd.DataFrame) -> Dict[str, Any]:
             latest_last[c] = np.nan
 
     X = latest_last[FORECAST_FEATURES].replace([np.inf, -np.inf], np.nan)
+    
 
     preds = model.predict(X)
     if preds is None or len(preds) != len(latest_last) or preds.shape[1] != 3:

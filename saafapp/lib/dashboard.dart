@@ -33,6 +33,37 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
   String weatherDesc = "جاري التحميل...";
   bool isLoadingWeather = true;
 
+String _formatLastAnalysisDate() {
+  final raw = widget.farmData['lastAnalysisAt'];
+
+  if (raw == null) return "—";
+
+  try {
+    DateTime dt;
+
+    // Firestore Timestamp
+    if (raw.runtimeType.toString() == 'Timestamp') {
+      dt = raw.toDate();
+    }
+    // milliseconds
+    else if (raw is int) {
+      dt = DateTime.fromMillisecondsSinceEpoch(raw);
+    }
+    // String
+    else if (raw is String) {
+      dt = DateTime.parse(raw);
+    } else {
+      return "—";
+    }
+
+    // التاريخ فقط بدون الوقت
+    return "${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}";
+
+  } catch (_) {
+    return "—";
+  }
+}
+
   @override
   void initState() {
     super.initState();
@@ -164,46 +195,55 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
   }
 
   Widget _buildModernHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.farmData['farmName'] ?? 'المزرعة',
-                style: GoogleFonts.almarai(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              Text(
-                "التحليل الذكي للمزرعة",
-                style: GoogleFonts.almarai(color: goldColor, fontSize: 12),
-              ),
-            ],
-          ),
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.white,
-              size: 18,
-            ),
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.white.withValues(alpha: 0.05),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.farmData['farmName'] ?? 'المزرعة',
+              style: GoogleFonts.almarai(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
               ),
             ),
+            Text(
+              "التحليل الذكي للمزرعة",
+              style: GoogleFonts.almarai(color: goldColor, fontSize: 12),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              "آخر تحليل: ${_formatLastAnalysisDate()}",
+              style: GoogleFonts.almarai(
+                color: Colors.white.withValues(alpha: 0.65),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(
+            Icons.arrow_forward_ios,
+            color: Colors.white,
+            size: 18,
           ),
-        ],
-      ),
-    );
-  }
+          style: IconButton.styleFrom(
+            backgroundColor: Colors.white.withValues(alpha: 0.05),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildFloatingTabBar() {
     return Container(
