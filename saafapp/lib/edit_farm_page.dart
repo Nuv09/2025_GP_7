@@ -22,6 +22,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:saafapp/secrets.dart';
+import 'package:flutter/services.dart';
 
 
 const Color primaryColor = Color(0xFF1E8D5F);
@@ -763,6 +764,9 @@ Future<bool> _confirmDialog(String title, String message) async {
             const SizedBox(height: 16),
             _region(),
             const SizedBox(height: 16),
+            _buildReadonlyContract(),   // ← أضيفي هذا السطر هنا بالضبط
+
+            const SizedBox(height: 16),
             _tf(_notesController, 'ملاحظات (اختياري)', Icons.notes, optional: true, maxLines: 3),
             const SizedBox(height: 16),
             ElevatedButton.icon(
@@ -865,6 +869,61 @@ Future<bool> _confirmDialog(String title, String message) async {
       validator: (v) => v == null ? 'الرجاء اختيار منطقة' : null,
     );
   }
+
+  Widget _buildReadonlyContract() {
+  final contract = (init['contractNumber'] ?? '').toString().trim();
+
+  if (contract.isEmpty) return const SizedBox.shrink();
+
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    decoration: BoxDecoration(
+      color: const Color.fromARGB(25, 255, 255, 255),
+      borderRadius: BorderRadius.circular(15),
+      border: Border.all(color: const Color.fromARGB(76, 253, 203, 110)),
+    ),
+    child: Row(
+      children: [
+        const Icon(Icons.confirmation_number, color: secondaryColor),
+        const SizedBox(width: 10),
+
+        // رقم العقد
+        Expanded(
+          child: Text(
+            'رقم العقد: $contract',
+            style: GoogleFonts.almarai(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+
+        // زر النسخ
+        IconButton(
+          icon: const Icon(Icons.copy, color: secondaryColor),
+          tooltip: 'نسخ رقم العقد',
+          onPressed: () async {
+            await Clipboard.setData(ClipboardData(text: contract));
+
+            if (!mounted) return;
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'تم نسخ رقم العقد',
+                  style: GoogleFonts.almarai(color: Colors.white),
+                ),
+                backgroundColor: primaryColor,
+              ),
+            );
+          },
+        ),
+      ],
+    ),
+  );
+}
+
 
   Widget _mapWithSearch() {
     return SizedBox(
