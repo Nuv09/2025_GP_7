@@ -1054,7 +1054,7 @@ Future<void> _deleteAccountLogic() async {
                                  color: Colors.redAccent,
                                 ),
                       label: Text(
-                               'حذف الحساب نهائياً',
+                               'حذف الحساب',
                                 style: GoogleFonts.almarai(
                                  color: Colors.redAccent,
                                 fontWeight: FontWeight.w600,
