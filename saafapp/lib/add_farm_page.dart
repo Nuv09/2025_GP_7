@@ -43,6 +43,8 @@ class _AddFarmPageState extends State<AddFarmPage> {
   final _ownerNameController = TextEditingController();
   final _farmSizeController = TextEditingController();
   final _notesController = TextEditingController();
+  final _contractNumberController = TextEditingController(); // رقم العقد
+
 
   // بحث الخريطة
   final _searchCtrl = TextEditingController();
@@ -161,6 +163,7 @@ Future<void> _fetchSuggestions(String input) async {
     _farmSizeController.dispose();
     _notesController.dispose();
     _searchCtrl.dispose();
+    _contractNumberController.dispose();
     _debounce?.cancel(); // ✅ ألغِ الـ debounce
     super.dispose();
   }
@@ -598,6 +601,30 @@ Future<void> _searchAndGo() async {
           if (mounted) setState(() => _isSaving = false);
           return;
         }
+        final contract = _contractNumberController.text.trim();
+
+// ✅ تحقق أن رقم العقد 10 إلى 12 رقم
+final isValidContract = RegExp(r'^\d{10,12}$').hasMatch(contract);
+if (!isValidContract) {
+  _showSnackBar('رقم العقد يجب ان يتكون من 10 إلى 12 خانة', isError: true);
+  if (mounted) setState(() => _isSaving = false);
+  return;
+}
+
+// ✅ تحقق من وجود مزرعة بنفس رقم العقد لنفس المستخدم
+final dupSnap = await _db
+    .collection('farms')
+    .where('contractNumber', isEqualTo: contract)
+    .limit(1)
+    .get();
+
+
+if (dupSnap.docs.isNotEmpty) {
+  _showSnackBar('هذه المزرعة مضافة مسبقًا', isError: true);
+  if (mounted) setState(() => _isSaving = false);
+  return;
+}
+
 
         final polygonData = _polygonPoints
             .map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList();
@@ -614,6 +641,8 @@ Future<void> _searchAndGo() async {
           'imagePath': null,
           'createdAt': FieldValue.serverTimestamp(),
           'createdBy': user.uid,
+          'contractNumber': contract,
+
 
           // حالة التحليل والنتيجة الابتدائية
           'status': 'pending',
@@ -917,6 +946,15 @@ Future<void> _searchAndGo() async {
               icon: Icons.person,
             ),
             const SizedBox(height: 20),
+
+            _textField(
+  controller: _contractNumberController,
+  label: 'رقم العقد',
+  icon: Icons.confirmation_number_rounded,
+  keyboardType: TextInputType.number,
+),
+const SizedBox(height: 20),
+
             _textField(
               controller: _farmSizeController,
               label: 'مساحة المزرعة (م²)',
@@ -978,6 +1016,13 @@ Future<void> _searchAndGo() async {
         if (!optional && (value == null || value.isEmpty)) {
           return 'هذا الحقل مطلوب';
         }
+          // ✅ تحقق خاص لرقم العقد (10-12 رقم)
+  if (controller == _contractNumberController) {
+    final v = value?.trim() ?? '';
+    if (!RegExp(r'^\d{10,12}$').hasMatch(v)) {
+      return 'رقم العقد يجب ان يتكون من 10 إلى 12 خانة';
+    }
+  }
         return null;
       },
       decoration: InputDecoration(
