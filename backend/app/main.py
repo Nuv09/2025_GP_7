@@ -197,6 +197,18 @@ def analyze():
 
         try:
             health_result = health_mod.analyze_farm_health(farm_id, farm_doc)
+            from app.alerts_engine import build_alerts_and_recommendations
+            from app.firestore_utils import set_alerts_and_recommendations
+
+            alerts_pkg = build_alerts_and_recommendations(farm_id, health_result)
+
+            set_alerts_and_recommendations(
+             farm_id,
+             alerts_pkg.get("alerts", []),
+             alerts_pkg.get("recommendations", [])
+             )
+
+            
             ch = health_result.get("current_health", {})
             app.logger.info(
                 f"[HEALTH] site={farm_id} "

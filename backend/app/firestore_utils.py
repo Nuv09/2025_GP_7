@@ -29,3 +29,13 @@ def set_status(farm_id: str, **data):
     
     data["updatedAt"] = firestore.SERVER_TIMESTAMP
     _get_db().collection("farms").document(farm_id).set(data, merge=True)
+
+
+def set_alerts_and_recommendations(farm_id: str, alerts: list, recommendations: list):
+    db = firestore.Client()
+    db.collection("farms").document(farm_id).set({
+        "alerts": alerts,
+        "recommendations": recommendations,
+        "alertsUpdatedAt": firestore.SERVER_TIMESTAMP,
+        "hasUnreadAlerts": True if alerts else False,
+    }, merge=True)

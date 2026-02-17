@@ -1029,7 +1029,7 @@ def forecast_next_week_summary(df_all: pd.DataFrame) -> Dict[str, Any]:
             latest_last[c] = np.nan
 
     X = latest_last[FORECAST_FEATURES].replace([np.inf, -np.inf], np.nan)
-    
+
 
     preds = model.predict(X)
     if preds is None or len(preds) != len(latest_last) or preds.shape[1] != 3:
@@ -1155,6 +1155,8 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
     df_all = compute_if_risk_inference(df_all)
 
     df_all = add_rpw_flags_and_score(df_all)
+    alert_signals = build_alert_signals(df_all)
+
     
     forecast_summary = forecast_next_week_summary(df_all)
 
@@ -1183,8 +1185,111 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
         "current_health": processed_health,  # ستظهر تحت هذا الاسم في فايربيس
         "forecast_next_week": forecast_summary,
         "indices_history_last_month": history_last_month,
-        "health_map": list(health_map_data) # نضمن إرسالها كـ Array []
+        "health_map": list(health_map_data), # نضمن إرسالها كـ Array []
+        "alert_signals": alert_signals,
     }
+
+def build_alert_signals(df_all: pd.DataFrame) -> Dict[str, Any]:
+    """
+    ✅ ملخص إشارات للتنبيهات مبني 100% على أعمدة df_all الناتجة من كودكم:
+    - pixel_risk_class
+    - RPW_label_rule
+    - flag_* (الموجودة فعلاً في add_rpw_flags_and_score)
+    - RPW_score / IF_score لترتيب النقاط الأهم (Hotspots)
+    """
+    if df_all is None or df_all.empty:
+        return {
+            "latest_date": None,
+            "total_pixels_latest": 0,
+            "risk_counts_latest": {"Healthy": 0, "Monitor": 0, "Critical": 0},
+            "rule_counts_latest": {},
+            "flag_counts_latest": {},
+            "hotspots": {"critical": [], "monitor": [], "stress": []},
+        }
+
+    df = df_all.copy()
+    df["date"] = pd.to_datetime(df["date"]).dt.normalize()
+    latest = df["date"].max()
+
+    d = df[df["date"] == latest].copy()
+    total = int(len(d))
+
+    # --- Risk counts (from pixel_risk_class) ---
+    risk_counts = {"Healthy": 0, "Monitor": 0, "Critical": 0}
+    if "pixel_risk_class" in d.columns:
+        vc = d["pixel_risk_class"].astype(str).value_counts().to_dict()
+        for k in risk_counts.keys():
+            risk_counts[k] = int(vc.get(k, 0))
+
+    # --- Rule label counts (from RPW_label_rule) ---
+    rule_counts = {}
+    if "RPW_label_rule" in d.columns:
+        rule_counts = d["RPW_label_rule"].astype(str).value_counts().to_dict()
+
+    # --- Flag counts (only flags that exist in your code) ---
+    flag_cols = [
+        "flag_drop_SIWSI10pct",
+        "flag_drop_NDWI10pct",
+        "flag_drop_NDVI005",
+        "flag_NDVI_below_030",
+        "flag_NDRE_below_035",
+        "flag_NDWI_below_025",
+        "flag_NDRE_low",
+        "flag_NDWI_low",
+    ]
+    flag_counts = {}
+    for c in flag_cols:
+        if c in d.columns:
+            flag_counts[c] = int(pd.to_numeric(d[c], errors="coerce").fillna(0).astype(bool).sum())
+        else:
+            flag_counts[c] = 0
+
+    # --- Hotspots (top points by RPW_score then IF_score) ---
+    if "RPW_score" not in d.columns:
+        d["RPW_score"] = 0.0
+    if "IF_score" not in d.columns:
+        d["IF_score"] = 0.0
+    d["RPW_score"] = pd.to_numeric(d["RPW_score"], errors="coerce").fillna(0.0)
+    d["IF_score"] = pd.to_numeric(d["IF_score"], errors="coerce").fillna(0.0)
+
+    def _top_points(mask, topn=12):
+        sub = d[mask].copy()
+        if sub.empty:
+            return []
+
+        sub = sub.sort_values(["RPW_score", "IF_score"], ascending=False).head(topn)
+
+        out = []
+        for _, r in sub.iterrows():
+            # IMPORTANT: df columns are x/y (lng/lat) in degrees for map usage
+            out.append({
+                "lng": float(r.get("x", 0.0)),
+                "lat": float(r.get("y", 0.0)),
+                "risk": str(r.get("pixel_risk_class", "Healthy")),
+                "rule": str(r.get("RPW_label_rule", "Healthy")),
+            })
+        return out
+
+    crit_mask = (d["pixel_risk_class"].astype(str) == "Critical") if "pixel_risk_class" in d.columns else pd.Series(False, index=d.index)
+    mon_mask  = (d["pixel_risk_class"].astype(str) == "Monitor")  if "pixel_risk_class" in d.columns else pd.Series(False, index=d.index)
+
+    stress_mask = pd.Series(False, index=d.index)
+    if "RPW_label_rule" in d.columns:
+        stress_mask = d["RPW_label_rule"].astype(str).isin(["Monitor_RPW_tail", "Critical_RPW_tail"])
+
+    return {
+        "latest_date": str(latest.date()) if pd.notna(latest) else None,
+        "total_pixels_latest": total,
+        "risk_counts_latest": risk_counts,
+        "rule_counts_latest": rule_counts,
+        "flag_counts_latest": flag_counts,
+        "hotspots": {
+            "critical": _top_points(crit_mask, topn=12),
+            "monitor":  _top_points(mon_mask,  topn=12),
+            "stress":   _top_points(stress_mask, topn=12),
+        },
+    }
+
 
 # --- دالة استخراج النقاط (المصححة لمسميات GEE) ---
 def get_health_map_points(df_all: pd.DataFrame) -> List[Dict[str, Any]]:
