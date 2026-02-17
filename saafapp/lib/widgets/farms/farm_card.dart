@@ -9,6 +9,8 @@ class FarmCard extends StatelessWidget {
   final String? sizeText;
   final String? imageURL;
   final DateTime? createdAt;
+  final String? lastAnalysisText;
+
 
   final String?
   analysisStatus; // "pending" | "processing" | "done" | "failed" | "error"
@@ -32,6 +34,7 @@ class FarmCard extends StatelessWidget {
     this.sizeText,
     this.imageURL,
     this.createdAt,
+    this.lastAnalysisText,
     this.analysisStatus,
     this.analysisCount,
     this.analysisQuality,
@@ -192,6 +195,29 @@ class FarmCard extends StatelessWidget {
                                 ],
                               ],
                             ),
+
+                            if (lastAnalysisText != null && lastAnalysisText!.isNotEmpty) ...[
+  const SizedBox(height: 6),
+  Row(
+    children: [
+      const Icon(Icons.analytics_outlined, size: 14, color: darkGreenColor),
+      const SizedBox(width: 4),
+      Flexible(
+        child: Text(
+          lastAnalysisText!,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: darkGreenColor,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    ],
+  ),
+],
+
                             const SizedBox(height: 8),
 
                             if (analysisStatus != null &&
