@@ -304,7 +304,7 @@ String _formatLastAnalysisDate() {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -331,7 +331,7 @@ String _formatLastAnalysisDate() {
                         (point['lat'] as num).toDouble(),
                         (point['lng'] as num).toDouble(),
                       ),
-                      color: baseColor.withOpacity(0.7),
+                      color: baseColor.withValues(alpha: 0.7),
                       borderColor: baseColor,
                       borderStrokeWidth: 2,
                       radius: 7,
@@ -358,9 +358,9 @@ String _formatLastAnalysisDate() {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: darkGreenColor.withOpacity(0.8),
+                      color: darkGreenColor.withValues(alpha: 0.8),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,9 +381,9 @@ String _formatLastAnalysisDate() {
                     vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: darkGreenColor.withOpacity(0.9),
+                    color: darkGreenColor.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: goldColor.withOpacity(0.4)),
+                    border: Border.all(color: goldColor.withValues(alpha: 0.4)),
                   ),
                   child: _buildMapMiniStat(
                     Icons.square_foot_rounded,
@@ -409,7 +409,7 @@ String _formatLastAnalysisDate() {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.black.withOpacity(0.5), Colors.transparent],
+                  colors: [Colors.black.withValues(alpha: 0.5), Colors.transparent],
                 ),
               ),
               padding: const EdgeInsets.all(20),
@@ -442,7 +442,7 @@ String _formatLastAnalysisDate() {
               color: color,
               shape: BoxShape.circle,
               boxShadow: [
-                BoxShadow(color: color.withOpacity(0.5), blurRadius: 4),
+                BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 4),
               ],
             ),
           ),
@@ -464,21 +464,21 @@ String _formatLastAnalysisDate() {
   Color _getHealthColor(int status) {
     switch (status) {
       case 2:
-        return const Color.fromARGB(87, 244, 67, 54).withOpacity(0.1); // مصاب
+        return const Color.fromARGB(87, 244, 67, 54).withValues(alpha: 0.1); // مصاب
       case 1:
         return const Color.fromARGB(
           62,
           255,
           235,
           59,
-        ).withOpacity(0.1); // مراقبة
+        ).withValues(alpha: 0.1); // مراقبة
       case 0:
         return const Color.fromARGB(
           150,
           105,
           240,
           123,
-        ).withOpacity(0.1); // سليم
+        ).withValues(alpha: 0.1); // سليم
       default:
         return Colors.transparent;
     }
@@ -564,10 +564,10 @@ String _formatLastAnalysisDate() {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: goldColor.withOpacity(0.15),
+                  color: goldColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(15),
                   border: Border.all(
-                    color: goldColor.withOpacity(0.5),
+                    color: goldColor.withValues(alpha: 0.5),
                     width: 1.5,
                   ),
                 ),
@@ -721,9 +721,9 @@ String _formatLastAnalysisDate() {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(25),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         ),
         child: Center(
           child: Text(
@@ -739,9 +739,9 @@ String _formatLastAnalysisDate() {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(10, 25, 20, 20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -768,7 +768,7 @@ String _formatLastAnalysisDate() {
                   enabled: true,
                   touchTooltipData: BarTouchTooltipData(
                     getTooltipColor: (group) =>
-                        Colors.blueGrey.withOpacity(0.9),
+                        Colors.blueGrey.withValues(alpha: 0.9),
                     tooltipPadding: const EdgeInsets.all(8),
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                       String suffix = rodIndex == 0
@@ -850,7 +850,7 @@ String _formatLastAnalysisDate() {
                   drawVerticalLine: false,
                   horizontalInterval: 20,
                   getDrawingHorizontalLine: (value) => FlLine(
-                    color: Colors.white.withOpacity(0.08),
+                    color: Colors.white.withValues(alpha: 0.08),
                     strokeWidth: 1,
                   ),
                 ),

@@ -602,12 +602,14 @@ Future<void> _searchAndGo() async {
           if (mounted) setState(() => _isSaving = false);
           return;
         }
-        final contract = _contractNumberController.text.trim();
+        final contract = _contractNumberController.text
+    .replaceAll(RegExp(r'\s+'), '') // removes ALL spaces/newlines, not just ends
+    .trim();
 
 // ✅ تحقق أن رقم العقد 10 إلى 12 رقم
-final isValidContract = RegExp(r'^\d{10,12}$').hasMatch(contract);
+final isValidContract = RegExp(r'^[0-9]{10,12}$').hasMatch(contract); // matches rules expectations
 if (!isValidContract) {
-  _showSnackBar('رقم العقد يجب ان يتكون من 10 إلى 12 خانة', isError: true);
+  _showSnackBar('Contract must be 10–12 digits (0-9).', isError: true);
   if (mounted) setState(() => _isSaving = false);
   return;
 }
@@ -615,22 +617,29 @@ if (!isValidContract) {
 contractRef = _db.collection('contracts').doc(contract);
 
 try {
-  await contractRef!.create({
-    'ownerUid': user.uid,
-    'createdAt': FieldValue.serverTimestamp(),
+  await _db.runTransaction((tx) async {
+    final snap = await tx.get(contractRef!);
+    if (snap.exists) {
+      throw 'contract-taken'; // نحن نحدد هذا الخطأ يدوياً
+    }
+    tx.set(contractRef, {
+      'ownerUid': user.uid,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   });
-} on FirebaseException catch (e) {
-  if (e.code == 'already-exists') {
-    _showSnackBar('رقم العقد مستخدم مسبقًا', isError: true);
-  } else if (e.code == 'permission-denied') {
-    _showSnackBar('لا يوجد صلاحية لحجز العقد (Firestore Rules)', isError: true);
+}  catch (e) {
+  if (e == 'contract-taken') {
+    _showSnackBar('هذه المزرعة مضافة مسبقًا', isError: true);
+  } else if (e is FirebaseException) {
+    debugPrint('🔥 FirebaseException code=${e.code} message=${e.message}');
+    _showSnackBar('Firestore error: ${e.code}', isError: true);
   } else {
-    _showSnackBar('خطأ في حجز العقد: ${e.code}', isError: true);
+    debugPrint('🔥 Unknown error: $e');
+    _showSnackBar('Unexpected error.', isError: true);
   }
   if (mounted) setState(() => _isSaving = false);
   return;
 }
-
 
 
 
@@ -718,9 +727,7 @@ try {
 
         // لا مزيد من setState هنا لأننا غادرنا الصفحة
       } catch (e) {
-        try {
-  if (contractRef != null) await contractRef!.delete();
-} catch (_) {}
+        
 
         _showSnackBar('حدث خطأ أثناء حفظ البيانات: $e', isError: true);
         if (mounted) setState(() => _isSaving = false);

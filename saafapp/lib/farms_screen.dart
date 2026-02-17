@@ -464,9 +464,9 @@ class _FarmsList extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.6),
+            color: Colors.black.withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: goldColor.withOpacity(0.4)),
+            border: Border.all(color: goldColor.withValues(alpha: 0.4)),
           ),
           child: Text(
             "آخر تحديث: $lastDate",
@@ -489,10 +489,10 @@ class _FarmsList extends StatelessWidget {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.6),
+                                color: Colors.black.withValues(alpha: 0.6),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: goldColor.withOpacity(0.4),
+                                  color: goldColor.withValues(alpha: 0.4),
                                 ),
                               ),
                               child: Row(
