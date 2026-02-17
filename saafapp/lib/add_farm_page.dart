@@ -593,6 +593,7 @@ Future<void> _searchAndGo() async {
       }
 
       setState(() => _isSaving = true);
+      DocumentReference<Map<String, dynamic>>? contractRef;
 
       try {
         final user = _auth.currentUser;
@@ -611,19 +612,29 @@ if (!isValidContract) {
   return;
 }
 
-// ✅ تحقق من وجود مزرعة بنفس رقم العقد لنفس المستخدم
-final dupSnap = await _db
-    .collection('farms')
-    .where('contractNumber', isEqualTo: contract)
-    .limit(1)
-    .get();
+contractRef = _db.collection('contracts').doc(contract);
 
-
-if (dupSnap.docs.isNotEmpty) {
-  _showSnackBar('هذه المزرعة مضافة مسبقًا', isError: true);
+try {
+  await contractRef!.create({
+    'ownerUid': user.uid,
+    'createdAt': FieldValue.serverTimestamp(),
+  });
+} on FirebaseException catch (e) {
+  if (e.code == 'already-exists') {
+    _showSnackBar('رقم العقد مستخدم مسبقًا', isError: true);
+  } else if (e.code == 'permission-denied') {
+    _showSnackBar('لا يوجد صلاحية لحجز العقد (Firestore Rules)', isError: true);
+  } else {
+    _showSnackBar('خطأ في حجز العقد: ${e.code}', isError: true);
+  }
   if (mounted) setState(() => _isSaving = false);
   return;
 }
+
+
+
+
+
 
 
         final polygonData = _polygonPoints
@@ -707,6 +718,10 @@ if (dupSnap.docs.isNotEmpty) {
 
         // لا مزيد من setState هنا لأننا غادرنا الصفحة
       } catch (e) {
+        try {
+  if (contractRef != null) await contractRef!.delete();
+} catch (_) {}
+
         _showSnackBar('حدث خطأ أثناء حفظ البيانات: $e', isError: true);
         if (mounted) setState(() => _isSaving = false);
       } finally {
@@ -803,9 +818,7 @@ if (dupSnap.docs.isNotEmpty) {
       }
     } catch (_) {
       setState(() => _suggestions = []);
-    } finally {
-      setState(() => _loadingSuggest = false);
-    }
+    } 
   }
 
   Future<void> _goToPlace(String placeId) async {
