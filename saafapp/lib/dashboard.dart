@@ -464,21 +464,21 @@ String _formatLastAnalysisDate() {
   Color _getHealthColor(int status) {
     switch (status) {
       case 2:
-        return const Color.fromARGB(87, 244, 67, 54).withValues(alpha: 0.1); // مصاب
+        return const Color.fromARGB(87, 244, 67, 54); // مصاب
       case 1:
         return const Color.fromARGB(
           62,
           255,
           235,
           59,
-        ).withValues(alpha: 0.1); // مراقبة
+        ); // مراقبة
       case 0:
         return const Color.fromARGB(
           150,
           105,
           240,
           123,
-        ).withValues(alpha: 0.1); // سليم
+        ); // سليم
       default:
         return Colors.transparent;
     }
@@ -1193,14 +1193,35 @@ Color _priorityColor(String p) {
   return Colors.white38;
 }
 
+String _bestSource(List<dynamic> srcs) {
+  final list = srcs.map((e) => e.toString().toLowerCase()).toList();
+
+  // نعطي أولوية لمصادر أوضح للأيقونة
+  const keys = ["water", "stress", "rpw", "growth", "baseline", "forecast", "unusual", "outlier", "current"];
+
+  for (final k in keys) {
+    final hit = list.firstWhere((s) => s.contains(k), orElse: () => "");
+    if (hit.isNotEmpty) return hit;
+  }
+
+  return list.isNotEmpty ? list.first : "";
+}
+
+
 IconData _recoIcon(String source) {
-  source = source.toLowerCase();
-  if (source.contains("water")) return Icons.water_drop_rounded;
-  if (source.contains("stress")) return Icons.opacity_rounded;
-  if (source.contains("growth")) return Icons.spa_rounded;
-  if (source.contains("forecast")) return Icons.auto_awesome_rounded;
+  final s = source.toLowerCase();
+
+  if (s.contains("water")) return Icons.water_drop_rounded;
+  if (s.contains("stress") || s.contains("rpw")) return Icons.opacity_rounded;
+  if (s.contains("growth") || s.contains("baseline")) return Icons.spa_rounded;
+  if (s.contains("forecast")) return Icons.auto_awesome_rounded;
+  if (s.contains("unusual") || s.contains("outlier")) return Icons.track_changes_rounded;
+  if (s.contains("current")) return Icons.warning_amber_rounded;
+
   return Icons.lightbulb_rounded;
 }
+
+
 
 Widget _buildForecastRecommendationsCard(List<Map<String, dynamic>> recos) {
   return Container(
@@ -1221,7 +1242,7 @@ Widget _buildForecastRecommendationsCard(List<Map<String, dynamic>> recos) {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                "توصيات للأسبوع القادم",
+                "توصيات ",
                 style: GoogleFonts.almarai(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -1258,7 +1279,10 @@ Widget _buildForecastRecommendationsCard(List<Map<String, dynamic>> recos) {
               final title = (r['title_ar'] ?? 'توصية').toString();
               final text = (r['text_ar'] ?? '').toString();
               final pr = (r['priority_ar'] ?? 'متوسطة').toString();
-              final src = (r['source'] ?? '').toString();
+              final List<dynamic> srcs = (r['sources'] as List?) ?? [];
+              final String src = _bestSource(srcs);
+
+
 
               final pColor = _priorityColor(pr);
 

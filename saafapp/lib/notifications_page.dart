@@ -201,13 +201,16 @@ class _NotificationsPageState extends State<NotificationsPage>
       stream: query.snapshots(),
       builder: (context, snap) {
         if (snap.hasError) {
-          return Center(
-            child: Text(
-              "حدث خطأ أثناء تحميل التنبيهات",
-              style: GoogleFonts.almarai(color: Colors.white60),
-            ),
-          );
-        }
+  debugPrint("🔥 Notifications error: ${snap.error}");
+  return Center(
+    child: Text(
+      "حدث خطأ أثناء تحميل التنبيهات\n${snap.error}",
+      style: GoogleFonts.almarai(color: Colors.white60),
+      textAlign: TextAlign.center,
+    ),
+  );
+}
+
 
         if (!snap.hasData) {
           return const Center(
