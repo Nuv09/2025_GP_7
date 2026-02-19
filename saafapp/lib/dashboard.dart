@@ -928,16 +928,7 @@ String _formatLastAnalysisDate() {
     );
   }
 
-  LineChartBarData _lineData(List<FlSpot> spots, Color color) {
-    return LineChartBarData(
-      spots: spots,
-      isCurved: true,
-      color: color,
-      barWidth: 3,
-      dotData: const FlDotData(show: true),
-      belowBarData: BarAreaData(show: false),
-    );
-  }
+ 
 
   Widget _buildLegendItem(String label, Color color, double val) {
     return Padding(
@@ -966,73 +957,89 @@ String _formatLastAnalysisDate() {
       ),
     );
   }
+Widget _buildRecommendationsSection() {
+  final Map<String, dynamic> healthRoot = widget.farmData['health'] != null
+      ? (widget.farmData['health'] as Map).cast<String, dynamic>()
+      : widget.farmData.cast<String, dynamic>();
 
-  Widget _buildRecommendationsSection() {
-    final Map<String, dynamic> healthRoot = widget.farmData['health'] != null
-        ? (widget.farmData['health'] as Map).cast<String, dynamic>()
-        : widget.farmData.cast<String, dynamic>();
+  final Map<String, dynamic> forecast =
+      (healthRoot['forecast_next_week'] is Map)
+          ? (healthRoot['forecast_next_week'] as Map).cast<String, dynamic>()
+          : {};
 
-    final Map<String, dynamic> forecast =
-        (healthRoot['forecast_next_week'] is Map)
-        ? (healthRoot['forecast_next_week'] as Map).cast<String, dynamic>()
-        : {};
+  final double hNext = double.tryParse("${forecast['Healthy_Pct_next']}") ?? 0.0;
+  final double mNext = double.tryParse("${forecast['Monitor_Pct_next']}") ?? 0.0;
+  final double cNext = double.tryParse("${forecast['Critical_Pct_next']}") ?? 0.0;
 
-    final double hNext =
-        double.tryParse("${forecast['Healthy_Pct_next']}") ?? 0.0;
-    final double mNext =
-        double.tryParse("${forecast['Monitor_Pct_next']}") ?? 0.0;
-    final double cNext =
-        double.tryParse("${forecast['Critical_Pct_next']}") ?? 0.0;
+  final double ndviDelta =
+      double.tryParse("${forecast['ndvi_delta_next_mean']}") ?? 0.0;
+  final double ndmiDelta =
+      double.tryParse("${forecast['ndmi_delta_next_mean']}") ?? 0.0;
 
-    // جلب قيم التغير المتوقع
-    final double ndviDelta =
-        double.tryParse("${forecast['ndvi_delta_next_mean']}") ?? 0.0;
-    final double ndmiDelta =
-        double.tryParse("${forecast['ndmi_delta_next_mean']}") ?? 0.0;
+  // ✅ (جديد) قراءة التوصيات من farmData
+  final List<dynamic> recosRaw =
+      (widget.farmData['recommendations'] as List?) ?? [];
+  final List<Map<String, dynamic>> recos = recosRaw
+      .whereType<Map>()
+      .map((e) => e.cast<String, dynamic>())
+      .toList();
 
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      child: Column(
-        children: [
-          // 1. كرت توقعات توزيع الحالة الصحية
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(25),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "توقعات توزيع الحالة الصحية (الأسبوع القادم)",
-                  style: GoogleFonts.almarai(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                _forecastRow("مستقر", Colors.greenAccent, hNext),
-                _forecastRow("قيد المراقبة", Colors.orangeAccent, mNext),
-                _forecastRow("حرج (خطر إصابة)", Colors.redAccent, cNext),
-              ],
-            ),
+  // ✅ (جديد) ترتيبها بالأولوية
+  recos.sort((a, b) {
+    final pa = _priorityRank((a['priority_ar'] ?? '').toString());
+    final pb = _priorityRank((b['priority_ar'] ?? '').toString());
+    return pa.compareTo(pb);
+  });
+
+  return SingleChildScrollView(
+    physics: const BouncingScrollPhysics(),
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+    child: Column(
+      children: [
+        // 1) كرت توقعات توزيع الحالة الصحية
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(25),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
           ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "توقعات توزيع الحالة الصحية (الأسبوع القادم)",
+                style: GoogleFonts.almarai(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 14),
+              _forecastRow("مستقر", Colors.greenAccent, hNext),
+              _forecastRow("قيد المراقبة", Colors.orangeAccent, mNext),
+              _forecastRow("حرج (خطر إصابة)", Colors.redAccent, cNext),
+            ],
+          ),
+        ),
 
-          const SizedBox(height: 20),
+        const SizedBox(height: 20),
 
-          // 2. كرت التحليل الفيزيولوجي المتوقع مع النسب المئوية
-          _buildPhysiologicalTrendCard(ndviDelta, ndmiDelta),
+        // 2) كرت التحليل الفيزيولوجي المتوقع
+        _buildPhysiologicalTrendCard(ndviDelta, ndmiDelta),
 
-          const SizedBox(height: 80),
-        ],
-      ),
-    );
-  }
+        const SizedBox(height: 20),
+
+        // ✅ (جديد) كرت التوصيات (يظهر تحت التنبؤ مباشرة)
+        _buildForecastRecommendationsCard(recos),
+
+        const SizedBox(height: 80),
+      ],
+    ),
+  );
+}
+
 
   Widget _buildPhysiologicalTrendCard(double ndviDelta, double ndmiDelta) {
     return Container(
@@ -1170,4 +1177,168 @@ String _formatLastAnalysisDate() {
       ),
     );
   }
+
+  int _priorityRank(String p) {
+  // الأصغر = أهم
+  if (p.contains("عاجلة")) return 0;
+  if (p.contains("مرتفعة")) return 1;
+  if (p.contains("متوسطة")) return 2;
+  return 3; // منخفضة أو غير محددة
+}
+
+Color _priorityColor(String p) {
+  if (p.contains("عاجلة")) return Colors.redAccent;
+  if (p.contains("مرتفعة")) return Colors.orangeAccent;
+  if (p.contains("متوسطة")) return Colors.blueAccent;
+  return Colors.white38;
+}
+
+IconData _recoIcon(String source) {
+  source = source.toLowerCase();
+  if (source.contains("water")) return Icons.water_drop_rounded;
+  if (source.contains("stress")) return Icons.opacity_rounded;
+  if (source.contains("growth")) return Icons.spa_rounded;
+  if (source.contains("forecast")) return Icons.auto_awesome_rounded;
+  return Icons.lightbulb_rounded;
+}
+
+Widget _buildForecastRecommendationsCard(List<Map<String, dynamic>> recos) {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.05),
+      borderRadius: BorderRadius.circular(25),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.recommend_rounded,
+                color: goldColor.withValues(alpha: 0.9), size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                "توصيات للأسبوع القادم",
+                style: GoogleFonts.almarai(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        if (recos.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+            ),
+            child: Text(
+              "لا توجد توصيات جديدة حاليًا. سيتم تحديثها تلقائيًا بعد التحليل القادم.",
+              style: GoogleFonts.almarai(color: Colors.white60, fontSize: 12),
+            ),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: recos.length > 6 ? 6 : recos.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (context, i) {
+              final r = recos[i];
+              final title = (r['title_ar'] ?? 'توصية').toString();
+              final text = (r['text_ar'] ?? '').toString();
+              final pr = (r['priority_ar'] ?? 'متوسطة').toString();
+              final src = (r['source'] ?? '').toString();
+
+              final pColor = _priorityColor(pr);
+
+              return Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: pColor.withValues(alpha: 0.10),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: pColor.withValues(alpha: 0.35)),
+                      ),
+                      child: Icon(_recoIcon(src), color: pColor, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  title,
+                                  style: GoogleFonts.almarai(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: pColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                      color: pColor.withValues(alpha: 0.35)),
+                                ),
+                                child: Text(
+                                  pr,
+                                  style: GoogleFonts.almarai(
+                                    color: pColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            text,
+                            style: GoogleFonts.almarai(
+                              color: Colors.white70,
+                              fontSize: 12,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+      ],
+    ),
+  );
+}
+
 }

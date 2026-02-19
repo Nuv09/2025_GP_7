@@ -760,13 +760,14 @@ Future<bool> _confirmDialog(String title, String message) async {
             const SizedBox(height: 16),
             _tf(_ownerNameController, 'اسم المالك', Icons.person),
             const SizedBox(height: 16),
+            _buildReadonlyContract(),   // ← أضيفي هذا السطر هنا بالضبط
+
+            const SizedBox(height: 16),
             _tf(_farmSizeController, 'مساحة المزرعة (م²)', Icons.straighten, keyboardType: TextInputType.number),
             const SizedBox(height: 16),
             _region(),
             const SizedBox(height: 16),
-            _buildReadonlyContract(),   // ← أضيفي هذا السطر هنا بالضبط
-
-            const SizedBox(height: 16),
+            
             _tf(_notesController, 'ملاحظات (اختياري)', Icons.notes, optional: true, maxLines: 3),
             const SizedBox(height: 16),
             ElevatedButton.icon(
