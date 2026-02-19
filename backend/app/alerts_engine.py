@@ -109,6 +109,29 @@ _PRIORITY_RANK = {
     "منخفضة": 3,
 }
 
+_PRIORITY_BY_ACTION = {
+    # أعلى شيء
+    "visit_now": "عاجلة",
+
+    # عالية
+    "visit_48h": "مرتفعة",
+    "water_check": "مرتفعة",
+
+    # متوسطة
+    "visual_check": "متوسطة",
+    "irrigation_points": "متوسطة",
+    "focus_spots": "متوسطة",
+    "prepare_week": "متوسطة",
+    "field_notes": "متوسطة",
+
+    # منخفضة
+    "auto_follow": "منخفضة",
+}
+
+def _priority_for_action(action_key: str) -> str:
+    return _PRIORITY_BY_ACTION.get((action_key or "").strip(), "متوسطة")
+
+
 
 def _priority_min(a: str, b: str) -> str:
     ra = _PRIORITY_RANK.get((a or "").strip(), 99)
@@ -120,13 +143,14 @@ def _add_reco(
     recos_map: Dict[str, Dict[str, Any]],
     farm_id: str,
     source: str,
-    priority_ar: str,
     action: Dict[str, Any],
 ) -> None:
     """Deduplicate recommendations by action key and keep the highest priority."""
     key = (action.get("key") or "").strip()
     if not key:
         return
+
+    priority_ar = _priority_for_action(key)
 
     existing = recos_map.get(key)
     if existing is None:
@@ -141,10 +165,13 @@ def _add_reco(
         }
         return
 
+    # keep the highest priority (lowest rank)
     existing["priority_ar"] = _priority_min(existing.get("priority_ar", ""), priority_ar)
+
     srcs = set(existing.get("sources", []) or [])
     srcs.add(source)
     existing["sources"] = sorted(srcs)
+
 
 
 def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]) -> Dict[str, Any]:
@@ -216,7 +243,7 @@ def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]
                 recos_map,
                 farm_id,
                 "current_health",
-                "عاجلة" if severity_now == "critical" else ("مرتفعة" if severity_now == "warning" else "متوسطة"),
+
                 x,
             )
 
@@ -242,7 +269,7 @@ def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]
             }
         )
         for x in acts2:
-            _add_reco(recos_map, farm_id, "baseline_drop", "عاجلة" if sev == "critical" else "مرتفعة", x)
+            _add_reco(recos_map, farm_id, "baseline_drop", x)
 
     # -------------------------
     # 3) stress_signals (RPW_tail)
@@ -266,7 +293,7 @@ def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]
             }
         )
         for x in acts3:
-            _add_reco(recos_map, farm_id, "stress_signals", "عاجلة" if sev == "critical" else "مرتفعة", x)
+            _add_reco(recos_map, farm_id, "stress_signals", x)
 
     # -------------------------
     # 4) unusual_points (IF_outlier)
@@ -290,7 +317,7 @@ def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]
             }
         )
         for x in acts4:
-            _add_reco(recos_map, farm_id, "unusual_points", "عاجلة" if sev == "critical" else "مرتفعة", x)
+            _add_reco(recos_map, farm_id, "unusual_points",  x)
 
     # -------------------------
     # 5) water_signals (flags)
@@ -318,7 +345,7 @@ def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]
             }
         )
         for x in acts5:
-            _add_reco(recos_map, farm_id, "water_signals", "مرتفعة" if sev == "warning" else "عاجلة", x)
+            _add_reco(recos_map, farm_id, "water_signals",  x)
 
     # -------------------------
     # 6) growth_signals (NDVI/NDRE drops)
@@ -346,7 +373,7 @@ def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]
             }
         )
         for x in acts6:
-            _add_reco(recos_map, farm_id, "growth_signals", "مرتفعة" if sev == "warning" else "عاجلة", x)
+            _add_reco(recos_map, farm_id, "growth_signals",  x)
 
     # -------------------------
     # 7) forecast_next_week
@@ -383,7 +410,7 @@ def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]
                     recos_map,
                     farm_id,
                     "forecast_next_week",
-                    "مرتفعة" if f_sev in {"warning", "critical"} else "متوسطة",
+                    
                     x,
                 )
 
