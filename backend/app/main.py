@@ -1,17 +1,25 @@
 import os
-from flask_cors import CORS
 import base64
 import json
+import logging
+import sys
+from datetime import datetime, timedelta
+
 from flask import Flask, request, jsonify
+from flask_cors import CORS
+
+from google.cloud import firestore
+import firebase_admin
+from firebase_admin import messaging
 
 from app.firestore_utils import set_status, get_farm_doc
-from google.cloud import firestore
 
 app = Flask(__name__)
 CORS(app)
 
-import logging
-import sys
+# ✅ Firebase Admin init (يستخدم Service Account حق Cloud Run تلقائياً)
+if not firebase_admin._apps:
+    firebase_admin.initialize_app()
 
 gunicorn_logger = logging.getLogger("gunicorn.error")
 if gunicorn_logger.handlers:
@@ -20,10 +28,12 @@ if gunicorn_logger.handlers:
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout, force=True)
 
-
+# ✅ Reuse Firestore client
+DB = firestore.Client()
 
 MODELS = None
 MODEL_URIS = {}
+
 
 def get_models_once():
     global MODELS, MODEL_URIS
@@ -38,44 +48,6 @@ def get_models_once():
     return MODELS, MODEL_URIS
 
 
-
-@app.get("/")
-def index():
-    models, uris = get_models_once()
-    info = {k: v.rsplit("/", 1)[-1] for k, v in (uris or {}).items()}
-    if "error" in info:
-        info["status"] = "Failed to initialize models"
-    return jsonify({"status": "alive", "models": info}), 200
-
-@app.get("/debug/farms")
-def debug_farms():
-    db = firestore.Client()
-    docs = db.collection("farms").limit(50).stream()
-    items = []
-    for d in docs:
-        doc = d.to_dict() or {}
-        poly = doc.get("polygon") or []
-        items.append({"id": d.id, "polygon_len": len(poly), "keys": list(doc.keys())[:8]})
-    return jsonify({"count": len(items), "items": items})
-
-@app.get("/debug/farm/<farm_id>")
-def debug_farm(farm_id):
-    doc = get_farm_doc(farm_id)
-    if not doc:
-        return jsonify({"ok": False, "reason": "not_found", "farmId": farm_id}), 404
-    poly = doc.get("polygon") or []
-    return jsonify(
-        {
-            "ok": True,
-            "farmId": farm_id,
-            "keys": sorted(doc.keys()),
-            "polygon_len": len(poly),
-            "polygon_sample": poly[:3],
-        }
-    )
-
-
-
 def _try_decode_base64_json(b64_str: str):
     try:
         txt = base64.b64decode(b64_str).decode("utf-8")
@@ -83,9 +55,8 @@ def _try_decode_base64_json(b64_str: str):
     except Exception:
         return None
 
-def extract_farm_id(envelope: dict) -> tuple[str | None, str]:
-   
 
+def extract_farm_id(envelope: dict) -> tuple[str | None, str]:
     if not isinstance(envelope, dict):
         return None, "not_json"
 
@@ -133,6 +104,115 @@ def extract_farm_id(envelope: dict) -> tuple[str | None, str]:
     return None, "no_supported_keys"
 
 
+def send_push_to_token(token: str, title: str, body: str, data: dict | None = None):
+    if not token:
+        return
+    safe_data = {str(k): str(v) for k, v in (data or {}).items()}  # ✅
+
+
+    msg = messaging.Message(
+        token=token,
+        notification=messaging.Notification(title=title, body=body),
+        android=messaging.AndroidConfig(priority="high"),
+        data=safe_data,
+    )
+    messaging.send(msg)
+
+
+def send_push_to_user(uid: str, title: str, body: str, data: dict | None = None):
+    user_doc = DB.collection("users").document(uid).get()
+    user_data = user_doc.to_dict() or {}
+    token = user_data.get("fcmToken")
+
+    if not token:
+        app.logger.info(f"📭 No fcmToken for uid={uid}")
+        return
+
+    send_push_to_token(token, title, body, data=data)
+    app.logger.info(f"✅ Push sent to uid={uid}")
+
+
+def maybe_send_push_for_alerts(owner_uid: str, alerts_pkg: dict):
+    """
+    يرسل Push إذا عند المستخدم تنبيهات غير مقروءة.
+    ويبني نص مختلف لو كانت تنبيهات تخص مزرعة واحدة فقط.
+    """
+    alerts_list = alerts_pkg.get("alerts", []) or []
+    if not owner_uid or len(alerts_list) == 0:
+        return
+
+    notifs = (
+        DB.collection("notifications")
+        .where("ownerUid", "==", owner_uid)
+        .where("isRead", "==", False)
+        .stream()
+    )
+
+    farm_ids = set()
+    for n in notifs:
+        data = n.to_dict() or {}
+        fid = data.get("farmId")
+        if fid:
+            farm_ids.add(fid)
+
+    if len(farm_ids) == 1:
+        single_farm_id = list(farm_ids)[0]
+        farm_doc_single = DB.collection("farms").document(single_farm_id).get()
+        farm_data = farm_doc_single.to_dict() or {}
+        farm_name = (
+           farm_data.get("name")
+           or farm_data.get("farmName")
+           or farm_data.get("title")
+           or "مزرعتك"
+            )
+        body_text = f"يوجد تنبيهات جديدة في {farm_name} 🌴"
+    else:
+        body_text = "يوجد تنبيهات جديدة في مزارعك 🌴"
+
+    send_push_to_user(
+        uid=owner_uid,
+        title="تنبيه جديد من سعف",
+        body=body_text,
+        data={"route": "notifications"},
+    )
+
+
+@app.get("/")
+def index():
+    models, uris = get_models_once()
+    info = {k: v.rsplit("/", 1)[-1] for k, v in (uris or {}).items()}
+    if "error" in info:
+        info["status"] = "Failed to initialize models"
+    return jsonify({"status": "alive", "models": info}), 200
+
+
+@app.get("/debug/farms")
+def debug_farms():
+    docs = DB.collection("farms").limit(50).stream()
+    items = []
+    for d in docs:
+        doc = d.to_dict() or {}
+        poly = doc.get("polygon") or []
+        items.append({"id": d.id, "polygon_len": len(poly), "keys": list(doc.keys())[:8]})
+    return jsonify({"count": len(items), "items": items})
+
+
+@app.get("/debug/farm/<farm_id>")
+def debug_farm(farm_id):
+    doc = get_farm_doc(farm_id)
+    if not doc:
+        return jsonify({"ok": False, "reason": "not_found", "farmId": farm_id}), 404
+    poly = doc.get("polygon") or []
+    return jsonify(
+        {
+            "ok": True,
+            "farmId": farm_id,
+            "keys": sorted(doc.keys()),
+            "polygon_len": len(poly),
+            "polygon_sample": poly[:3],
+        }
+    )
+
 
 @app.post("/analyze")
 def analyze():
@@ -172,7 +252,9 @@ def analyze():
 
         models, uris = get_models_once()
         if not models:
-            raise RuntimeError(f"YOLO model initialization failed: {uris.get('error', 'Unknown failure')}")
+            raise RuntimeError(
+                f"YOLO model initialization failed: {uris.get('error', 'Unknown failure')}"
+            )
 
         farm_doc = get_farm_doc(farm_id)
         if not farm_doc:
@@ -195,20 +277,24 @@ def analyze():
             "model": picked.get("picked"),
         }
 
+        # ✅ Health + Alerts + Push
         try:
             health_result = health_mod.analyze_farm_health(farm_id, farm_doc)
+
             from app.alerts_engine import build_alerts_and_recommendations
             from app.firestore_utils import set_alerts_and_recommendations
 
             alerts_pkg = build_alerts_and_recommendations(farm_id, health_result)
 
             set_alerts_and_recommendations(
-             farm_id,
-             alerts_pkg.get("alerts", []),
-             alerts_pkg.get("recommendations", [])
-             )
+                farm_id,
+                alerts_pkg.get("alerts", []),
+                alerts_pkg.get("recommendations", []),
+            )
 
-            
+            owner_uid = farm_doc.get("createdBy") or farm_doc.get("ownerUid")
+            maybe_send_push_for_alerts(owner_uid, alerts_pkg)
+
             ch = health_result.get("current_health", {})
             app.logger.info(
                 f"[HEALTH] site={farm_id} "
@@ -226,10 +312,9 @@ def analyze():
             status="done",
             finalCount=count_summary["count"],
             finalQuality=count_summary["quality"],
-            health=health_result, # الآن هذا الكائن لا يحتوي على الخريطة بداخله
+            health=health_result,
             healthMap=h_map,
-            lastAnalysisAt=firestore.SERVER_TIMESTAMP      # الخريطة ستكون في هذا الحقل المستقل فقط
-            
+            lastAnalysisAt=firestore.SERVER_TIMESTAMP,
         )
 
         return (
@@ -250,24 +335,13 @@ def analyze():
         set_status(farm_id, status="failed", errorMessage=str(e))
         app.logger.exception(f"❌ ERROR during /analyze: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
-    
-    
 
-from datetime import datetime, timedelta
 
 @app.post("/scheduled-update")
 def scheduled_update():
-    db = firestore.Client()
-
-    farms = (
-    db.collection("farms")
-      .order_by("lastAnalysisAt")
-      .limit(8)
-      .stream()
-    )
+    farms = DB.collection("farms").order_by("lastAnalysisAt").limit(8).stream()
 
     now = datetime.utcnow()
-
     updated = []
     skipped = []
 
@@ -276,7 +350,6 @@ def scheduled_update():
         farm_id = doc.id
 
         last = farm.get("lastAnalysisAt")
-
         if last is None:
             needs_update = True
         else:
@@ -299,27 +372,22 @@ def scheduled_update():
             health_result = health_mod.analyze_farm_health(farm_id, farm)
             h_map = list(health_result.pop("health_map", []))
 
-
             set_status(
                 farm_id,
                 status="done",
                 finalCount=int(picked["count"]),
                 finalQuality=float(picked["score"]),
                 health=health_result,
-                healthMap=h_map,  # 👈 هذا السطر الناقص
-                lastAnalysisAt=firestore.SERVER_TIMESTAMP
+                healthMap=h_map,
+                lastAnalysisAt=firestore.SERVER_TIMESTAMP,
             )
-
 
             updated.append(farm_id)
 
         except Exception as e:
             set_status(farm_id, status="failed", errorMessage=str(e))
 
-    return jsonify({
-        "updated": updated,
-        "skipped": skipped
-    }), 200
+    return jsonify({"updated": updated, "skipped": skipped}), 200
 
 
 if __name__ == "__main__":

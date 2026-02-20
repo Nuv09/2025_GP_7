@@ -16,3 +16,4 @@ scikit-learn==1.4.2
 joblib==1.4.2
 psutil
 lightgbm==4.5.0
+firebase-admin==6.5.0
