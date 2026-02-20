@@ -289,14 +289,17 @@ def analyze():
 
             alerts_pkg = build_alerts_and_recommendations(farm_id, health_result)
 
-            set_alerts_and_recommendations(
-                farm_id,
-                alerts_pkg.get("alerts", []),
-                alerts_pkg.get("recommendations", []),
-            )
+# ✅ (1) خزن alerts/recs وارجع لنا كم alert جديد انضاف
+            new_alerts_count = set_alerts_and_recommendations(
+               farm_id,
+               alerts_pkg.get("alerts", []),
+               alerts_pkg.get("recommendations", []),
+              )
 
+# ✅ (2) Push فقط لو فيه جديد
             owner_uid = farm_doc.get("createdBy") or farm_doc.get("ownerUid")
-            maybe_send_push_for_alerts(owner_uid, alerts_pkg)
+            if owner_uid and (new_alerts_count or 0) > 0:
+               maybe_send_push_for_alerts(owner_uid, alerts_pkg)
 
             ch = health_result.get("current_health", {})
             app.logger.info(
@@ -342,11 +345,14 @@ def analyze():
 
 @app.post("/scheduled-update")
 def scheduled_update():
+    app.logger.info("⏰ /scheduled-update called")
+
     farms = DB.collection("farms").order_by("lastAnalysisAt").limit(8).stream()
 
     now = datetime.utcnow()
     updated = []
     skipped = []
+    failed = []
 
     for doc in farms:
         farm = doc.to_dict() or {}
@@ -366,15 +372,38 @@ def scheduled_update():
         try:
             from app import inference as inf
             from app import health as health_mod
+            from app.alerts_engine import build_alerts_and_recommendations
+            from app.firestore_utils import set_alerts_and_recommendations
 
-            models, _ = get_models_once()
+            models, uris = get_models_once()
+            if not models:
+                raise RuntimeError(
+                    f"YOLO model initialization failed: {uris.get('error', 'Unknown failure')}"
+                )
 
+            # ✅ 1) Count
             img_path = inf.get_sat_image_for_farm(farm)
             picked = inf.run_both_and_pick_best(models, img_path)
 
+            # ✅ 2) Health
             health_result = health_mod.analyze_farm_health(farm_id, farm)
             h_map = list(health_result.pop("health_map", []))
 
+            # ✅ 3) Alerts + Recommendations (هذا اللي كان ناقص!)
+            alerts_pkg = build_alerts_and_recommendations(farm_id, health_result)
+
+            new_alerts_count = set_alerts_and_recommendations(
+                farm_id,
+                alerts_pkg.get("alerts", []),
+                alerts_pkg.get("recommendations", []),
+            )
+
+            # ✅ 4) Push فقط لو فعلاً فيه تنبيه جديد
+            owner_uid = farm.get("createdBy") or farm.get("ownerUid")
+            if owner_uid and (new_alerts_count or 0) > 0:
+                maybe_send_push_for_alerts(owner_uid, alerts_pkg)
+
+            # ✅ 5) Update farm doc / status
             set_status(
                 farm_id,
                 status="done",
@@ -385,12 +414,21 @@ def scheduled_update():
                 lastAnalysisAt=firestore.SERVER_TIMESTAMP,
             )
 
-            updated.append(farm_id)
+            updated.append(
+                {
+                    "farmId": farm_id,
+                    "newAlerts": int(new_alerts_count or 0),
+                    "count": int(picked["count"]),
+                    "score": float(picked["score"]),
+                }
+            )
 
         except Exception as e:
+            app.logger.exception(f"❌ scheduled-update failed for farmId={farm_id}: {e}")
             set_status(farm_id, status="failed", errorMessage=str(e))
+            failed.append({"farmId": farm_id, "error": str(e)})
 
-    return jsonify({"updated": updated, "skipped": skipped}), 200
+    return jsonify({"updated": updated, "skipped": skipped, "failed": failed}), 200
 
 
 if __name__ == "__main__":

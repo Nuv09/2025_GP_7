@@ -2,8 +2,8 @@ from typing import Optional, Dict, Any, List
 from google.cloud import firestore
 from google.api_core.exceptions import AlreadyExists
 
-
 _db = None
+
 
 def _get_db():
     global _db
@@ -11,11 +11,13 @@ def _get_db():
         _db = firestore.Client()
     return _db
 
+
 def get_farm_doc(farm_id: str) -> Optional[Dict[str, Any]]:
     doc = _get_db().collection("farms").document(farm_id).get()
     if not doc.exists:
         return None
     return doc.to_dict()
+
 
 def set_status(farm_id: str, **data):
     data.setdefault("status", "pending")
@@ -33,7 +35,12 @@ def set_alerts_and_recommendations(
     farm_id: str,
     alerts: List[Dict[str, Any]],
     recommendations: List[Dict[str, Any]],
-):
+) -> int:
+    """
+    ✅ نفس السكيمة الحالية (بدون أي تغيير على DB)
+    ✅ يمنع "إعادة" createdAt و isRead للتنبيه إذا كان موجود
+    ✅ يرجّع عدد التنبيهات الجديدة اللي تم إنشاؤها فعلياً (new_count)
+    """
     db = _get_db()
 
     # 1) حفظ نفس الشي داخل farms (زي قبل)
@@ -47,25 +54,29 @@ def set_alerts_and_recommendations(
         merge=True,
     )
 
-    # 2) NEW: اكتب alerts داخل collection('notifications')
-    # عشان notifications_page.dart يقدر يقرأها
+    # 2) اكتب alerts داخل collection('notifications') عشان notifications_page.dart يقدر يقرأها
     if not alerts:
-        return
+        return 0
 
     farm_doc = get_farm_doc(farm_id) or {}
     owner_uid = farm_doc.get("createdBy") or farm_doc.get("ownerUid")
-    farm_name = farm_doc.get("farmName") or ""
+    farm_name = farm_doc.get("farmName") or farm_doc.get("name") or ""
 
     if not owner_uid:
-        return
+        return 0
+
+    new_count = 0
 
     for a in alerts:
         alert_id = (a.get("id") or "").strip()
         if not alert_id:
             continue
 
-        notif_payload = {
-            "ownerUid": owner_uid,          # مهم للـ where('ownerUid'...)
+        ref = db.collection("notifications").document(alert_id)
+
+        # ✅ Payload لأول مرة فقط (createdAt + isRead=False)
+        create_payload = {
+            "ownerUid": owner_uid,
             "farmId": farm_id,
             "farmName": farm_name,
 
@@ -76,18 +87,35 @@ def set_alerts_and_recommendations(
             "actions": a.get("actions", []),
             "hotspots": a.get("hotspots", []),
 
-            # مهم للترتيب في الصفحة
             "createdAt": firestore.SERVER_TIMESTAMP,
             "updatedAt": firestore.SERVER_TIMESTAMP,
 
-            # مهم لأن الصفحة غالبًا تعرض غير المقروء
             "isRead": False,
         }
 
-        ref = db.collection("notifications").document(alert_id)
+        # ✅ Payload تحديث إذا كان موجود (بدون لمس createdAt ولا isRead)
+        update_payload = {
+            "ownerUid": owner_uid,  # لو تغيرت ملكية/بيانات - اختياري
+            "farmId": farm_id,
+            "farmName": farm_name,
 
-        # create لو أول مرة، وإذا موجود سو merge update
+            # إذا تبين تثبتي محتوى التنبيه بعد إنشائه، تقدرين تشيلين هذي السطور
+            "type": a.get("type", ""),
+            "severity": a.get("severity", ""),
+            "title_ar": a.get("title_ar", ""),
+            "message_ar": a.get("message_ar", ""),
+            "actions": a.get("actions", []),
+            "hotspots": a.get("hotspots", []),
+
+            "updatedAt": firestore.SERVER_TIMESTAMP,
+        }
+
         try:
-            ref.create(notif_payload)
+            # create لو أول مرة
+            ref.create(create_payload)
+            new_count += 1
         except AlreadyExists:
-            ref.set(notif_payload, merge=True)
+            # موجود: سو merge update بدون createdAt/isRead
+            ref.set(update_payload, merge=True)
+
+    return new_count
