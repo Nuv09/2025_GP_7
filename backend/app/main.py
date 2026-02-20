@@ -147,9 +147,12 @@ def maybe_send_push_for_alerts(owner_uid: str, alerts_pkg: dict):
         .where("isRead", "==", False)
         .stream()
     )
+    notifs_list = list(notifs)      # ✅
+    if len(notifs_list) == 0:       # ✅
+       return
 
     farm_ids = set()
-    for n in notifs:
+    for n in notifs_list:
         data = n.to_dict() or {}
         fid = data.get("farmId")
         if fid:
