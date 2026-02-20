@@ -1,5 +1,6 @@
 # app/alerts_engine.py
 from __future__ import annotations
+
 from typing import Dict, Any, List, Tuple
 from datetime import datetime, timezone
 import hashlib
@@ -72,6 +73,7 @@ def _trend_slope(values: List[float]) -> float:
             continue
         xs.append(float(i))
         ys.append(fv)
+
     if len(xs) < 3:
         return 0.0
 
@@ -153,15 +155,21 @@ def _add_reco(
     srcs.add(source)
     existing["sources"] = sorted(srcs)
 
+    # Keep the strongest / earliest explanation; only fill if empty
     if (not existing.get("why_ar")) and why:
         existing["why_ar"] = why
 
 
 # =========================
-# Actions Library (User-friendly wording)
+# Actions Library (Product-grade Arabic)
 # =========================
 
 def _actions_library(severity: str) -> Dict[str, Dict[str, str]]:
+    """
+    NOTE:
+    - Wording is user-facing and intentionally avoids technical indicator names.
+    - We avoid hard claims ("السبب كذا") and use evidence-based, non-committal language.
+    """
     sev = (severity or "").lower().strip()
     urgent = (sev == "critical")
 
@@ -169,75 +177,78 @@ def _actions_library(severity: str) -> Dict[str, Dict[str, str]]:
         "visit_now": {
             "key": "visit_now",
             "title_ar": "إجراء عاجل",
-            "text_ar": "ابدأ فورًا بزيارة المناطق الأكثر تأثرًا كما تظهر على الخريطة (النقاط الساخنة).",
+            "text_ar": "توجّه فورًا إلى المناطق الأكثر تأثرًا كما تظهر على الخريطة، وابدأ التحقق الميداني قبل تنفيذ أي تعديل واسع.",
         },
         "visit_48h": {
             "key": "visit_48h",
             "title_ar": "زيارة خلال 48 ساعة",
-            "text_ar": "قم بزيارة المناطق المتأثرة كما تظهر على الخريطة للتأكد من السبب وتحديد الإجراء المناسب.",
+            "text_ar": "قم بزيارة المناطق المتأثرة كما تظهر على الخريطة للتحقق من الحالة ميدانيًا وتحديد الإجراء الأنسب.",
         },
         "water_check": {
             "key": "water_check",
             "title_ar": "مراجعة الري",
-            "text_ar": "تأكد من أن الماء يصل بشكل جيد للمناطق المتأثرة (لا يوجد انسداد/تسرب/ضعف ضخ/توزيع غير متوازن)."
-            if urgent
-            else "راجع توزيع الري حول المناطق المتأثرة وتأكد أنه متوازن.",
+            "text_ar": (
+                "تحقق من انتظام وصول الماء للمناطق المتأثرة: توزيع التغطية، الفروقات بين الخطوط، وأي مؤشرات على ضعف ضخ أو عدم توازن."
+                if urgent
+                else "راجع انتظام توزيع الماء حول المناطق المتأثرة وتأكد من عدم وجود تباين واضح في التغطية."
+            ),
         },
         "irrigation_points": {
             "key": "irrigation_points",
-            "title_ar": "فحص أقرب نقاط الري",
-            "text_ar": "افحص أقرب نقاط ري للمناطق المتأثرة للتأكد من قوة الضخ وتوازن التغطية.",
+            "title_ar": "فحص نقاط الري القريبة",
+            "text_ar": "افحص أقرب نقاط ري للمناطق المتأثرة للتأكد من كفاءة الضخ وتوازن التغطية مقارنة بالمناطق السليمة.",
         },
         "visual_check": {
             "key": "visual_check",
-            "title_ar": "فحص بصري للنخيل",
-            "text_ar": "افحص النخيل بصريًا لرصد علامات ذبول/اصفرار/جفاف/حشرات/تعفن في المناطق المتأثرة.",
+            "title_ar": "فحص بصري موجه للنخيل",
+            "text_ar": "نفّذ فحصًا بصريًا داخل المناطق المتأثرة لرصد أي تغيرات ظاهرية (مثل تغير اللون أو ضعف النمو أو أعراض غير معتادة).",
         },
         "nutrient_check": {
             "key": "nutrient_check",
-            "title_ar": "مراجعة التسميد",
-            "text_ar": "راجع برنامج التسميد، وإذا استمرت المشكلة يُفضّل اختبار تربة/ورق لتحديد النقص بدقة.",
+            "title_ar": "تقييم التسميد عند الحاجة",
+            "text_ar": "إذا استمرت الإشارة بعد الفحص الميداني وضبط الري، راجع برنامج التسميد أو نفّذ اختبار تربة/ورق لتحديد الاحتياج بدقة.",
         },
         "pest_disease_check": {
             "key": "pest_disease_check",
-            "title_ar": "اشتباه آفات أو مرض",
-            "text_ar": "ركّز الفحص على احتمال وجود آفات/مرض في المناطق المتأثرة لأنها تختلف عن بقية المزرعة.",
+            "title_ar": "تحقق من عوامل موضعية محتملة",
+            "text_ar": "ركّز الفحص على احتمال وجود عامل موضعي في المناطق المتأثرة (مثل آفة/مرض/مشكلة محلية) لأنها تختلف عن النمط العام للمزرعة.",
         },
         "heat_mitigation": {
             "key": "heat_mitigation",
-            "title_ar": "تخفيف أثر الحرارة",
-            "text_ar": "في موجات الحر: قدّم مواعيد الري لأوقات أبرد (الفجر/المساء) وزد المتابعة للمناطق المتأثرة.",
+            "title_ar": "تقليل أثر الحرارة",
+            "text_ar": "في موجات الحر، قدّم الري لأوقات أبرد (الفجر/المساء) وزد متابعة المناطق المتأثرة لتقليل الإجهاد الحراري.",
         },
         "prepare_week": {
             "key": "prepare_week",
-            "title_ar": "استعداد للأسبوع القادم",
-            "text_ar": "ارفع وتيرة المتابعة قبل بداية الأسبوع القادم لتقليل احتمالية التدهور.",
+            "title_ar": "تعزيز المتابعة للأسبوع القادم",
+            "text_ar": "ارفع وتيرة المتابعة خلال الأسبوع القادم وراقب المناطق المتأثرة مبكرًا لتقليل احتمال التدهور.",
         },
         "field_notes": {
             "key": "field_notes",
-            "title_ar": "توثيق ملاحظات",
-            "text_ar": "وثّق نتائج الفحص (صور/ملاحظات) لمقارنة التحسن في التحديثات القادمة.",
+            "title_ar": "توثيق الملاحظات",
+            "text_ar": "وثّق نتائج الزيارة (صور/ملاحظات/مواقع) لمقارنة التحسن في التحديثات القادمة واتخاذ قرار أدق.",
         },
         "auto_follow": {
             "key": "auto_follow",
             "title_ar": "متابعة تلقائية",
-            "text_ar": "سيعيد النظام التحقق تلقائيًا في التحديث القادم لتأكيد اتجاه الحالة وتقليل الإنذارات الكاذبة.",
+            "text_ar": "سيعيد النظام التحقق تلقائيًا في التحديث القادم للتأكد من الاتجاه العام وتقليل الإنذارات غير الضرورية.",
         },
     }
 
 
 # =========================
-# Driver detection (No indices names shown to user)
+# Driver detection (Internal only - no indicator names shown to user)
 # =========================
 
 def _extract_history_series(health_result: Dict[str, Any]) -> Dict[str, List[float]]:
     """
-    We only use the numeric series internally to detect trend.
+    We only use numeric series internally to detect trend.
     We DO NOT display any indicator names to the user.
     """
     hist = health_result.get("indices_history_last_month", []) or []
     a, b, c = [], [], []
     for row in hist:
+        # keep as-is from pipeline; never show names outside
         a.append(row.get("NDVI"))
         b.append(row.get("NDMI"))
         c.append(row.get("NDRE"))
@@ -253,6 +264,7 @@ def _compute_drivers(
     rule_counts = alert_signals.get("rule_counts_latest", {}) or {}
     flag_counts = alert_signals.get("flag_counts_latest", {}) or {}
 
+    # Water-related signals (counts)
     water_flags = (
         _safe_int(flag_counts.get("flag_drop_SIWSI10pct", 0))
         + _safe_int(flag_counts.get("flag_drop_NDWI10pct", 0))
@@ -260,6 +272,7 @@ def _compute_drivers(
         + _safe_int(flag_counts.get("flag_NDWI_below_025", 0))
     )
 
+    # Plant-activity-related signals (counts)
     growth_flags = (
         _safe_int(flag_counts.get("flag_drop_NDVI005", 0))
         + _safe_int(flag_counts.get("flag_NDVI_below_030", 0))
@@ -267,21 +280,25 @@ def _compute_drivers(
         + _safe_int(flag_counts.get("flag_NDRE_below_035", 0))
     )
 
+    # Rule evidence
     baseline_drop = _safe_int(rule_counts.get("Critical_baseline_drop", 0)) + _safe_int(rule_counts.get("Monitor_baseline_drop", 0))
     stress_pockets = _safe_int(rule_counts.get("Critical_RPW_tail", 0)) + _safe_int(rule_counts.get("Monitor_RPW_tail", 0))
     unusual_points = _safe_int(rule_counts.get("Critical_IF_outlier", 0)) + _safe_int(rule_counts.get("Monitor_IF_outlier", 0))
 
+    # History trend (internal)
     series = _extract_history_series(health_result)
-    slope_a = _trend_slope([_safe_float(v) for v in series.get("A", [])])
-    slope_b = _trend_slope([_safe_float(v) for v in series.get("B", [])])
-    slope_c = _trend_slope([_safe_float(v) for v in series.get("C", [])])
+    slope_a = _trend_slope([_safe_float(v) for v in series.get("A", [])])  # general activity proxy
+    slope_b = _trend_slope([_safe_float(v) for v in series.get("B", [])])  # general moisture proxy
+    slope_c = _trend_slope([_safe_float(v) for v in series.get("C", [])])  # general color/chl proxy
 
+    # Forecast
     forecast = health_result.get("forecast_next_week", {}) or {}
     mon_next = _pct(forecast.get("Monitor_Pct_next"))
     crit_next = _pct(forecast.get("Critical_Pct_next"))
     delta_a = _safe_float(forecast.get("ndvi_delta_next_mean"))
     delta_b = _safe_float(forecast.get("ndmi_delta_next_mean"))
 
+    # Convert counts->rates
     water_rate = _ratio(water_flags, total_pixels_latest)
     growth_rate = _ratio(growth_flags, total_pixels_latest)
     baseline_rate = _ratio(baseline_drop, total_pixels_latest)
@@ -291,10 +308,11 @@ def _compute_drivers(
     def clamp01(x: float) -> float:
         return max(0.0, min(1.0, x))
 
+    # Scoring (pixel-level tuned)
     water_score = clamp01(water_rate / 0.08)
     growth_score = clamp01(growth_rate / 0.10)
     unusual_score = clamp01(unusual_rate / 0.04)
-    trend_score = clamp01(max(0.0, (-slope_a)) / 0.03)
+    trend_score = clamp01(max(0.0, (-slope_a)) / 0.03)  # decreasing general activity is bad
     pockets_score = clamp01(pockets_rate / 0.06)
     forecast_score = clamp01(max(mon_next / 100.0, crit_next / 5.0))
 
@@ -349,6 +367,7 @@ def _pick_top_drivers(drivers: Dict[str, Any], topk: int = 3) -> List[Tuple[str,
 
 
 def _severity_from_health(crit_now: float, mon_now: float) -> str:
+    # Product behavior: critical if >=2% critical pixels; warning if monitor >=35%
     if crit_now >= 2.0:
         return "critical"
     if mon_now >= 35.0:
@@ -363,6 +382,7 @@ def _should_forecast_alert(severity_now: str, drivers: Dict[str, Any]) -> Tuple[
     delta_activity = _safe_float(fc.get("delta_activity_next_mean"))
     delta_moisture = _safe_float(fc.get("delta_moisture_next_mean"))
 
+    # Conservative rules to avoid noisy forecast alerts
     if crit_next >= 1.0:
         return True, "critical"
     if mon_next >= 80.0 and severity_now != "critical":
@@ -373,10 +393,46 @@ def _should_forecast_alert(severity_now: str, drivers: Dict[str, Any]) -> Tuple[
 
 
 # =========================
+# Product-grade wording helpers
+# =========================
+
+def _why_templates() -> Dict[str, str]:
+    """
+    Short, evidence-based explanations (NO hard causal claims).
+    """
+    return {
+        "visit": "تم رصد تباين مكاني داخل المزرعة؛ التحقق الميداني هو أسرع خطوة لتأكيد الحالة وتحديد السبب بدقة.",
+        "water": "ظهرت إشارات قد تتوافق مع تغير في مستوى الرطوبة أو انتظام التغطية المائية في بعض المناطق مقارنة بالمحيط.",
+        "growth": "البيانات تشير إلى انخفاض في نشاط النبات أو اتجاه هبوط خلال الأسابيع الأخيرة في مناطق محددة.",
+        "unusual": "تم رصد مناطق تختلف عن النمط العام للمزرعة؛ وغالبًا ما تكون مرتبطة بعامل محلي يحتاج فحصًا مباشرًا.",
+        "forecast": "النموذج التنبؤي يتوقع ارتفاع الحاجة للمتابعة الأسبوع القادم؛ تعزيز المتابعة يقلل احتمالية التدهور.",
+        "follow": "إعادة التحقق في التحديث القادم تساعد على تأكيد الاتجاه وتقليل الإنذارات غير الضرورية.",
+        "notes": "التوثيق يسهّل المقارنة بين الزيارات والتحديثات ويجعل القرار التالي أكثر دقة.",
+    }
+
+
+def _driver_titles() -> Dict[str, str]:
+    return {
+        "water": "إشارات مرتبطة بالري والرطوبة",
+        "growth": "إشارات انخفاض في نشاط النبات",
+        "unusual": "مناطق غير معتادة داخل المزرعة",
+        "trend": "اتجاه هبوط خلال الأسابيع الأخيرة",
+        "stress_pockets": "جيوب إجهاد متفرقة",
+        "forecast": "مخاطر متوقعة للأسبوع القادم",
+    }
+
+
+# =========================
 # Main builder
 # =========================
 
 def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Returns:
+      - alerts: MAX 2 (overall + forecast if needed)
+      - recommendations: deduped + prioritized
+      - summary: useful for UI (drivers + evidence) without exposing indicator names
+    """
     alerts: List[Dict[str, Any]] = []
     recos_map: Dict[str, Dict[str, Any]] = {}
 
@@ -388,48 +444,33 @@ def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]
     alert_signals = health_result.get("alert_signals", {}) or {}
     total_pixels_latest = _safe_int(alert_signals.get("total_pixels_latest", 0))
 
-    # ✅ FIX: fallback if total is missing/0
-    if total_pixels_latest <= 0:
-        rc = alert_signals.get("risk_counts_latest", {}) or {}
-        total_pixels_latest = (
-            _safe_int(rc.get("Healthy", 0)) +
-            _safe_int(rc.get("Monitor", 0)) +
-            _safe_int(rc.get("Critical", 0))
-        )
-
-    hotspots = (alert_signals.get("hotspots", {}) or health_result.get("hotspots", {}) or {})
+    hotspots = (
+        alert_signals.get("hotspots", {})
+        or health_result.get("hotspots", {})
+        or {}
+    )
 
     drivers = _compute_drivers(health_result, total_pixels_latest=total_pixels_latest)
     top_drivers = _pick_top_drivers(drivers, topk=3)
 
-    driver_titles = {
-        "water": "إشارات مرتبطة بالري والرطوبة",
-        "growth": "إشارات انخفاض في نشاط النبات",
-        "unusual": "نقاط غير معتادة داخل المزرعة",
-        "trend": "اتجاه هبوط خلال الأسابيع الأخيرة",
-        "stress_pockets": "جيوب إجهاد متفرقة",
-        "forecast": "مخاطر متوقعة للأسبوع القادم",
-    }
+    driver_titles = _driver_titles()
+    why_t = _why_templates()
 
     created_at = _now_iso()
 
-    # 1) Overall alert
+    # -------------------------
+    # 1) Overall alert (CONCISE)
+    # -------------------------
     overall_needed = (severity_now != "info") or (len(top_drivers) > 0)
     if overall_needed:
         sev = severity_now if severity_now != "info" else "warning"
         actions_lib = _actions_library(sev)
 
-        lines: List[str] = []
+        # Short alert message: no long reasons; reasons go into recommendations
         if crit_now >= 0.5:
-            lines.append(f"الحالة الحالية: مناطق تحتاج تدخل سريع {crit_now:.1f}%، ومناطق تحتاج متابعة {mon_now:.1f}%.")
+            msg = f"تم رصد مناطق تحتاج تدخل سريع ({crit_now:.1f}%) ومناطق تحتاج متابعة ({mon_now:.1f}%). راجع الخريطة واتّبع التوصيات المقترحة."
         else:
-            lines.append(f"الحالة الحالية: مناطق تحتاج متابعة {mon_now:.1f}%.")
-
-        if top_drivers:
-            reasons = [driver_titles.get(k, k) for (k, _) in top_drivers]
-            lines.append("الأسباب المحتملة الأبرز: " + "، ".join(reasons) + ".")
-
-        lines.append("ركّز على المناطق الأكثر تأثرًا كما تظهر على الخريطة.")
+            msg = f"تم رصد مناطق تحتاج متابعة ({mon_now:.1f}%). راجع الخريطة واتّبع التوصيات المقترحة."
 
         title = "تنبيه عاجل: مناطق متأثرة داخل المزرعة" if sev == "critical" else "تنبيه: مناطق تحتاج متابعة"
 
@@ -442,31 +483,16 @@ def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]
             ",".join([k for k, _ in top_drivers]) if top_drivers else "none",
         )
 
-        hs = hotspots.get("critical", []) if sev == "critical" else (hotspots.get("monitor", []) or hotspots.get("stress", []) or [])
+        # Choose hotspots for alert display
+        hs = (
+            hotspots.get("critical", []) if sev == "critical"
+            else (hotspots.get("monitor", []) or hotspots.get("stress", []) or [])
+        )
 
+        # Actions inside alert: keep minimal (avoid repetition)
         acts: List[Dict[str, Any]] = []
         acts.append(actions_lib["visit_now"] if sev == "critical" else actions_lib["visit_48h"])
-
-        keys = [k for k, _ in top_drivers]
-        if "water" in keys or "stress_pockets" in keys:
-            acts.append(actions_lib["water_check"])
-            acts.append(actions_lib["irrigation_points"])
-        if "growth" in keys or "trend" in keys:
-            acts.append(actions_lib["visual_check"])
-            acts.append(actions_lib["nutrient_check"])
-        if "unusual" in keys:
-            acts.append(actions_lib["pest_disease_check"])
-
         acts.append(actions_lib["auto_follow"])
-        acts.append(actions_lib["field_notes"])
-
-        seen = set()
-        acts2 = []
-        for a in acts:
-            k = a.get("key")
-            if k and k not in seen:
-                seen.add(k)
-                acts2.append(a)
 
         alerts.append(
             {
@@ -474,26 +500,36 @@ def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]
                 "type": "overall",
                 "severity": sev,
                 "title_ar": title,
-                "message_ar": " ".join(lines),
-                "drivers": [{"key": k, "title_ar": driver_titles.get(k, k), "score": float(s)} for k, s in top_drivers],
-                "actions": acts2,
+                "message_ar": msg,
+                # drivers can exist for UI badges/insights, but alert text stays short
+                "drivers": [
+                    {"key": k, "title_ar": driver_titles.get(k, k), "score": float(s)}
+                    for k, s in top_drivers
+                ],
+                "actions": acts,
                 "hotspots": hs,
                 "createdAtISO": created_at,
             }
         )
 
-        for a in acts2:
-            _add_reco(
-                recos_map,
-                farm_id,
-                "overall",
-                a,
-                why="التوصية مبنية على إشارات التحليل الحالية للمزرعة وتوزيع المناطق المتأثرة على الخريطة.",
-            )
+        # Recommendations from overall (visit + follow), with professional "why"
+        _add_reco(
+            recos_map, farm_id, "overall",
+            acts[0],
+            why=why_t["visit"]
+        )
+        _add_reco(
+            recos_map, farm_id, "overall",
+            acts[1],
+            why=why_t["follow"]
+        )
 
-    # 2) Forecast alert
+    # -------------------------
+    # 2) Forecast alert (only if meaningful; also concise)
+    # -------------------------
     forecast = health_result.get("forecast_next_week", {}) or {}
     forecast_needed, forecast_sev = _should_forecast_alert(severity_now, drivers)
+
     if forecast and forecast_needed:
         fc = drivers.get("forecast", {}) or {}
         mon_next = _safe_float(fc.get("Monitor_Pct_next"))
@@ -501,12 +537,13 @@ def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]
         delta_activity = _safe_float(fc.get("delta_activity_next_mean"))
         delta_moisture = _safe_float(fc.get("delta_moisture_next_mean"))
 
-        parts = ["يتوقع النظام زيادة الحاجة للمتابعة خلال الأسبوع القادم."]
+        parts: List[str] = ["قد ترتفع الحاجة للمتابعة خلال الأسبوع القادم."]
         if crit_next >= 1.0:
             parts.append(f"قد تظهر مناطق تحتاج تدخل سريع بنسبة تقريبية {crit_next:.1f}%.")
         if mon_next >= 70.0:
             parts.append(f"مناطق المتابعة قد تصل إلى {mon_next:.1f}%.")
 
+        # Explain deltas by meaning (no indicator names)
         if delta_activity < 0:
             parts.append("قد يظهر تراجع بسيط في نشاط النبات مقارنة بالأسبوع الحالي.")
         if delta_moisture < 0:
@@ -524,7 +561,6 @@ def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]
         acts = [
             actions_lib["prepare_week"],
             actions_lib["visit_now"] if forecast_sev == "critical" else actions_lib["visit_48h"],
-            actions_lib["auto_follow"],
         ]
 
         alerts.append(
@@ -540,69 +576,104 @@ def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]
             }
         )
 
-        for a in acts:
-            _add_reco(
-                recos_map,
-                farm_id,
-                "forecast_next_week",
-                a,
-                why="التوصية مبنية على توقعات الأسبوع القادم لتقليل احتمال تدهور الحالة.",
-            )
+        # Recos from forecast (no duplication if already exists; _add_reco handles)
+        _add_reco(
+            recos_map, farm_id, "forecast_next_week",
+            actions_lib["prepare_week"],
+            why=why_t["forecast"]
+        )
 
-    # 3) Targeted recos by drivers (no extra alerts)
+    # -------------------------
+    # 3) Targeted recommendations by drivers (DETAILED + with reasons)
+    #    Goal: avoid repetition.
+    #    - Alert is short.
+    #    - Recommendations carry the explanation.
+    # -------------------------
     scores = drivers.get("scores", {}) or {}
     water_s = _safe_float(scores.get("water"))
     growth_s = _safe_float(scores.get("growth"))
     unusual_s = _safe_float(scores.get("unusual"))
     trend_s = _safe_float(scores.get("trend"))
+    pockets_s = _safe_float(scores.get("stress_pockets"))
 
-    lib_any = _actions_library("critical" if severity_now == "critical" else "warning")
+    lib = _actions_library("critical" if severity_now == "critical" else "warning")
 
-    if water_s >= 0.45:
+    # Always useful: field notes (low priority), but only if we already triggered some recos
+    def _has_any_reco() -> bool:
+        return len(recos_map) > 0
+
+    # Water-related: keep ONE core action, add "points" only if strong/urgent
+    if water_s >= 0.45 or pockets_s >= 0.55:
         _add_reco(
-            recos_map, farm_id, "driver_water", lib_any["water_check"],
+            recos_map, farm_id, "drivers",
+            lib["water_check"],
             priority_override="مرتفعة" if severity_now == "critical" else "متوسطة",
-            why="ظهرت إشارات ترتبط غالبًا بخلل في وصول الماء أو انخفاض الرطوبة في بعض المناطق."
+            why=why_t["water"]
         )
-        _add_reco(
-            recos_map, farm_id, "driver_water", lib_any["irrigation_points"],
-            priority_override="متوسطة",
-            why="فحص نقاط الري القريبة من المناطق المتأثرة يساعد على تحديد السبب بسرعة."
-        )
+        if severity_now == "critical" or water_s >= 0.70:
+            _add_reco(
+                recos_map, farm_id, "drivers",
+                lib["irrigation_points"],
+                priority_override="متوسطة",
+                why="وجود فرق واضح بين مناطق متجاورة يستدعي فحص أقرب نقاط ري لتحديد مصدر التباين بسرعة."
+            )
 
+    # Growth/trend: keep visual check as primary; nutrient as conditional follow-up
     if growth_s >= 0.45 or trend_s >= 0.45:
         _add_reco(
-            recos_map, farm_id, "driver_growth", lib_any["visual_check"],
+            recos_map, farm_id, "drivers",
+            lib["visual_check"],
             priority_override="متوسطة",
-            why="هناك إشارات لانخفاض نشاط النبات أو اتجاه هبوط خلال الأسابيع الأخيرة."
+            why=why_t["growth"]
         )
+        # Only add nutrient_check if signal is strong (to avoid repeating too much)
+        if growth_s >= 0.65 or (trend_s >= 0.65 and severity_now != "info"):
+            _add_reco(
+                recos_map, farm_id, "drivers",
+                lib["nutrient_check"],
+                priority_override="متوسطة",
+                why="كخيار ثانوي: إذا لم يفسر الفحص الميداني الحالة أو استمرت الإشارة، فالتقييم التحليلي يساعد على استبعاد العوامل التغذوية."
+            )
+
+    # Unusual/local anomalies: include only when strong
+    if unusual_s >= 0.55:
         _add_reco(
-            recos_map, farm_id, "driver_growth", lib_any["nutrient_check"],
+            recos_map, farm_id, "drivers",
+            lib["pest_disease_check"],
             priority_override="متوسطة",
-            why="قد يرتبط الانخفاض أحيانًا بالتغذية أو إجهاد مستمر — يُفضّل مراجعة التسميد إذا استمرت الإشارة."
+            why=why_t["unusual"]
         )
 
-    if unusual_s >= 0.45:
+    # Forecast preparation already added when needed; keep it clean (no duplicates)
+    if forecast and forecast_needed:
         _add_reco(
-            recos_map, farm_id, "driver_unusual", lib_any["pest_disease_check"],
+            recos_map, farm_id, "forecast_next_week",
+            lib["prepare_week"],
             priority_override="متوسطة",
-            why="ظهرت مناطق تختلف عن نمط المزرعة؛ وقد يكون السبب موضعيًا مثل آفة/مرض أو خلل ري محلي."
+            why=why_t["forecast"]
         )
 
-    _add_reco(
-        recos_map, farm_id, "system", lib_any["auto_follow"],
-        priority_override="منخفضة",
-        why="لتأكيد اتجاه الحالة في التحديث القادم وتقليل الإنذارات الكاذبة."
+    # Add field notes only if there is at least one meaningful action
+    if _has_any_reco():
+        _add_reco(
+            recos_map, farm_id, "system",
+            lib["field_notes"],
+            priority_override="منخفضة",
+            why=why_t["notes"]
+        )
+
+    # -------------------------
+    # 4) Sort outputs + cap alerts
+    # -------------------------
+    recos = list(recos_map.values())
+    recos.sort(
+        key=lambda r: (
+            _PRIORITY_RANK.get((r.get("priority_ar") or "").strip(), 99),
+            r.get("title_ar", ""),
+        )
     )
 
-    # 4) Sort outputs
-    recos = list(recos_map.values())
-    recos.sort(key=lambda r: (_PRIORITY_RANK.get((r.get("priority_ar") or "").strip(), 99), r.get("title_ar", "")))
-
-    # ✅ OPTIONAL: limit recommendations to avoid overwhelming the user
-    MAX_RECOS = 6
-    recos = recos[:MAX_RECOS]
-
+    # Alerts: critical then warning then info; keep MAX 2
     order = {"critical": 0, "warning": 1, "info": 2}
     alerts.sort(key=lambda a: (order.get(a.get("severity", "info"), 9), a.get("type", "")))
     alerts = alerts[:2]
@@ -610,7 +681,10 @@ def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]
     summary = {
         "current_severity": severity_now,
         "health_now": {"Critical_Pct": crit_now, "Monitor_Pct": mon_now},
-        "drivers_top": [{"key": k, "title_ar": driver_titles.get(k, k), "score": float(s)} for k, s in top_drivers],
+        "drivers_top": [
+            {"key": k, "title_ar": driver_titles.get(k, k), "score": float(s)}
+            for k, s in top_drivers
+        ],
         "drivers_scores": drivers.get("scores", {}),
         "evidence_counts": drivers.get("evidence_counts", {}),
         "rates": drivers.get("rates", {}),
