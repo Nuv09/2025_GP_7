@@ -24,12 +24,31 @@ import 'edit_farm_page.dart';
 import 'pages/analysis_status_page.dart';
 import 'idle_session.dart';
 import 'about_us.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:saafapp/notifications_page.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  try {
+    Firebase.app();
+  } catch (_) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // تهيئة Firebase
   await _initializeFirebase();
+  await _initializeFCM();
+
 
   runApp(const MyApp());
 }
@@ -87,6 +106,64 @@ void _initializeAppCheckInBackground() {
   });
 }
 
+
+Future<void> _initializeFCM() async {
+  try {
+    // ✅ تسجيل الهاندلر للخلفية (Android/iOS)
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+    final messaging = FirebaseMessaging.instance;
+
+    // ✅ طلب الإذن (مهم خصوصاً iOS)
+    await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+  
+
+    
+
+    // ✅ لو تغير التوكن لاحقاً
+    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+      await _saveFcmTokenIfLoggedIn(forcedToken: newToken);
+    });
+
+    // ✅ إذا المستخدم ضغط على الإشعار وفتح التطبيق
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(builder: (_) => const NotificationsPage()),
+      );
+    });
+
+    // ✅ لو التطبيق كان مقفّل بالكامل وانفتح من إشعار
+    final initialMsg = await FirebaseMessaging.instance.getInitialMessage();
+    if (initialMsg != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(builder: (_) => const NotificationsPage()),
+        );
+      });
+    }
+  } catch (e) {
+    debugPrint("⚠️ FCM init failed: $e");
+  }
+}
+
+Future<void> _saveFcmTokenIfLoggedIn({String? forcedToken}) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+
+  final token = forcedToken ?? await FirebaseMessaging.instance.getToken();
+  if (token == null || token.isEmpty) return;
+
+  await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+    'fcmToken': token,
+    'fcmUpdatedAt': FieldValue.serverTimestamp(),
+  }, SetOptions(merge: true));
+}
+
 // ======================== MyApp ========================
 
 class MyApp extends StatelessWidget {
@@ -95,6 +172,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Saaf',
       localizationsDelegates: const [
@@ -132,6 +210,7 @@ class MyApp extends StatelessWidget {
         '/about': (_) => const AboutUsPage(),
         '/pages/profilepage': (_) => const ProfilePage(),
         '/main': (_) => const IdleSessionWrapper(child: MainShell()),
+        '/notifications': (_) => const NotificationsPage(),
         '/analysis': (ctx) {
           final args = ModalRoute.of(ctx)!.settings.arguments as Map?;
           final farmId = (args?['farmId'] ?? '') as String;

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui' show ImageFilter;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 const Color kDeepGreen = Color(0xFF042C25);
 const Color kLightBeige = Color(0xFFFFF6E0);
@@ -180,6 +181,22 @@ void _showSnack(
         email: email,
         password: pass,
       );
+
+      // ✅ احفظ FCM Token بعد نجاح تسجيل الدخول
+final loggedInUser = cred.user;
+if (loggedInUser != null) {
+  try {
+    final token = await FirebaseMessaging.instance.getToken();
+    if (token != null && token.isNotEmpty) {
+      await FirebaseFirestore.instance.collection('users').doc(loggedInUser.uid).set({
+        'fcmToken': token,
+        'fcmUpdatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
+  } catch (e) {
+    debugPrint("⚠️ Failed to save FCM token: $e");
+  }
+}
 
 
       await _updateSecurityState(email, success: true);

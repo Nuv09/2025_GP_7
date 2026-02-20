@@ -32,58 +32,74 @@ class FarmsScreen extends StatelessWidget {
         textDirection: TextDirection.ltr,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // زر التنبيهات
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const NotificationsPage(),
-                ),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(
-                  color: goldColor.withValues(alpha: 0.4),
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: goldColor.withValues(alpha: 0.1),
-                    blurRadius: 8,
-                    spreadRadius: 1,
-                  ),
-                ],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Icon(
-                    Icons.notifications_active_outlined,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: const Color.fromARGB(255, 216, 74, 74),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: darkGreenColor, width: 1),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          
+          // زر التنبيهات (Badge ديناميكي)
+StreamBuilder<QuerySnapshot>(
+  stream: FirebaseFirestore.instance
+      .collection('notifications')
+      .where('ownerUid', isEqualTo: FirebaseAuth.instance.currentUser?.uid ?? '')
+      .where('isRead', isEqualTo: false)
+      .limit(1)
+      .snapshots(),
+  builder: (context, snapNoti) {
+    final showBadge = (snapNoti.data?.docs.isNotEmpty ?? false);
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const NotificationsPage(),
           ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(
+            color: goldColor.withValues(alpha: 0.4),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: goldColor.withValues(alpha: 0.1),
+              blurRadius: 8,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            const Icon(
+              Icons.notifications_active_outlined,
+              color: Colors.white,
+              size: 24,
+            ),
+
+            // ✅ النقطة الحمراء: تظهر فقط إذا فيه unread
+            if (showBadge)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 216, 74, 74),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: darkGreenColor, width: 1),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  },
+),
 
           // اللوقو في النص
           const Expanded(child: Center(child: _LogoButton())),
