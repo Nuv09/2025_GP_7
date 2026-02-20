@@ -12,6 +12,8 @@ dependencies:
     sdk: flutter
   url_launcher: ^6.2.5
   universal_html: ^2.2.4
+  path_provider: ^2.1.2
+  share_plus: ^7.2.2
 
   # 🗺️ الخرائط والموقع
   http: ^1.1.0

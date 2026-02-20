@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:zxcvbn/zxcvbn.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 // الثوابت
 const Color kDeepGreen = Color(0xFF042C25);
@@ -215,6 +216,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
         'updatedAt': FieldValue.serverTimestamp(),
         'termsAccepted': true, // ⭐️ تسجيل الموافقة في Firestore
       }, SetOptions(merge: true));
+
+      // ✅ احفظ FCM Token بعد إنشاء حساب المستخدم
+try {
+  
+  final token = await FirebaseMessaging.instance.getToken();
+  if (token != null && token.isNotEmpty) {
+    await userDoc.set({
+      'fcmToken': token,
+      'fcmUpdatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+} catch (e) {
+  debugPrint("⚠️ Failed to save FCM token on signup: $e");
+}
 
       if (!mounted) return;
 

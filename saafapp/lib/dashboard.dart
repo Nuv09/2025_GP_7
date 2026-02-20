@@ -7,6 +7,9 @@ import 'dart:convert';
 import 'package:saafapp/secrets.dart';
 import 'package:flutter_map/flutter_map.dart'; // سنترك هذه كما هي لأننا نستخدمها بكثرة هنا
 import 'package:latlong2/latlong.dart'; // سنتركها أيضاً
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 // خريطة جوجل نعطيها اسماً مستعاراً (gmaps) لكي لا تتدخل في هذه الصفحة
 
@@ -65,11 +68,11 @@ String _formatLastAnalysisDate() {
 }
 
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _fetchWeather();
-  }
+void initState() {
+  super.initState();
+  _tabController = TabController(length: 3, vsync: this);
+  _fetchWeather();
+}
 
   Future<void> _fetchWeather() async {
     try {
@@ -194,12 +197,261 @@ String _formatLastAnalysisDate() {
     );
   }
 
-  Widget _buildModernHeader() {
+Widget _buildHeaderExportIcon() {
+  return InkWell(
+    borderRadius: BorderRadius.circular(14),
+    onTap: _showExportOptions, // ✅ هنا
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: goldColor.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.ios_share_rounded, color: goldColor, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            "تصدير",
+            style: GoogleFonts.almarai(
+              color: goldColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+void _showExportOptions() {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: darkGreenColor.withValues(alpha: 0.96),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "تصدير التقرير",
+              style: GoogleFonts.almarai(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            _exportTile(
+              icon: Icons.picture_as_pdf_rounded,
+              title: "PDF",
+              subtitle: "مناسب للإرسال والاعتماد",
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _exportPdf();
+              },
+            ),
+            const SizedBox(height: 10),
+            _exportTile(
+              icon: Icons.table_chart_rounded,
+              title: "Excel",
+              subtitle: "مناسب للتحليل والتعديل",
+              onTap: () async {
+                Navigator.pop(ctx);
+                await _exportExcel();
+              },
+            ),
+
+            const SizedBox(height: 10),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+Widget _exportTile({
+  required IconData icon,
+  required String title,
+  required String subtitle,
+  required VoidCallback onTap,
+}) {
+  return InkWell(
+    borderRadius: BorderRadius.circular(18),
+    onTap: onTap,
+    child: Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: goldColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: goldColor.withValues(alpha: 0.35)),
+            ),
+            child: Icon(icon, color: goldColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.almarai(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.almarai(
+                    color: Colors.white60,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Icon(Icons.chevron_left_rounded, color: Colors.white60),
+        ],
+      ),
+    ),
+  );
+}
+
+void _showLoading(String msg) {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => AlertDialog(
+      backgroundColor: darkGreenColor.withValues(alpha: 0.95),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      content: Row(
+        children: [
+          const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2, color: goldColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(msg, style: GoogleFonts.almarai(color: Colors.white)),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+void _toast(String msg) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(msg, style: GoogleFonts.almarai()),
+      backgroundColor: const Color(0xFF0A4D41),
+    ),
+  );
+}
+
+Future<void> _exportPdf() async {
+  try {
+    _showLoading("جاري تجهيز PDF...");
+
+    final uri = Uri.parse("${Secrets.apiBaseUrl}/reports/${widget.farmId}/pdf");
+
+    final res = await http.post(
+      uri,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        // خطوة 1: نرسل farmData نفسها للسيرفر
+        "farmData": widget.farmData,
+      }),
+    ).timeout(const Duration(seconds: 30));
+
+    if (!mounted) return;
+    Navigator.pop(context); // close loading
+
+    if (res.statusCode != 200) {
+      _toast("تعذر إنشاء التقرير");
+      return;
+    }
+
+    final data = jsonDecode(res.body);
+    final String b64 = data["base64"] ?? "";
+    final String fileName = data["fileName"] ?? "report.pdf";
+
+    if (b64.isEmpty) {
+      _toast("التقرير رجع فاضي");
+      return;
+    }
+
+    final bytes = base64Decode(b64);
+
+    final dir = await getTemporaryDirectory();
+    final file = File("${dir.path}/$fileName");
+    await file.writeAsBytes(bytes, flush: true);
+
+    await Share.shareXFiles([XFile(file.path)], text: "تقرير المزرعة (PDF)");
+
+   } catch (e) {
+    if (mounted) {
+      try { Navigator.pop(context); } catch (_) {}
+      _toast("صار خطأ: تأكدي من الاتصال");
+    }
+   }
+}
+
+Future<void> _exportExcel() async {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text("Excel قريباً", style: GoogleFonts.almarai()),
+      backgroundColor: const Color(0xFF0A4D41),
+    ),
+  );
+}
+
+void _onExportPressed() {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        "ميزة تصدير التقارير ستكون متاحة قريباً",
+        style: GoogleFonts.almarai(),
+      ),
+      backgroundColor: const Color(0xFF0A4D41),
+    ),
+  );
+}
+
+Widget _buildModernHeader() {
   return Padding(
     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // النصوص (اسم المزرعة + آخر تحليل)
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -226,24 +478,34 @@ String _formatLastAnalysisDate() {
             ),
           ],
         ),
-        IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(
-            Icons.arrow_forward_ios,
-            color: Colors.white,
-            size: 18,
-          ),
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.white.withValues(alpha: 0.05),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+
+        // أزرار اليمين (تصدير + رجوع) ✅ ثابتة دائمًا
+        Row(
+          children: [
+            _buildHeaderExportIcon(),
+            const SizedBox(width: 10),
+            IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.white,
+                size: 18,
+              ),
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.white.withValues(alpha: 0.05),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ],
     ),
   );
 }
+
+
 
   Widget _buildFloatingTabBar() {
     return Container(
@@ -540,56 +802,6 @@ String _formatLastAnalysisDate() {
           _buildHealthStatsCard(totalPalms, healthy, monitor, critical),
           const SizedBox(height: 20),
           _buildHistoryChart(),
-
-          // --- إضافة زر تصدير النتائج هنا في الجهة اليمنى ---
-          const SizedBox(height: 25),
-          Align(
-            alignment: Alignment.centerRight,
-            child: InkWell(
-              onTap: () {
-                // ميزة مستقبلية
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      "ميزة تصدير التقارير ستكون متاحة قريباً",
-                      style: GoogleFonts.almarai(),
-                    ),
-                    backgroundColor: const Color(0xFF0A4D41),
-                  ),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: goldColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(
-                    color: goldColor.withValues(alpha: 0.5),
-                    width: 1.5,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      "تصدير النتائج",
-                      style: GoogleFonts.almarai(
-                        color: goldColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Icon(Icons.ios_share_rounded, color: goldColor, size: 20),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
           const SizedBox(height: 100), // مسافة إضافية لراحة التمرير
         ],
       ),
@@ -1237,12 +1449,15 @@ Widget _buildForecastRecommendationsCard(List<Map<String, dynamic>> recos) {
       children: [
         Row(
           children: [
-            Icon(Icons.recommend_rounded,
-                color: goldColor.withValues(alpha: 0.9), size: 20),
+            Icon(
+              Icons.recommend_rounded,
+              color: goldColor.withValues(alpha: 0.9),
+              size: 20,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                "توصيات ",
+                "توصيات",
                 style: GoogleFonts.almarai(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -1276,87 +1491,16 @@ Widget _buildForecastRecommendationsCard(List<Map<String, dynamic>> recos) {
             separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (context, i) {
               final r = recos[i];
-              final title = (r['title_ar'] ?? 'توصية').toString();
-              final text = (r['text_ar'] ?? '').toString();
               final pr = (r['priority_ar'] ?? 'متوسطة').toString();
               final List<dynamic> srcs = (r['sources'] as List?) ?? [];
               final String src = _bestSource(srcs);
-
-
-
               final pColor = _priorityColor(pr);
 
-              return Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: pColor.withValues(alpha: 0.10),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: pColor.withValues(alpha: 0.35)),
-                      ),
-                      child: Icon(_recoIcon(src), color: pColor, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  title,
-                                  style: GoogleFonts.almarai(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: pColor.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(
-                                      color: pColor.withValues(alpha: 0.35)),
-                                ),
-                                child: Text(
-                                  pr,
-                                  style: GoogleFonts.almarai(
-                                    color: pColor,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 10,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            text,
-                            style: GoogleFonts.almarai(
-                              color: Colors.white70,
-                              fontSize: 12,
-                              height: 1.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+              return _RecoCardExpandable(
+                r: r,
+                pColor: pColor,
+                icon: _recoIcon(src),
+                priorityText: pr,
               );
             },
           ),
@@ -1365,4 +1509,207 @@ Widget _buildForecastRecommendationsCard(List<Map<String, dynamic>> recos) {
   );
 }
 
+
+
+}
+
+class _RecoCardExpandable extends StatefulWidget {
+  final Map<String, dynamic> r;
+  final Color pColor;
+  final IconData icon;
+  final String priorityText;
+
+  const _RecoCardExpandable({
+    required this.r,
+    required this.pColor,
+    required this.icon,
+    required this.priorityText,
+  });
+
+  @override
+  State<_RecoCardExpandable> createState() => _RecoCardExpandableState();
+}
+
+class _RecoCardExpandableState extends State<_RecoCardExpandable> {
+  bool _open = false;
+
+  String _safeStr(String k, {String fallback = ""}) {
+    final v = widget.r[k];
+    if (v == null) return fallback;
+    return v.toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = _safeStr('title_ar', fallback: 'توصية');
+    final actionTitle = _safeStr('actionTitle_ar', fallback: 'ماذا أفعل؟');
+    final actionText = _safeStr('text_ar', fallback: '');
+    final whyTitle = _safeStr('whyTitle_ar', fallback: 'لماذا؟');
+    final whyText = _safeStr('why_ar', fallback: '');
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => setState(() => _open = !_open),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: widget.pColor.withValues(alpha: 0.10),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: widget.pColor.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Icon(widget.icon, color: widget.pColor, size: 20),
+                ),
+                const SizedBox(width: 12),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: GoogleFonts.almarai(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: widget.pColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: widget.pColor.withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: Text(
+                              widget.priorityText,
+                              style: GoogleFonts.almarai(
+                                color: widget.pColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+                Icon(
+                  _open
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  color: Colors.white60,
+                ),
+              ],
+            ),
+          ),
+
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 220),
+            crossFadeState:
+                _open ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            firstChild: const SizedBox(height: 0),
+            secondChild: Padding(
+              padding: const EdgeInsets.only(top: 14),
+              child: Column(
+                children: [
+                  _infoBubble(
+                    title: whyTitle,
+                    icon: Icons.help_outline_rounded,
+                    color: Colors.white.withValues(alpha: 0.10),
+                    border: Colors.white.withValues(alpha: 0.10),
+                    text: whyText,
+                  ),
+                  const SizedBox(height: 10),
+                  _infoBubble(
+                    title: actionTitle,
+                    icon: Icons.check_circle_outline_rounded,
+                    color: widget.pColor.withValues(alpha: 0.10),
+                    border: widget.pColor.withValues(alpha: 0.22),
+                    text: actionText,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoBubble({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required Color border,
+    required String text,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: Colors.white70),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: GoogleFonts.almarai(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            text.isEmpty ? "—" : text,
+            style: GoogleFonts.almarai(
+              color: Colors.white70,
+              fontSize: 12,
+              height: 1.55,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

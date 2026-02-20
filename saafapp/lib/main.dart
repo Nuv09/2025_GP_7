@@ -122,6 +122,7 @@ Future<void> _initializeFCM() async {
     );
 
   
+    await _saveFcmTokenIfLoggedIn();
 
     
 

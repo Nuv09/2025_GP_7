@@ -1,34 +1,8 @@
-// import 'package:flutter/foundation.dart' show kIsWeb;
-// import 'package:web/web.dart' as web;
-
-// // لجلب المفاتيح من index.html للويب
-// String _webSecret(String name) {
-//   return web.document
-//           .querySelector('meta[name="$name"]')
-//           ?.getAttribute('content') ??
-//       '';
-// }
-
-// // المفتاح الموحد للويب والموبايل
-// class Secrets {
-//   // API KEY
-//   static String get placesKey {
-//     if (kIsWeb) {
-//       return _webSecret("PLACES_KEY");
-//     }
-//     return _mobilePlacesKey; // سرّي للجوال
-//   }
-
-//   // هنا نحط مفاتيح الجوال فقط
-//   static const String _mobilePlacesKey = "AIzaSyCEU204FgpLDPx_XvogBcnrMVQ6wCQdu30";
-// }
-
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:universal_html/html.dart' as html;
 
 String _webSecret(String name) {
   if (!kIsWeb) return '';
-
   try {
     final el = html.document.querySelector('meta[name="$name"]');
     return el?.getAttribute('content') ?? '';
@@ -38,15 +12,30 @@ String _webSecret(String name) {
 }
 
 class Secrets {
-  static String get placesKey {
+  // ✅ رابط الباك-إند
+  static String get apiBaseUrl {
     if (kIsWeb) {
-      return _webSecret("PLACES_KEY");
+      // للويب نخليه يقرأ من meta في index.html (اختياري)
+      final v = _webSecret("API_BASE_URL");
+      if (v.isNotEmpty) return v;
     }
-    // مفتاح الجوال
+    // للموبايل/الإيموليتر
+    return _mobileApiBaseUrl;
+  }
+
+  // ✅ غيريه حسب جهازك:
+  // Android Emulator:
+  static const String _mobileApiBaseUrl = "http://10.0.2.2:5000";
+
+  // لو جهاز حقيقي (مثال):
+  // static const String _mobileApiBaseUrl = "http://192.168.1.10:5000";
+
+  // --- باقي مفاتيحك ---
+  static String get placesKey {
+    if (kIsWeb) return _webSecret("PLACES_KEY");
     return _mobilePlacesKey;
   }
 
-  // مفتاح الجوال فقط
   static const String _mobilePlacesKey =
       "AIzaSyCEU204FgpLDPx_XvogBcnrMVQ6wCQdu30";
 
