@@ -418,7 +418,7 @@ Future<void> _exportPdf() async {
    } catch (e) {
     if (mounted) {
       try { Navigator.pop(context); } catch (_) {}
-      _toast("صار خطأ: تأكدي من الاتصال");
+      _toast("حدث خطأ تأكد من الاتصال");
     }
    }
 }
