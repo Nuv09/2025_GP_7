@@ -17,9 +17,11 @@ dependencies:
 
   # 🗺️ الخرائط والموقع
   http: ^1.1.0
+  # d
   google_maps_flutter: ^2.6.0
   latlong2: ^0.9.1
   geolocator: ^10.1.0
+ # d
   geocoding: ^2.1.0
   animate_do: ^4.2.0
   curved_navigation_bar: ^1.0.6
@@ -49,7 +51,7 @@ dependencies:
   # 🎞️ انيميشن لوتي
   lottie: ^3.1.2
 
-  uuid: ^4.5.1
+
   zxcvbn: ^1.0.0
   video_player: ^2.10.1
   fl_chart: ^1.1.1

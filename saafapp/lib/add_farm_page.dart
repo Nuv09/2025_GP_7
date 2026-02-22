@@ -9,13 +9,15 @@ import 'package:saafapp/constant.dart';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:geocoding/geocoding.dart'
-    show Placemark, locationFromAddress, placemarkFromCoordinates;
+
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+
 import 'package:image_picker/image_picker.dart';
-import 'package:uuid/uuid.dart'; // ✅ لِـ session token
+// import 'package:uuid/uuid.dart'; // ✅ لِـ session token
 
 // Firebase
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -55,16 +57,12 @@ class _AddFarmPageState extends State<AddFarmPage> {
   File? _farmImage; // للأندرويد/‏iOS/‏دسكتوب
   Uint8List? _imageBytes; // للويب
 
-  // خريطة
-  GoogleMapController? _gCtrl;
-  CameraPosition _initialCamera = const CameraPosition(
-    target: LatLng(24.774265, 46.738586), // الرياض
-    zoom: 12,
-  );
-  final List<LatLng> _polygonPoints = [];
-  Set<Polygon> _polygons = {};
-  Set<Marker> _markers = {};
+final MapController _mapController = MapController();
+LatLng _currentCenter = const LatLng(24.774265, 46.738586);
 
+final List<LatLng> _polygonPoints = [];
+List<Polygon> _polygons = [];
+List<Marker> _markers = [];
   // Firebase
   final _auth = FirebaseAuth.instance;
   final _db = FirebaseFirestore.instance;
@@ -91,54 +89,15 @@ class _AddFarmPageState extends State<AddFarmPage> {
   // === Google Places (Autocomplete + Details) ===
   // ⚠️ ملاحظة أمنية: يفضّل تمرير المفتاح عبر dart-define وليس هاردكود.
   // مثال تشغيل: flutter run --dart-define=PLACES_KEY=AIza... (وشيّكي قيود المفتاح في Google Cloud)
-final String _placesKey = Secrets.placesKey;
+// final String _placesKey = Secrets.placesKey;
 
-  final _uuid = const Uuid();
-  String _sessionToken = '';
+//   final _uuid = const Uuid();
+//   String _sessionToken = '';
   Timer? _debounce;
   List<Map<String, dynamic>> _suggestions = [];
   bool _loadingSuggest = false;
 
-Future<void> _fetchSuggestions(String input) async {
-  setState(() => _loadingSuggest = true);
 
-  final uri = Uri.https(
-    'maps.googleapis.com',
-    '/maps/api/place/autocomplete/json',
-    {
-      'input': input,
-      'key': _placesKey,
-      'language': 'ar',
-      'sessiontoken': _sessionToken,
-      'components': 'country:sa',
-    },
-  );
-
-  try {
-    final res = await http.get(uri);
-    final data = jsonDecode(res.body);
-
-    if (data['status'] == 'OK') {
-      final preds = data['predictions'] as List;
-      setState(() {
-        _suggestions = preds
-            .map((e) => {
-                  'primary': e['structured_formatting']['main_text'],
-                  'secondary': e['structured_formatting']['secondary_text'],
-                  'place_id': e['place_id'],
-                })
-            .toList();
-      });
-    } else {
-      setState(() => _suggestions = []);
-    }
-  } catch (e) {
-    debugPrint('Autocomplete error: $e');
-    setState(() => _suggestions = []);
-  }
-
-  setState(() => _loadingSuggest = false);
-}
 
 
   // === أداة تنظيف روابط الصور (إزالة فراغات/أسطر + فك %252F) ===
@@ -169,24 +128,24 @@ Future<void> _fetchSuggestions(String input) async {
   }
 
   // =================== الموقع الحالي ===================
+
   Future<void> _centerToMyLocation() async {
-    try {
-      final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-      final cam =
-          CameraPosition(target: LatLng(pos.latitude, pos.longitude), zoom: 15);
-      _initialCamera = cam;
-      if (_gCtrl != null) {
-        await _gCtrl!.animateCamera(
-          CameraUpdate.newCameraPosition(cam),
-        );
-      }
-      if (mounted) setState(() {});
-    } catch (e) {
-      debugPrint('location error: $e');
-    }
+  try {
+    final pos = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+    // تحديث الإحداثيات المركزية
+    setState(() {
+      _currentCenter = LatLng(pos.latitude, pos.longitude);
+    });
+    // تحريك خريطة MapTiler للموقع الجديد
+    _mapController.move(_currentCenter, 15); 
+    
+    if (mounted) setState(() {});
+  } catch (e) {
+    debugPrint('location error: $e');
   }
+}
 
   // =================== البحث (Geocoding احتياطي) ===================
 Future<void> _searchAndGo() async {
@@ -194,20 +153,22 @@ Future<void> _searchAndGo() async {
   if (text.isEmpty) return;
 
   try {
-    final locations = await locationFromAddress(text);
-    if (locations.isNotEmpty) {
-      final loc = locations.first;
-      await _gCtrl?.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(
-            target: LatLng(loc.latitude, loc.longitude),
-            zoom: 15,
-          ),
-        ),
-      );
+    // نطلب الإحداثيات من MapTiler بناءً على النص المدخل
+    final url = 'https://api.maptiler.com/geocoding/$text.json?key=${Secrets.mapTilerKey}&country=sa&language=ar';
+    final res = await http.get(Uri.parse(url));
+    final data = jsonDecode(res.body);
+    
+    if (data['features'] != null && data['features'].isNotEmpty) {
+      final coords = data['features'][0]['center']; // [longitude, latitude]
+      final newLatLng = LatLng(coords[1], coords[0]);
+      
+      _mapController.move(newLatLng, 15);
+      setState(() {
+        _currentCenter = newLatLng;
+      });
     }
   } catch (e) {
-    debugPrint('Search geocoding error: $e');
+    debugPrint('MapTiler Search error: $e');
   }
 }
 
@@ -251,29 +212,32 @@ Future<void> _searchAndGo() async {
     setState(() {});
   }
 
-  void _rebuildOverlays() {
-    _markers = {
-      for (int i = 0; i < _polygonPoints.length; i++)
-        Marker(
-          markerId: MarkerId('pt_$i'),
-          position: _polygonPoints[i],
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueGreen,
-          ),
-        )
-    };
-    _polygons = {
-      if (_polygonPoints.length >= 3)
-        Polygon(
-          polygonId: const PolygonId('farm'),
-          points: _polygonPoints,
-          fillColor: const Color.fromARGB(75, 215, 172, 92),
-          strokeColor: const Color.fromARGB(255, 2, 79, 25),
-          strokeWidth: 3,
-        ),
-    };
-    setState(() {});
-  }
+void _rebuildOverlays() {
+  _markers = _polygonPoints.map((point) {
+    return Marker(
+      point: point,
+      width: 40,
+      height: 40,
+      child: const Icon(
+        Icons.location_on,
+        color: Colors.green,
+        size: 30,
+      ),
+    );
+  }).toList();
+
+  _polygons = [
+    if (_polygonPoints.length >= 3)
+      Polygon(
+        points: _polygonPoints,
+        color: const Color.fromARGB(75, 215, 172, 92),
+        borderColor: const Color.fromARGB(255, 2, 79, 25),
+        borderStrokeWidth: 3,
+      ),
+  ];
+
+  setState(() {});
+}
 
   // =================== اختيار صورة ===================
   Future<void> _pickImage() async {
@@ -337,44 +301,32 @@ Future<void> _searchAndGo() async {
     return LatLng(lat / pts.length, lng / pts.length);
   }
 
-  Future<String?> _reverseRegionFromCentroid() async {
-    try {
-      final c = _centroid(_polygonPoints);
-      // نحاول بالعربية (سعودية) أولاً
-      List<Placemark> p = [];
-      try {
-        p = await placemarkFromCoordinates(
-          c.latitude,
-          c.longitude,
-          localeIdentifier: 'ar_SA',
-        );
-      } catch (_) {}
-
-      // إن فشل أو فاضي، نجرب إنجليزي
-      if (p.isEmpty) {
-        try {
-          p = await placemarkFromCoordinates(
-            c.latitude,
-            c.longitude,
-            localeIdentifier: 'en',
-          );
-        } catch (_) {}
+Future<String?> _reverseRegionFromCentroid() async {
+  try {
+    if (_polygonPoints.isEmpty) return null;
+    final c = _centroid(_polygonPoints);
+    
+    // نطلب اسم المنطقة من MapTiler باستخدام الإحداثيات
+    final url = 'https://api.maptiler.com/geocoding/${c.longitude},${c.latitude}.json?key=${Secrets.mapTilerKey}&language=ar';
+    
+    final res = await http.get(Uri.parse(url));
+    final data = jsonDecode(res.body);
+    
+    if (data['features'] != null && data['features'].isNotEmpty) {
+      for (var feature in data['features']) {
+        // نبحث عن التصنيف الذي يمثل المنطقة أو المحافظة
+        if (feature['place_type'].contains('province') || feature['place_type'].contains('region')) {
+          return feature['text_ar'] ?? feature['text'];
+        }
       }
-
-      if (p.isEmpty) return null;
-
-      final first = p.first;
-      final main = (first.administrativeArea ?? '').trim();
-      final sub = (first.subAdministrativeArea ?? '').trim();
-      final locality = (first.locality ?? '').trim();
-      final raw =
-          [main, sub, locality].firstWhere((e) => e.isNotEmpty, orElse: () => '');
-      return raw.isEmpty ? null : raw;
-    } catch (e) {
-      debugPrint('reverse geocoding error: $e');
-      return null;
+      return data['features'][0]['text_ar'] ?? data['features'][0]['text'];
     }
+    return null;
+  } catch (e) {
+    debugPrint('MapTiler Reverse Geocoding error: $e');
+    return null;
   }
+}
 
   String _normalize(String s) {
     if (s.isEmpty) return s;
@@ -445,7 +397,7 @@ Future<void> _searchAndGo() async {
   return await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          backgroundColor: const Color(0xFF042C25), // اللون الجديد للخلفية
+          backgroundColor: const Color(0xFF042C25), 
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
@@ -453,7 +405,7 @@ Future<void> _searchAndGo() async {
             title,
             textAlign: TextAlign.center,
             style: GoogleFonts.almarai(
-              color: const Color(0xFFFFF6E0), // ← اللون الجديد للنص
+              color: const Color(0xFFFFF6E0), 
               fontWeight: FontWeight.w800,
               fontSize: 22,
             ),
@@ -462,7 +414,7 @@ Future<void> _searchAndGo() async {
             message,
             textAlign: TextAlign.center,
             style: GoogleFonts.almarai(
-              color: const Color(0xFFFFF6E0), // ← اللون الجديد للنص
+              color: const Color(0xFFFFF6E0), 
               fontSize: 16,
               height: 1.5,
             ),
@@ -474,7 +426,7 @@ Future<void> _searchAndGo() async {
               child: Text(
                 'إلغاء',
                 style: GoogleFonts.almarai(
-                  color: const Color(0xFFFFF6E0), // ← لو تبينه بيج
+                  color: const Color(0xFFFFF6E0), 
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -771,7 +723,8 @@ try {
   }
 
   // =================== Autocomplete & Details ===================
-  void _onSearchChanged(String value) {
+
+void _onSearchChanged(String value) {
   if (_debounce?.isActive ?? false) _debounce!.cancel();
 
   _debounce = Timer(const Duration(milliseconds: 500), () async {
@@ -779,89 +732,13 @@ try {
       setState(() => _suggestions = []);
       return;
     }
-
-    if (_sessionToken.isEmpty) {
-      _sessionToken = _uuid.v4();
-    }
-
-    await _fetchSuggestions(value);
+    // لم نعد بحاجة لـ sessionToken هنا لأننا نستخدم MapTiler
+    await _fetchMapTilerSuggestions(value);
   });
 }
 
 // ignore: unused_element
-  Future<void> _fetchAutocomplete(String input) async {
-    setState(() => _loadingSuggest = true);
-    try {
-      final uri = Uri.https(
-        'maps.googleapis.com',
-        '/maps/api/place/autocomplete/json',
-        {
-          'input': input,
-          'key': _placesKey,
-          'language': 'ar',
-          'components': 'country:sa', // قصر البحث على السعودية
-          'sessiontoken': _sessionToken,
-        },
-      );
 
-      final res = await http.get(uri);
-      final data = jsonDecode(res.body) as Map<String, dynamic>;
-      if (data['status'] == 'OK') {
-        final preds = (data['predictions'] as List).cast<Map<String, dynamic>>();
-        setState(() {
-          _suggestions = preds
-              .map((p) => {
-                    'place_id': p['place_id'],
-                    'primary': (p['structured_formatting']?['main_text'] ?? '')
-                        .toString(),
-                    'secondary':
-                        (p['structured_formatting']?['secondary_text'] ?? '')
-                            .toString(),
-                  })
-              .toList();
-        });
-      } else {
-        setState(() => _suggestions = []);
-      }
-    } catch (_) {
-      setState(() => _suggestions = []);
-    } 
-  }
-
-  Future<void> _goToPlace(String placeId) async {
-    try {
-      final uri = Uri.https(
-        'maps.googleapis.com',
-        '/maps/api/place/details/json',
-        {
-          'place_id': placeId,
-          'key': _placesKey,
-          'fields': 'geometry,name',
-          'language': 'ar',
-          'sessiontoken': _sessionToken,
-        },
-      );
-      final res = await http.get(uri);
-      final data = jsonDecode(res.body) as Map<String, dynamic>;
-      if (data['status'] == 'OK') {
-        final loc = data['result']['geometry']['location'];
-        final lat = (loc['lat'] as num).toDouble();
-        final lng = (loc['lng'] as num).toDouble();
-
-        await _gCtrl?.animateCamera(
-          CameraUpdate.newCameraPosition(
-            CameraPosition(target: LatLng(lat, lng), zoom: 15),
-          ),
-        );
-
-        // بعد إتمام الجلسة، صفري التوكن واقفلي اللست
-        _sessionToken = '';
-        setState(() => _suggestions = []);
-      }
-    } catch (e) {
-      debugPrint('place details error: $e');
-    }
-  }
 
   // =================== واجهة المستخدم ===================
   @override
@@ -1118,163 +995,285 @@ const SizedBox(height: 20),
       ),
     );
   }
+  // 1. دالة البحث الجديدة باستخدام MapTiler
+Future<void> _fetchMapTilerSuggestions(String input) async {
+  if (input.isEmpty) {
+    setState(() => _suggestions = []);
+    return;
+  }
+  setState(() => _loadingSuggest = true);
 
-  Widget _buildMapSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'تحديد حدود المزرعة',
-          style: GoogleFonts.almarai(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-          ),
+  // نستخدم الرابط الخاص بـ MapTiler للبحث في السعودية وبالعربي
+  final url = 'https://api.maptiler.com/geocoding/$input.json?key=${Secrets.mapTilerKey}&country=sa&language=ar';
+
+  try {
+    final res = await http.get(Uri.parse(url));
+    final data = jsonDecode(res.body);
+    final List features = data['features'] ?? [];
+
+    setState(() {
+      _suggestions = features.map((e) => {
+        'primary': e['text_ar'] ?? e['text'], // الاسم بالعربي
+        'secondary': e['place_name_ar'] ?? e['place_name'], // العنوان الكامل
+        'center': e['center'], // الإحداثيات [lng, lat]
+      }).toList();
+    });
+  } catch (e) {
+    debugPrint('MapTiler Geocoding Error: $e');
+  } finally {
+    setState(() => _loadingSuggest = false);
+  }
+}
+
+// 2. دالة الانتقال للموقع المختار من البحث
+void _moveToMapTilerLocation(List<dynamic> center) {
+  
+  final newLatLng = LatLng(center[1], center[0]);
+  
+  _mapController.move(newLatLng, 15); 
+
+  setState(() {
+    _currentCenter = newLatLng;
+    _suggestions = []; 
+    _searchCtrl.clear(); 
+  });
+}
+
+Widget _buildMapSection() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Text(
+        'تحديد حدود المزرعة',
+        style: GoogleFonts.almarai(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
         ),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: 350,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: Stack(
-              children: [
-                GoogleMap(
-                  mapType: MapType.hybrid,
-                  initialCameraPosition: _initialCamera,
-                  onMapCreated: (c) => _gCtrl = c,
-                  onTap: _onMapTap,
-                  polygons: _polygons,
-                  markers: _markers,
-                  zoomControlsEnabled: true,
-                  compassEnabled: false,
-                  myLocationEnabled: true,
-                  myLocationButtonEnabled: true,
-                ),
-                // شريط البحث
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  right: 12,
-                  child: Material(
-                    elevation: 6,
-                    borderRadius: BorderRadius.circular(16),
-                    color: Colors.white,
-                    child: Row(
-                      children: [
-                        const SizedBox(width: 8),
-                        const Icon(Icons.search, color: Colors.black54),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: TextField(
-                            controller: _searchCtrl,
-                            textInputAction: TextInputAction.search,
-                            onChanged: _onSearchChanged, // ✅ Autocomplete
-                            onSubmitted: (_) => _searchAndGo(), // احتياطي Geocoding
-                            decoration: InputDecoration(
-                              hintText: 'ابحث باسم مكان / عنوان...',
-                              hintStyle: GoogleFonts.almarai(
-                                color: Colors.black45,
-                                fontSize: 14,
-                              ),
-                              border: InputBorder.none,
-                            ),
-                            style:
-                                GoogleFonts.almarai(color: Colors.black87),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: _searchAndGo,
-                          icon: const Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            color: Colors.black54,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                // قائمة الاقتراحات
-                Positioned(
-                  top: 70,
-                  left: 12,
-                  right: 12,
-                  child: _suggestions.isEmpty && !_loadingSuggest
-                      ? const SizedBox.shrink()
-                      : Material(
-                          elevation: 6,
-                          borderRadius: BorderRadius.circular(12),
-                          color: Colors.white,
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxHeight: 260),
-                            child: _loadingSuggest
-                                ? const Padding(
-                                    padding: EdgeInsets.all(16),
-                                    child: Center(child: CircularProgressIndicator()),
-                                  )
-                                : ListView.separated(
-                                    shrinkWrap: true,
-                                    itemCount: _suggestions.length,
-                                    separatorBuilder: (_, __) => const Divider(height: 1),
-                                    itemBuilder: (ctx, i) {
-                                      final s = _suggestions[i];
-                                      return ListTile(
-                                        leading: const Icon(Icons.place_outlined),
-                                        title: Text(
-                                          s['primary'] ?? '',
-                                          style: GoogleFonts.almarai(fontWeight: FontWeight.w700),
-                                        ),
-                                        subtitle: Text(
-                                          s['secondary'] ?? '',
-                                          style: GoogleFonts.almarai(color: Colors.black54),
-                                        ),
-                                        onTap: () => _goToPlace(s['place_id'] as String),
-                                      );
-                                    },
-                                  ),
-                          ),
-                        ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            ElevatedButton.icon(
-              onPressed: _undoLastPoint,
-              icon: const Icon(Icons.undo, color: Color(0xFF042C25)),
-              label: Text(
-                'تراجع',
-                style: GoogleFonts.almarai(color: Color(0xFF042C25)),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFDCB6E),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-            ElevatedButton.icon(
-              onPressed: _clearPolygon,
-              icon: const Icon(Icons.clear_all, color: Colors.white),
-              label: Text(
-                'مسح النقاط',
-                style: GoogleFonts.almarai(color: Colors.white),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
+      ),
+      const SizedBox(height: 12),
+  
+      Container(
+        height: 380, 
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(25),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
-      ],
-    );
-  }
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(25),
+          child: Stack(
+            children: [
+              // 1. الخريطة الأساسية (MapTiler)
+              FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: _currentCenter,
+                  initialZoom: 15.0,
+                  onTap: (tapPosition, point) => _onMapTap(point),
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate: 'https://api.maptiler.com/maps/hybrid/{z}/{x}/{y}.jpg?key=${Secrets.mapTilerKey}',
+                    userAgentPackageName: 'com.saaf.app',
+                  ),
+                  // رسم المضلع (الحدود)
+                  if (_polygonPoints.isNotEmpty)
+                    PolygonLayer(
+                      polygons: [
+                        Polygon(
+                          points: _polygonPoints,
+                          color: const Color.fromARGB(75, 215, 172, 92),
+                          borderColor: const Color.fromARGB(255, 2, 79, 25),
+                          borderStrokeWidth: 3,
+                        ),
+                      ],
+                    ),
+                  // رسم النقاط
+                  MarkerLayer(
+                    markers: _polygonPoints.map((p) => Marker(
+                      point: p,
+                      child: const Icon(Icons.location_on, color: Colors.green, size: 30),
+                    )).toList(),
+                  ),
+                ],
+              ),
+              
+              // 2. أزرار التحكم اليدوية (الزوم والبوصلة)
+              Positioned(
+                bottom: 20,
+                left: 15, 
+                child: Column(
+                  children: [
+                    _buildCustomMapButton(
+                      icon: Icons.add,
+                      onPressed: () => _mapController.move(_mapController.camera.center, _mapController.camera.zoom + 1),
+                    ),
+                    _buildCustomMapButton(
+                      icon: Icons.remove,
+                      onPressed: () => _mapController.move(_mapController.camera.center, _mapController.camera.zoom - 1),
+                    ),
+                    _buildCustomMapButton(
+                      icon: Icons.explore_outlined,
+                      onPressed: () => _mapController.rotate(0), // إعادة توجيه الشمال
+                    ),
+                  ],
+                ),
+              ),
+
+              // 3. شريط البحث  
+              Positioned(
+                top: 15,
+                left: 15,
+                right: 15,
+                child: Material(
+                  elevation: 8,
+                  borderRadius: BorderRadius.circular(30),
+                  color: Colors.white,
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 15),
+                      const Icon(Icons.search, color: primaryColor), 
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: _searchCtrl,
+                          onChanged: _onSearchChanged,
+                          onSubmitted: (_) => _searchAndGo(),
+                          decoration: InputDecoration(
+                            hintText: 'ابحث عن موقع المزرعة...',
+                            hintStyle: GoogleFonts.almarai(color: Colors.black45, fontSize: 14),
+                            border: InputBorder.none,
+                          ),
+                          style: GoogleFonts.almarai(color: Colors.black87),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+              // 4. قائمة الاقتراحات (Autocomplete)
+              if (_suggestions.isNotEmpty || _loadingSuggest)
+                Positioned(
+                  top: 70,
+                  left: 20,
+                  right: 20,
+                  child: Material(
+                    elevation: 10,
+                    borderRadius: BorderRadius.circular(15),
+                    color: Colors.white,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      child: _loadingSuggest
+                          ? const Padding(
+                              padding: EdgeInsets.all(15),
+                              child: Center(child: CircularProgressIndicator()),
+                              
+                            )
+                          : ListView.separated(
+                              shrinkWrap: true,
+                              itemCount: _suggestions.length,
+                              separatorBuilder: (_, __) => const Divider(height: 1),
+                              itemBuilder: (ctx, i) {
+  final s = _suggestions[i];
+  return ListTile(
+    leading: const Icon(Icons.location_on, color: secondaryColor),
+    title: Text(
+      s['primary'] ?? '',
+      style: GoogleFonts.almarai(
+        fontSize: 14,
+        color: Colors.black87, 
+      ),
+    ),
+    subtitle: Text(
+      s['secondary'] ?? '',
+      style: GoogleFonts.almarai(
+        fontSize: 12,
+        color: Colors.black54,
+      ),
+    ),
+    onTap: () => _moveToMapTilerLocation(s['center']),
+  );
+},
+                            ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+      const SizedBox(height: 15),
+      // أزرار التحكم السفلية (تراجع ومسح)
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _mapActionButton(
+            label: 'تراجع',
+            icon: Icons.undo,
+            color: secondaryColor,
+            textColor: darkBackground,
+            onTap: _undoLastPoint,
+          ),
+          _mapActionButton(
+            label: 'مسح الكل',
+            icon: Icons.delete_sweep,
+            color: primaryColor,
+            textColor: Colors.white,
+            onTap: _clearPolygon,
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+ Widget _buildCustomMapButton({required IconData icon, required VoidCallback onPressed}) {
+  return Container(
+    margin: const EdgeInsets.symmetric(vertical: 4),
+    child: Material(
+      color: Colors.white.withOpacity(0.9), 
+      borderRadius: BorderRadius.circular(12),
+      elevation: 4,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: secondaryColor.withOpacity(0.5), width: 1),
+          ),
+          child: Icon(
+            icon,
+            color: darkBackground, 
+            size: 26,
+          ),
+        ),
+      ),
+    ),
+  );
+} 
+Widget _mapActionButton({required String label, required IconData icon, required Color color, required Color textColor, required VoidCallback onTap}) {
+  return ElevatedButton.icon(
+    onPressed: onTap,
+    icon: Icon(icon, color: textColor, size: 20),
+    label: Text(label, style: GoogleFonts.almarai(color: textColor, fontWeight: FontWeight.bold)),
+    style: ElevatedButton.styleFrom(
+      backgroundColor: color,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+    ),
+  );
+}
+
 
   Widget _buildSubmitButton() {
     return SizedBox(
