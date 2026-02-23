@@ -1005,6 +1005,27 @@ FORECAST_FEATURES = [
     "RPW_score","IF_score",
 ]
 
+
+#healthmap predection points (توقعات حالة البكسلات للأسبوع القادم) - نفس تنسيق نقاط الخريطة العادية لكن مع حالة التوقع وليس الحالة الحالية
+def get_forecast_lookup(latest_last: pd.DataFrame) -> Dict[str, int]:
+    if latest_last is None or latest_last.empty:
+        return {}
+
+    lookup = {}
+    for _, row in latest_last.iterrows():
+        code = row.get('pred_class_code_next', 0)
+        status_code = 0
+        if code >= 1.5: status_code = 2
+        elif code >= 0.5: status_code = 1
+            
+        # المفتاح lat_lng
+        key = f"{round(float(row['y']), 6)}_{round(float(row['x']), 6)}"
+        lookup[key] = status_code
+    return lookup
+
+
+    
+
 def forecast_next_week_summary(df_all: pd.DataFrame) -> Dict[str, Any]:
     if df_all.empty:
         return {
@@ -1073,21 +1094,24 @@ def forecast_next_week_summary(df_all: pd.DataFrame) -> Dict[str, Any]:
             "ndvi_delta_next_mean": 0.0,
             "ndmi_delta_next_mean": 0.0,
         }
-
+    history_last_month = indices_history_last_weeks(df_all, weeks=5, agg="mean")
+    forecast_lookup = get_forecast_lookup(latest_last)
     row = out.iloc[0].to_dict()
     return {
+    "summary": {
         "Healthy_Pct_next": float(row.get("Healthy_Pct_next", 0.0)),
         "Monitor_Pct_next": float(row.get("Monitor_Pct_next", 0.0)),
         "Critical_Pct_next": float(row.get("Critical_Pct_next", 0.0)),
         "ndvi_delta_next_mean": float(row.get("ndvi_delta_next_mean", 0.0) or 0.0),
         "ndmi_delta_next_mean": float(row.get("ndmi_delta_next_mean", 0.0) or 0.0),
-    }
-
+    },
+    "lookup": forecast_lookup # نرجع القاموس هنا
+}
 
 
 
 def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any]:
-
+    # 1. التحقق من المضلع (Polygon)
     poly = farm_doc.get("polygon") or []
     if len(poly) < 3:
         raise ValueError("Farm polygon is missing or < 3 points")
@@ -1095,7 +1119,7 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
     coords = [(p["lng"], p["lat"]) for p in poly]
     site = {"name": farm_id, "polygon": coords}
 
-    # 1) Sentinel-2 + LST أسبوعية من GEE
+    # 2. جلب بيانات Sentinel-2 و Landsat LST من GEE
     weekly_series: List[pd.DataFrame] = []
     thermal_rows: List[Dict[str, Any]] = []
 
@@ -1111,16 +1135,11 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
             {"site": farm_id, "date": pd.to_datetime(wstart).normalize(), "canopy_temp": lst_c}
         )
 
+    # 3. تجميع البيانات في DataFrame واحد
     if weekly_series:
         df_s2 = pd.concat(weekly_series, ignore_index=True)
     else:
-        df_s2 = pd.DataFrame(
-            columns=[
-                "site", "date", "x", "y",
-                "NDVI", "GNDVI", "NDRE", "NDRE740", "MTCI", "NDMI",
-                "NDWI_Gao", "SIWSI1", "SIWSI2", "SRWI", "NMDI",
-            ]
-        )
+        df_s2 = pd.DataFrame(columns=["site", "date", "x", "y", "NDVI", "GNDVI", "NDRE", "NDRE740", "MTCI", "NDMI", "NDWI_Gao", "SIWSI1", "SIWSI2", "SRWI", "NMDI"])
 
     df_th = pd.DataFrame(thermal_rows)
     df_th["date"] = pd.to_datetime(df_th["date"]).dt.normalize()
@@ -1134,60 +1153,49 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
     )
 
     if df_all.empty:
-        raise RuntimeError(
-            "لم يتمكن النظام من جلب أي بكسلات Sentinel-2 لهذه المزرعة في الفترة المحددة"
-        )
+        raise RuntimeError("لم يتمكن النظام من جلب أي بكسلات Sentinel-2 لهذه المزرعة")
 
+    # 4. معالجة الميزات (Features) وحساب المخاطر
     df_all["date"] = pd.to_datetime(df_all["date"]).dt.normalize()
-
     df_all = add_features(df_all)
-
     df_all = df_all.dropna(subset=INDEX_COLS_ALL, how="all").copy()
 
     if "history_weeks" in df_all.columns:
         df_all = df_all[df_all["history_weeks"] >= 6].reset_index(drop=True)
 
-    if df_all.empty:
-        raise RuntimeError(
-            "كل البكسلات المتاحة أقل من 6 أسابيع تاريخ أو لا تحتوي مؤشرات كافية بعد الفلترة"
-        )
-
     df_all = compute_if_risk_inference(df_all)
-
     df_all = add_rpw_flags_and_score(df_all)
     alert_signals = build_alert_signals(df_all)
 
-    
-    forecast_summary = forecast_next_week_summary(df_all)
-
-
-    
-    # 1. حساب الإحصائيات (موجود أصلاً في كودك)
-    # --- الجزء النهائي المضمون لملف health.py ---
-    
-    # 1. حساب الإحصائيات من البيانات الفعلية
+    # 5. حساب الإحصائيات الحالية (Stats)
     stats = site_summary(df_all)
-    
-    # تجهيز النسب المئوية بدقة (استخدمنا مسميات واضحة لمنع التداخل)
     processed_health = {
         "Healthy_Pct": float(stats.get("Healthy_Pct", 0.0)),
         "Monitor_Pct": float(stats.get("Monitor_Pct", 0.0)),
         "Critical_Pct": float(stats.get("Critical_Pct", 0.0)),
     }
-
     history_last_month = indices_history_last_weeks(df_all, weeks=5, agg="mean")
 
-    # 2. استدعاء دالة النقاط (التي أصلحنا فيها مشكلة x, y)
+    # 6. جلب التوقعات والقاموس (Lookup) ودمجها في الخريطة
+    forecast_res = forecast_next_week_summary(df_all)
+    lookup = forecast_res.get("lookup", {}) # القاموس الذي يحتوي على الإحداثيات والحالة المتوقعة
+
     health_map_data = get_health_map_points(df_all)
 
-    # 3. إرجاع القاموس النهائي المتوافق تماماً مع Firestore وتطبيق الفلاتر
+    # دمج الحالة المتوقعة (ps) داخل نقاط الخريطة الحالية لتوفير حجم البيانات
+    for pt in health_map_data:
+        key = f"{pt['lat']}_{pt['lng']}"
+        pt['ps'] = lookup.get(key, 0) # الحالة المتوقعة الافتراضية 0 (سليم)
+
+    # 7. الإرجاع النهائي الموحد لـ Firestore
     return {
-        "current_health": processed_health,  # ستظهر تحت هذا الاسم في فايربيس
-        "forecast_next_week": forecast_summary,
+        "current_health": processed_health,
+        "forecast_next_week": forecast_res.get("summary", {}), # ملخص النسب المئوية للمستقبل
+        "health_map": health_map_data, # القائمة الموحدة التي تحتوي على s و ps
         "indices_history_last_month": history_last_month,
-        "health_map": list(health_map_data), # نضمن إرسالها كـ Array []
         "alert_signals": alert_signals,
     }
+
 
 def build_alert_signals(df_all: pd.DataFrame) -> Dict[str, Any]:
     """
@@ -1321,4 +1329,5 @@ def get_health_map_points(df_all: pd.DataFrame) -> List[Dict[str, Any]]:
             'lng': round(float(row['lng']), 6),
             's': status_code
         })
-    return map_points
+    return map_points 
+
