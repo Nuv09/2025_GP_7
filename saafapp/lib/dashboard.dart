@@ -30,49 +30,49 @@ class FarmDashboardPage extends StatefulWidget {
 class _FarmDashboardPageState extends State<FarmDashboardPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _isForecastMode = false; // التحكم في وضع الخريطة (حالي / توقعات)
 
   // متغيرات الطقس
   String temp = "--";
   String weatherDesc = "جاري التحميل...";
   bool isLoadingWeather = true;
 
-String _formatLastAnalysisDate() {
-  final raw = widget.farmData['lastAnalysisAt'];
+  String _formatLastAnalysisDate() {
+    final raw = widget.farmData['lastAnalysisAt'];
 
-  if (raw == null) return "—";
+    if (raw == null) return "—";
 
-  try {
-    DateTime dt;
+    try {
+      DateTime dt;
 
-    // Firestore Timestamp
-    if (raw.runtimeType.toString() == 'Timestamp') {
-      dt = raw.toDate();
-    }
-    // milliseconds
-    else if (raw is int) {
-      dt = DateTime.fromMillisecondsSinceEpoch(raw);
-    }
-    // String
-    else if (raw is String) {
-      dt = DateTime.parse(raw);
-    } else {
+      // Firestore Timestamp
+      if (raw.runtimeType.toString() == 'Timestamp') {
+        dt = raw.toDate();
+      }
+      // milliseconds
+      else if (raw is int) {
+        dt = DateTime.fromMillisecondsSinceEpoch(raw);
+      }
+      // String
+      else if (raw is String) {
+        dt = DateTime.parse(raw);
+      } else {
+        return "—";
+      }
+
+      // التاريخ فقط بدون الوقت
+      return "${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}";
+    } catch (_) {
       return "—";
     }
-
-    // التاريخ فقط بدون الوقت
-    return "${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}";
-
-  } catch (_) {
-    return "—";
   }
-}
 
   @override
-void initState() {
-  super.initState();
-  _tabController = TabController(length: 3, vsync: this);
-  _fetchWeather();
-}
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    _fetchWeather();
+  }
 
   Future<void> _fetchWeather() async {
     try {
@@ -197,315 +197,321 @@ void initState() {
     );
   }
 
-Widget _buildHeaderExportIcon() {
-  return InkWell(
-    borderRadius: BorderRadius.circular(14),
-    onTap: _showExportOptions, // ✅ هنا
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: goldColor.withValues(alpha: 0.35)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.ios_share_rounded, color: goldColor, size: 18),
-          const SizedBox(width: 8),
-          Text(
-            "تصدير",
-            style: GoogleFonts.almarai(
-              color: goldColor,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-void _showExportOptions() {
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.transparent,
-    builder: (ctx) {
-      return Container(
-        padding: const EdgeInsets.all(16),
+  Widget _buildHeaderExportIcon() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: _showExportOptions, // ✅ هنا
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: darkGreenColor.withValues(alpha: 0.96),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: goldColor.withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.ios_share_rounded, color: goldColor, size: 18),
+            const SizedBox(width: 8),
+            Text(
+              "تصدير",
+              style: GoogleFonts.almarai(
+                color: goldColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showExportOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: darkGreenColor.withValues(alpha: 0.96),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "تصدير التقرير",
+                style: GoogleFonts.almarai(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              _exportTile(
+                icon: Icons.picture_as_pdf_rounded,
+                title: "PDF",
+                subtitle: "مناسب للإرسال والاعتماد",
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _exportPdf();
+                },
+              ),
+              const SizedBox(height: 10),
+              _exportTile(
+                icon: Icons.table_chart_rounded,
+                title: "Excel",
+                subtitle: "مناسب للتحليل والتعديل",
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _exportExcel();
+                },
+              ),
+
+              const SizedBox(height: 10),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _exportTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Text(
-              "تصدير التقرير",
-              style: GoogleFonts.almarai(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: goldColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: goldColor.withValues(alpha: 0.35)),
+              ),
+              child: Icon(icon, color: goldColor),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.almarai(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.almarai(
+                      color: Colors.white60,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
-
-            _exportTile(
-              icon: Icons.picture_as_pdf_rounded,
-              title: "PDF",
-              subtitle: "مناسب للإرسال والاعتماد",
-              onTap: () async {
-                Navigator.pop(ctx);
-                await _exportPdf();
-              },
-            ),
-            const SizedBox(height: 10),
-            _exportTile(
-              icon: Icons.table_chart_rounded,
-              title: "Excel",
-              subtitle: "مناسب للتحليل والتعديل",
-              onTap: () async {
-                Navigator.pop(ctx);
-                await _exportExcel();
-              },
-            ),
-
-            const SizedBox(height: 10),
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_left_rounded, color: Colors.white60),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showLoading(String msg) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        backgroundColor: darkGreenColor.withValues(alpha: 0.95),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        content: Row(
+          children: [
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: goldColor,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(msg, style: GoogleFonts.almarai(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _toast(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, style: GoogleFonts.almarai()),
+        backgroundColor: const Color(0xFF0A4D41),
+      ),
+    );
+  }
+
+  Future<void> _exportPdf() async {
+    try {
+      _showLoading("جاري تجهيز PDF...");
+
+      final uri = Uri.parse(
+        "${Secrets.apiBaseUrl}/reports/${widget.farmId}/pdf",
       );
-    },
-  );
-}
 
-Widget _exportTile({
-  required IconData icon,
-  required String title,
-  required String subtitle,
-  required VoidCallback onTap,
-}) {
-  return InkWell(
-    borderRadius: BorderRadius.circular(18),
-    onTap: onTap,
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      final res = await http
+          .post(
+            uri,
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode({
+              // خطوة 1: نرسل farmData نفسها للسيرفر
+              "farmData": widget.farmData,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      if (!mounted) return;
+      Navigator.pop(context); // close loading
+
+      if (res.statusCode != 200) {
+        _toast("تعذر إنشاء التقرير");
+        return;
+      }
+
+      final data = jsonDecode(res.body);
+      final String b64 = data["base64"] ?? "";
+      final String fileName = data["fileName"] ?? "report.pdf";
+
+      if (b64.isEmpty) {
+        _toast("التقرير رجع فاضي");
+        return;
+      }
+
+      final bytes = base64Decode(b64);
+
+      final dir = await getTemporaryDirectory();
+      final file = File("${dir.path}/$fileName");
+      await file.writeAsBytes(bytes, flush: true);
+
+      await Share.shareXFiles([XFile(file.path)], text: "تقرير المزرعة (PDF)");
+    } catch (e) {
+      if (mounted) {
+        try {
+          Navigator.pop(context);
+        } catch (_) {}
+        _toast("حدث خطأ تأكد من الاتصال");
+      }
+    }
+  }
+
+  Future<void> _exportExcel() async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Excel قريباً", style: GoogleFonts.almarai()),
+        backgroundColor: const Color(0xFF0A4D41),
       ),
+    );
+  }
+
+  void _onExportPressed() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          "ميزة تصدير التقارير ستكون متاحة قريباً",
+          style: GoogleFonts.almarai(),
+        ),
+        backgroundColor: const Color(0xFF0A4D41),
+      ),
+    );
+  }
+
+  Widget _buildModernHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: goldColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: goldColor.withValues(alpha: 0.35)),
-            ),
-            child: Icon(icon, color: goldColor),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.almarai(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
+          // النصوص (اسم المزرعة + آخر تحليل)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.farmData['farmName'] ?? 'المزرعة',
+                style: GoogleFonts.almarai(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: GoogleFonts.almarai(
-                    color: Colors.white60,
-                    fontSize: 11,
-                  ),
+              ),
+              Text(
+                "التحليل الذكي للمزرعة",
+                style: GoogleFonts.almarai(color: goldColor, fontSize: 12),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                "آخر تحليل: ${_formatLastAnalysisDate()}",
+                style: GoogleFonts.almarai(
+                  color: Colors.white.withValues(alpha: 0.65),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          const Icon(Icons.chevron_left_rounded, color: Colors.white60),
-        ],
-      ),
-    ),
-  );
-}
 
-void _showLoading(String msg) {
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => AlertDialog(
-      backgroundColor: darkGreenColor.withValues(alpha: 0.95),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      content: Row(
-        children: [
-          const SizedBox(
-            width: 18,
-            height: 18,
-            child: CircularProgressIndicator(strokeWidth: 2, color: goldColor),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(msg, style: GoogleFonts.almarai(color: Colors.white)),
+          // أزرار اليمين (تصدير + رجوع) ✅ ثابتة دائمًا
+          Row(
+            children: [
+              _buildHeaderExportIcon(),
+              const SizedBox(width: 10),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white.withValues(alpha: 0.05),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
-    ),
-  );
-}
-
-void _toast(String msg) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(msg, style: GoogleFonts.almarai()),
-      backgroundColor: const Color(0xFF0A4D41),
-    ),
-  );
-}
-
-Future<void> _exportPdf() async {
-  try {
-    _showLoading("جاري تجهيز PDF...");
-
-    final uri = Uri.parse("${Secrets.apiBaseUrl}/reports/${widget.farmId}/pdf");
-
-    final res = await http.post(
-      uri,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        // خطوة 1: نرسل farmData نفسها للسيرفر
-        "farmData": widget.farmData,
-      }),
-    ).timeout(const Duration(seconds: 30));
-
-    if (!mounted) return;
-    Navigator.pop(context); // close loading
-
-    if (res.statusCode != 200) {
-      _toast("تعذر إنشاء التقرير");
-      return;
-    }
-
-    final data = jsonDecode(res.body);
-    final String b64 = data["base64"] ?? "";
-    final String fileName = data["fileName"] ?? "report.pdf";
-
-    if (b64.isEmpty) {
-      _toast("التقرير رجع فاضي");
-      return;
-    }
-
-    final bytes = base64Decode(b64);
-
-    final dir = await getTemporaryDirectory();
-    final file = File("${dir.path}/$fileName");
-    await file.writeAsBytes(bytes, flush: true);
-
-    await Share.shareXFiles([XFile(file.path)], text: "تقرير المزرعة (PDF)");
-
-   } catch (e) {
-    if (mounted) {
-      try { Navigator.pop(context); } catch (_) {}
-      _toast("حدث خطأ تأكد من الاتصال");
-    }
-   }
-}
-
-Future<void> _exportExcel() async {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text("Excel قريباً", style: GoogleFonts.almarai()),
-      backgroundColor: const Color(0xFF0A4D41),
-    ),
-  );
-}
-
-void _onExportPressed() {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(
-        "ميزة تصدير التقارير ستكون متاحة قريباً",
-        style: GoogleFonts.almarai(),
-      ),
-      backgroundColor: const Color(0xFF0A4D41),
-    ),
-  );
-}
-
-Widget _buildModernHeader() {
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // النصوص (اسم المزرعة + آخر تحليل)
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.farmData['farmName'] ?? 'المزرعة',
-              style: GoogleFonts.almarai(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            Text(
-              "التحليل الذكي للمزرعة",
-              style: GoogleFonts.almarai(color: goldColor, fontSize: 12),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              "آخر تحليل: ${_formatLastAnalysisDate()}",
-              style: GoogleFonts.almarai(
-                color: Colors.white.withValues(alpha: 0.65),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-
-        // أزرار اليمين (تصدير + رجوع) ✅ ثابتة دائمًا
-        Row(
-          children: [
-            _buildHeaderExportIcon(),
-            const SizedBox(width: 10),
-            IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(
-                Icons.arrow_forward_ios,
-                color: Colors.white,
-                size: 18,
-              ),
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.white.withValues(alpha: 0.05),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
-}
-
-
+    );
+  }
 
   Widget _buildFloatingTabBar() {
     return Container(
@@ -556,6 +562,7 @@ Widget _buildModernHeader() {
     LatLng center = points.isNotEmpty
         ? points[0]
         : const LatLng(24.7136, 46.6753);
+
     final List<dynamic> healthMapPoints = widget.farmData['healthMap'] ?? [];
     String areaValue = widget.farmData['farmSize']?.toString() ?? 'غير محدد';
 
@@ -578,7 +585,7 @@ Widget _buildModernHeader() {
           ClipRRect(
             borderRadius: BorderRadius.circular(30),
             child: FlutterMap(
-              options: MapOptions(initialCenter: center, initialZoom: 16),
+              options: MapOptions(initialCenter: center, initialZoom: 17),
               children: [
                 TileLayer(
                   urlTemplate:
@@ -587,7 +594,13 @@ Widget _buildModernHeader() {
                 ),
                 CircleLayer(
                   circles: healthMapPoints.map((point) {
-                    final baseColor = _getHealthColor(point['s'] as int);
+                    // التبديل بين s (الحالي) و ps (المتوقع) بناءً على الزر فقط
+                    final int status = _isForecastMode
+                        ? (point['ps'] ?? 0)
+                        : (point['s'] ?? 0);
+
+                    final baseColor = _getHealthColor(status);
+
                     return CircleMarker(
                       point: LatLng(
                         (point['lat'] as num).toDouble(),
@@ -605,7 +618,39 @@ Widget _buildModernHeader() {
             ),
           ),
 
-          // 2. بطاقات المعلومات العائمة (المفتاح + المساحة)
+          // 2. التظليل العلوي للعنوان (تم نقله ليكون تحت الزر)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 70,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(30),
+                ),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.5),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                "تحليل الصحة النباتية",
+                style: GoogleFonts.almarai(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+
+          // 3. بطاقات المعلومات العائمة السفلى
           Positioned(
             bottom: 20,
             right: 15,
@@ -614,7 +659,6 @@ Widget _buildModernHeader() {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                // بطاقة مفتاح الألوان بتأثير زجاجي مصحح
                 ClipRRect(
                   borderRadius: BorderRadius.circular(20),
                   child: Container(
@@ -622,7 +666,9 @@ Widget _buildModernHeader() {
                     decoration: BoxDecoration(
                       color: darkGreenColor.withValues(alpha: 0.8),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.1),
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -635,8 +681,6 @@ Widget _buildModernHeader() {
                     ),
                   ),
                 ),
-
-                // بطاقة المساحة
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 15,
@@ -657,31 +701,43 @@ Widget _buildModernHeader() {
             ),
           ),
 
-          // 3. التظليل العلوي للعنوان
+          // 4. زر التبديل (تم وضعه في النهاية ليكون هو الأعلى وقابل لللمس)
           Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
+            top: 15,
+            left: 15,
             child: Container(
-              height: 70,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(30),
-                ),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.black.withValues(alpha: 0.5), Colors.transparent],
-                ),
+                color: darkGreenColor.withOpacity(0.85),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: goldColor.withOpacity(0.3)),
+                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
               ),
-              padding: const EdgeInsets.all(20),
-              child: Text(
-                "تحليل الصحة النباتية",
-                style: GoogleFonts.almarai(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _isForecastMode ? "وضع التنبؤ" : "الوضع الحالي",
+                    style: GoogleFonts.almarai(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Transform.scale(
+                    scale: 0.8,
+                    child: Switch(
+                      value: _isForecastMode,
+                      activeColor: goldColor,
+                      onChanged: (val) {
+                        setState(() {
+                          _isForecastMode = val;
+                        });
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -728,19 +784,9 @@ Widget _buildModernHeader() {
       case 2:
         return const Color.fromARGB(87, 244, 67, 54); // مصاب
       case 1:
-        return const Color.fromARGB(
-          62,
-          255,
-          235,
-          59,
-        ); // مراقبة
+        return const Color.fromARGB(62, 255, 235, 59); // مراقبة
       case 0:
-        return const Color.fromARGB(
-          150,
-          105,
-          240,
-          123,
-        ); // سليم
+        return const Color.fromARGB(150, 105, 240, 123); // سليم
       default:
         return Colors.transparent;
     }
@@ -1140,8 +1186,6 @@ Widget _buildModernHeader() {
     );
   }
 
- 
-
   Widget _buildLegendItem(String label, Color color, double val) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -1169,89 +1213,92 @@ Widget _buildModernHeader() {
       ),
     );
   }
-Widget _buildRecommendationsSection() {
-  final Map<String, dynamic> healthRoot = widget.farmData['health'] != null
-      ? (widget.farmData['health'] as Map).cast<String, dynamic>()
-      : widget.farmData.cast<String, dynamic>();
 
-  final Map<String, dynamic> forecast =
-      (healthRoot['forecast_next_week'] is Map)
-          ? (healthRoot['forecast_next_week'] as Map).cast<String, dynamic>()
-          : {};
+  Widget _buildRecommendationsSection() {
+    final Map<String, dynamic> healthRoot = widget.farmData['health'] != null
+        ? (widget.farmData['health'] as Map).cast<String, dynamic>()
+        : widget.farmData.cast<String, dynamic>();
 
-  final double hNext = double.tryParse("${forecast['Healthy_Pct_next']}") ?? 0.0;
-  final double mNext = double.tryParse("${forecast['Monitor_Pct_next']}") ?? 0.0;
-  final double cNext = double.tryParse("${forecast['Critical_Pct_next']}") ?? 0.0;
+    final Map<String, dynamic> forecast =
+        (healthRoot['forecast_next_week'] is Map)
+        ? (healthRoot['forecast_next_week'] as Map).cast<String, dynamic>()
+        : {};
 
-  final double ndviDelta =
-      double.tryParse("${forecast['ndvi_delta_next_mean']}") ?? 0.0;
-  final double ndmiDelta =
-      double.tryParse("${forecast['ndmi_delta_next_mean']}") ?? 0.0;
+    final double hNext =
+        double.tryParse("${forecast['Healthy_Pct_next']}") ?? 0.0;
+    final double mNext =
+        double.tryParse("${forecast['Monitor_Pct_next']}") ?? 0.0;
+    final double cNext =
+        double.tryParse("${forecast['Critical_Pct_next']}") ?? 0.0;
 
-  // ✅ (جديد) قراءة التوصيات من farmData
-  final List<dynamic> recosRaw =
-      (widget.farmData['recommendations'] as List?) ?? [];
-  final List<Map<String, dynamic>> recos = recosRaw
-      .whereType<Map>()
-      .map((e) => e.cast<String, dynamic>())
-      .toList();
+    final double ndviDelta =
+        double.tryParse("${forecast['ndvi_delta_next_mean']}") ?? 0.0;
+    final double ndmiDelta =
+        double.tryParse("${forecast['ndmi_delta_next_mean']}") ?? 0.0;
 
-  // ✅ (جديد) ترتيبها بالأولوية
-  recos.sort((a, b) {
-    final pa = _priorityRank((a['priority_ar'] ?? '').toString());
-    final pb = _priorityRank((b['priority_ar'] ?? '').toString());
-    return pa.compareTo(pb);
-  });
+    // ✅ (جديد) قراءة التوصيات من farmData
+    final List<dynamic> recosRaw =
+        (widget.farmData['recommendations'] as List?) ?? [];
+    final List<Map<String, dynamic>> recos = recosRaw
+        .whereType<Map>()
+        .map((e) => e.cast<String, dynamic>())
+        .toList();
 
-  return SingleChildScrollView(
-    physics: const BouncingScrollPhysics(),
-    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-    child: Column(
-      children: [
-        // 1) كرت توقعات توزيع الحالة الصحية
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(25),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "توقعات توزيع الحالة الصحية (الأسبوع القادم)",
-                style: GoogleFonts.almarai(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+    // ✅ (جديد) ترتيبها بالأولوية
+    recos.sort((a, b) {
+      final pa = _priorityRank((a['priority_ar'] ?? '').toString());
+      final pb = _priorityRank((b['priority_ar'] ?? '').toString());
+      return pa.compareTo(pb);
+    });
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Column(
+        children: [
+          // 1) كرت توقعات توزيع الحالة الصحية
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "توقعات توزيع الحالة الصحية (الأسبوع القادم)",
+                  style: GoogleFonts.almarai(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 14),
-              _forecastRow("مستقر", Colors.greenAccent, hNext),
-              _forecastRow("قيد المراقبة", Colors.orangeAccent, mNext),
-              _forecastRow("حرج (خطر إصابة)", Colors.redAccent, cNext),
-            ],
+                const SizedBox(height: 14),
+                _forecastRow("مستقر", Colors.greenAccent, hNext),
+                _forecastRow("قيد المراقبة", Colors.orangeAccent, mNext),
+                _forecastRow("حرج (خطر إصابة)", Colors.redAccent, cNext),
+              ],
+            ),
           ),
-        ),
 
-        const SizedBox(height: 20),
+          const SizedBox(height: 20),
 
-        // 2) كرت التحليل الفيزيولوجي المتوقع
-        _buildPhysiologicalTrendCard(ndviDelta, ndmiDelta),
+          // 2) كرت التحليل الفيزيولوجي المتوقع
+          _buildPhysiologicalTrendCard(ndviDelta, ndmiDelta),
 
-        const SizedBox(height: 20),
+          const SizedBox(height: 20),
 
-        // ✅ (جديد) كرت التوصيات (يظهر تحت التنبؤ مباشرة)
-        _buildForecastRecommendationsCard(recos),
+          // ✅ (جديد) كرت التوصيات (يظهر تحت التنبؤ مباشرة)
+          _buildForecastRecommendationsCard(recos),
 
-        const SizedBox(height: 80),
-      ],
-    ),
-  );
-}
-
+          const SizedBox(height: 80),
+        ],
+      ),
+    );
+  }
 
   Widget _buildPhysiologicalTrendCard(double ndviDelta, double ndmiDelta) {
     return Container(
@@ -1391,126 +1438,132 @@ Widget _buildRecommendationsSection() {
   }
 
   int _priorityRank(String p) {
-  // الأصغر = أهم
-  if (p.contains("عاجلة")) return 0;
-  if (p.contains("مرتفعة")) return 1;
-  if (p.contains("متوسطة")) return 2;
-  return 3; // منخفضة أو غير محددة
-}
-
-Color _priorityColor(String p) {
-  if (p.contains("عاجلة")) return Colors.redAccent;
-  if (p.contains("مرتفعة")) return Colors.orangeAccent;
-  if (p.contains("متوسطة")) return Colors.blueAccent;
-  return Colors.white38;
-}
-
-String _bestSource(List<dynamic> srcs) {
-  final list = srcs.map((e) => e.toString().toLowerCase()).toList();
-
-  // نعطي أولوية لمصادر أوضح للأيقونة
-  const keys = ["water", "stress", "rpw", "growth", "baseline", "forecast", "unusual", "outlier", "current"];
-
-  for (final k in keys) {
-    final hit = list.firstWhere((s) => s.contains(k), orElse: () => "");
-    if (hit.isNotEmpty) return hit;
+    // الأصغر = أهم
+    if (p.contains("عاجلة")) return 0;
+    if (p.contains("مرتفعة")) return 1;
+    if (p.contains("متوسطة")) return 2;
+    return 3; // منخفضة أو غير محددة
   }
 
-  return list.isNotEmpty ? list.first : "";
-}
+  Color _priorityColor(String p) {
+    if (p.contains("عاجلة")) return Colors.redAccent;
+    if (p.contains("مرتفعة")) return Colors.orangeAccent;
+    if (p.contains("متوسطة")) return Colors.blueAccent;
+    return Colors.white38;
+  }
 
+  String _bestSource(List<dynamic> srcs) {
+    final list = srcs.map((e) => e.toString().toLowerCase()).toList();
 
-IconData _recoIcon(String source) {
-  final s = source.toLowerCase();
+    // نعطي أولوية لمصادر أوضح للأيقونة
+    const keys = [
+      "water",
+      "stress",
+      "rpw",
+      "growth",
+      "baseline",
+      "forecast",
+      "unusual",
+      "outlier",
+      "current",
+    ];
 
-  if (s.contains("water")) return Icons.water_drop_rounded;
-  if (s.contains("stress") || s.contains("rpw")) return Icons.opacity_rounded;
-  if (s.contains("growth") || s.contains("baseline")) return Icons.spa_rounded;
-  if (s.contains("forecast")) return Icons.auto_awesome_rounded;
-  if (s.contains("unusual") || s.contains("outlier")) return Icons.track_changes_rounded;
-  if (s.contains("current")) return Icons.warning_amber_rounded;
+    for (final k in keys) {
+      final hit = list.firstWhere((s) => s.contains(k), orElse: () => "");
+      if (hit.isNotEmpty) return hit;
+    }
 
-  return Icons.lightbulb_rounded;
-}
+    return list.isNotEmpty ? list.first : "";
+  }
 
+  IconData _recoIcon(String source) {
+    final s = source.toLowerCase();
 
+    if (s.contains("water")) return Icons.water_drop_rounded;
+    if (s.contains("stress") || s.contains("rpw")) return Icons.opacity_rounded;
+    if (s.contains("growth") || s.contains("baseline"))
+      return Icons.spa_rounded;
+    if (s.contains("forecast")) return Icons.auto_awesome_rounded;
+    if (s.contains("unusual") || s.contains("outlier"))
+      return Icons.track_changes_rounded;
+    if (s.contains("current")) return Icons.warning_amber_rounded;
 
-Widget _buildForecastRecommendationsCard(List<Map<String, dynamic>> recos) {
-  return Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.05),
-      borderRadius: BorderRadius.circular(25),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(
-              Icons.recommend_rounded,
-              color: goldColor.withValues(alpha: 0.9),
-              size: 20,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                "توصيات",
-                style: GoogleFonts.almarai(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+    return Icons.lightbulb_rounded;
+  }
+
+  Widget _buildForecastRecommendationsCard(List<Map<String, dynamic>> recos) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.recommend_rounded,
+                color: goldColor.withValues(alpha: 0.9),
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  "توصيات",
+                  style: GoogleFonts.almarai(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-
-        if (recos.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-            ),
-            child: Text(
-              "لا توجد توصيات جديدة حاليًا. سيتم تحديثها تلقائيًا بعد التحليل القادم.",
-              style: GoogleFonts.almarai(color: Colors.white60, fontSize: 12),
-            ),
-          )
-        else
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: recos.length > 6 ? 6 : recos.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (context, i) {
-              final r = recos[i];
-              final pr = (r['priority_ar'] ?? 'متوسطة').toString();
-              final List<dynamic> srcs = (r['sources'] as List?) ?? [];
-              final String src = _bestSource(srcs);
-              final pColor = _priorityColor(pr);
-
-              return _RecoCardExpandable(
-                r: r,
-                pColor: pColor,
-                icon: _recoIcon(src),
-                priorityText: pr,
-              );
-            },
+            ],
           ),
-      ],
-    ),
-  );
-}
+          const SizedBox(height: 12),
 
+          if (recos.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+              ),
+              child: Text(
+                "لا توجد توصيات جديدة حاليًا. سيتم تحديثها تلقائيًا بعد التحليل القادم.",
+                style: GoogleFonts.almarai(color: Colors.white60, fontSize: 12),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: recos.length > 6 ? 6 : recos.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, i) {
+                final r = recos[i];
+                final pr = (r['priority_ar'] ?? 'متوسطة').toString();
+                final List<dynamic> srcs = (r['sources'] as List?) ?? [];
+                final String src = _bestSource(srcs);
+                final pColor = _priorityColor(pr);
 
-
+                return _RecoCardExpandable(
+                  r: r,
+                  pColor: pColor,
+                  icon: _recoIcon(src),
+                  priorityText: pr,
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class _RecoCardExpandable extends StatefulWidget {
@@ -1618,7 +1671,6 @@ class _RecoCardExpandableState extends State<_RecoCardExpandable> {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      
                     ],
                   ),
                 ),
@@ -1636,8 +1688,9 @@ class _RecoCardExpandableState extends State<_RecoCardExpandable> {
 
           AnimatedCrossFade(
             duration: const Duration(milliseconds: 220),
-            crossFadeState:
-                _open ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            crossFadeState: _open
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
             firstChild: const SizedBox(height: 0),
             secondChild: Padding(
               padding: const EdgeInsets.only(top: 14),
