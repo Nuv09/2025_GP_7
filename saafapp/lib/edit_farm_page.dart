@@ -527,7 +527,7 @@ Future<bool> _confirmDialog(String title, String message) async {
               'تحذير عدم تطابق المنطقة',
               'المنطقة المختارة: "${_selectedRegion!}"\n'
               'إحداثيات الخريطة تشير إلى: "$detected"\n\n'
-              'هل تريدين المتابعة رغم عدم التطابق؟',
+              'هل تريد المتابعة رغم عدم التطابق؟',
             );
             if (!ok) return;
           }
@@ -895,7 +895,7 @@ Widget _mapWithSearch() {
           borderRadius: BorderRadius.circular(25),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               blurRadius: 15,
               offset: const Offset(0, 8),
             ),
@@ -1090,13 +1090,13 @@ onTap: () {
   return Container(
     margin: const EdgeInsets.symmetric(vertical: 4),
     child: Material(
-      color: Colors.white.withOpacity(0.9), 
+      color: Colors.white.withValues(alpha: 0.9), 
       borderRadius: BorderRadius.circular(12),
       elevation: 4,
       child: InkWell(
         onTap: onPressed,
         borderRadius: BorderRadius.circular(12),
-        child: Container(
+        child: SizedBox(
           width: 44, height: 44,
           child: Icon(icon, color: darkBackground, size: 26),
         ),

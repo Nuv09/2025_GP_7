@@ -248,7 +248,7 @@ class _MainShellState extends State<MainShell> {
       body: IndexedStack(index: _index, children: _pages),
       bottomNavigationBar: CurvedNavigationBar(
         height: 65,
-        color: beige,
+        color:const Color(0xFFEADEC4),
         backgroundColor: darkGreenColor,
         animationDuration: const Duration(milliseconds: 300),
         index: _index,

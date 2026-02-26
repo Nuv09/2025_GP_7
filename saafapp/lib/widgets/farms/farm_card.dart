@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:saafapp/constant.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class FarmCard extends StatelessWidget {
   final int farmIndex;
@@ -22,7 +23,7 @@ class FarmCard extends StatelessWidget {
   final double? healthyPct;
   final double? monitorPct;
   final double? criticalPct;
-
+  final Widget? healthRing;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
@@ -44,6 +45,7 @@ class FarmCard extends StatelessWidget {
     this.criticalPct,
     this.onEdit,
     this.onDelete,
+    this.healthRing,
   });
 
   @override
@@ -53,250 +55,84 @@ class FarmCard extends StatelessWidget {
     }
 
     return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: 1,
-        vertical: defaultPadding / 2,
-      ),
-      decoration: BoxDecoration(
-        color: beige,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: const [
-          BoxShadow(
-            offset: Offset(0, 8),
-            blurRadius: 18,
-            color: Colors.black26,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
-        child: SizedBox(
-          height: 195, // زودنا شوي عشان الهيلث
-          child: Row(
-            textDirection: TextDirection.rtl,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ==== الصورة (يمين) ====
-              Flexible(
-                // 👈 تم التعديل هنا
-                flex: 3, // 40% من المساحة
-                child: (imageURL != null && imageURL!.isNotEmpty)
-                    ? ClipRRect(
-                        borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(22),
-                          bottomRight: Radius.circular(22),
-                        ),
-                        child: _FarmImage(
-                          url: imageURL!,
-                          width: double.infinity, // لملء الـ Flexible
-                          height: 195,
-                          key: ValueKey('farm-$farmIndex-${imageURL!}'),
-                        ),
-                      )
-                    : const ColoredBox(
-                        color: Colors.black26,
-                        child: Center(
-                          child: Icon(
-                            Icons.image_not_supported,
-                            color: Colors.white70,
-                            size: 30,
-                          ),
-                        ),
-                      ),
-              ),
-
-              // ==== المعلومات + الأكشن ====
-              Expanded(
-                flex: 8,
-                child: Padding(
-                  padding: const EdgeInsets.only(
-                    right: defaultPadding,
-                    // ✅ اليسار (L): هامش بسيط جداً لزيادة المساحة المتاحة للمحتوى
-                    left: 0,
-                    top: 10,
-                    bottom: 10,
-                  ),
-                  child: Row(
-                    children: [
-                      // النصوص
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: darkGreenColor,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              // 👈 حذفنا const من الـ Row لكي نتمكن من استخدام subtitle
-                              children: [
-                                const Icon(
-                                  // 👈 الأيقونة
-                                  Icons.location_on,
-                                  size: 14,
-                                  color: darkGreenColor,
-                                ),
-                                const SizedBox(width: 4),
-                                // 👈 النص (اسم المنطقة) بجانب الأيقونة مباشرة
-                                Flexible(
-                                  // نستخدم Flexible أو Expanded لضمان عدم تجاوز النص لحجم الكارت
-                                  child: Text(
-                                    subtitle, // هنا يوجد 'الرياض'
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: darkGreenColor,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            // 👈 حذفنا عنصر Padding الذي كان يحتوي على النص
-                            const SizedBox(height: 6),
-
-                            Wrap(
-                              spacing: 12,
-                              runSpacing: 6,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: [
-                                if (sizeText != null) ...[
-                                  const Icon(
-                                    Icons.straighten,
-                                    size: 14,
-                                    color: darkGreenColor,
-                                  ),
-                                  Text(
-                                    sizeText!,
-                                    style: const TextStyle(
-                                      color: darkGreenColor,
-                                    ),
-                                  ),
-                                ],
-                                if (createdAt != null) ...[
-                                  const Icon(
-                                    Icons.schedule,
-                                    size: 14,
-                                    color: darkGreenColor,
-                                  ),
-                                  Text(
-                                    _formatDate(createdAt!),
-                                    style: const TextStyle(
-                                      color: darkGreenColor,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-
-                            if (lastAnalysisText != null && lastAnalysisText!.isNotEmpty) ...[
-  const SizedBox(height: 6),
-  Row(
-    children: [
-      const Icon(Icons.analytics_outlined, size: 14, color: darkGreenColor),
-      const SizedBox(width: 4),
-      Flexible(
-        child: Text(
-          lastAnalysisText!,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: darkGreenColor,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+  margin: const EdgeInsets.symmetric(
+    horizontal: 1,
+    vertical: defaultPadding / 2,
+  ),
+  decoration: BoxDecoration(
+    borderRadius: BorderRadius.circular(22),
+    boxShadow: const [
+      BoxShadow(
+        offset: Offset(0, 10),
+        blurRadius: 26,
+        color: Colors.black38,
       ),
     ],
   ),
-],
+  child: ClipRRect(
+    borderRadius: BorderRadius.circular(22),
+    child: Stack(
+      children: [
+        // ✅ خلفية فخمة بدل البيج الميت
+        const Positioned.fill(child: _CardLuxBackground()),
 
-                            const SizedBox(height: 8),
-
-                            if (analysisStatus != null &&
-                                analysisStatus!.isNotEmpty) ...[
-                              _AnalysisBadge(
-                                status: analysisStatus!,
-                                count: analysisCount,
-                                quality: analysisQuality,
-                                error: analysisError,
-                              ),
-                              const SizedBox(height: 6),
-
-                              // 🩺 ملخّص صحة النخيل تحت عدد النخيل
-                              _HealthSummary(
-                                status: analysisStatus!,
-                                healthyPct: healthyPct,
-                                monitorPct: monitorPct,
-                                criticalPct: criticalPct,
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(width: 8),
-
-                      // أزرار الأكشن
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          IconButton(
-                            onPressed: onEdit,
-                            tooltip: 'تعديل',
-                            icon: const Icon(
-                              Icons.edit,
-                              color: lightGreenColor,
-                              size: 20,
-                            ),
-                            constraints: const BoxConstraints(
-                              minWidth: 32,
-                              minHeight: 32,
-                            ),
-                            padding: EdgeInsets.zero,
-                            splashRadius: 18,
-                          ),
-                          const SizedBox(height: 6),
-                          IconButton(
-                            onPressed: onDelete,
-                            tooltip: 'حذف',
-                            icon: const Icon(
-                              Icons.delete_outline,
-                              color: prownColor,
-                              size: 20,
-                            ),
-                            constraints: const BoxConstraints(
-                              minWidth: 32,
-                              minHeight: 32,
-                            ),
-                            padding: EdgeInsets.zero,
-                            splashRadius: 18,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+        // ✅ المحتوى الأساسي
+        SizedBox(
+          height:160, // أول كرت Featured
+          child: Row(
+            textDirection: TextDirection.rtl,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // ==== الصورة (يمين) ====
+              Flexible(
+                flex: 3,
+                child: _ImagePane(
+                  imageURL: imageURL,
+                  farmIndex: farmIndex,
                 ),
               ),
+       
+              // ==== المعلومات + الأكشن ====
+              Expanded(
+                flex: 8,
+                child: _InfoPane(
+                  title: title,
+                  subtitle: subtitle,
+                  sizeText: sizeText,
+                  createdAt: createdAt,
+                  lastAnalysisText: lastAnalysisText,
+                  analysisStatus: analysisStatus,
+                  analysisCount: analysisCount,
+                  analysisQuality: analysisQuality,
+                  analysisError: analysisError,
+                  healthyPct: healthyPct,
+                  monitorPct: monitorPct,
+                  criticalPct: criticalPct,
+                  healthRing: healthRing,
+                  onEdit: onEdit,
+                  onDelete: onDelete,
+                ),
+              ),
+            
             ],
           ),
         ),
-      ),
-    );
+
+        Positioned(
+          left: 5,
+          top: 4,
+          child: _ActionButtons(
+            onEdit: onEdit,
+            onDelete: onDelete,
+          ),
+        ), 
+      ],
+    ),
+  ),
+);
   }
 
-  String _formatDate(DateTime d) {
-    final dd = d.day.toString().padLeft(2, '0');
-    final mm = d.month.toString().padLeft(2, '0');
-    return '$dd/$mm';
-  }
+ 
 }
 
 class _AnalysisBadge extends StatelessWidget {
@@ -359,20 +195,21 @@ class _AnalysisBadge extends StatelessWidget {
       case 'processing':
       case 'running':
       default:
-        bg = const Color(0xFFFFF3E0);
-        fg = const Color(0xFF8D6E63);
+        bg = darkGreenColor.withValues(alpha: 0.08);
+        fg = darkGreenColor;
         content = Row(
           mainAxisSize: MainAxisSize.min,
           children: const [
             SizedBox(
-              width: 14,
-              height: 14,
+              width: 5,
+              height: 5,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
             SizedBox(width: 8),
             Text(
               'جاري التحليل…',
               style: TextStyle(fontWeight: FontWeight.w700),
+              
             ),
           ],
         );
@@ -380,7 +217,7 @@ class _AnalysisBadge extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
@@ -394,151 +231,431 @@ class _AnalysisBadge extends StatelessWidget {
   }
 }
 
-// 🩺 ملخّص صحة النخيل تحت البادج
-class _HealthSummary extends StatelessWidget {
-  final String status;
-  final double? healthyPct;
-  final double? monitorPct;
-  final double? criticalPct;
-
-  const _HealthSummary({
-    required this.status,
-    this.healthyPct,
-    this.monitorPct,
-    this.criticalPct,
-  });
-
-  double _clampPct(double? v) {
-    if (v == null || v.isNaN) return 0;
-    if (v < 0) return 0;
-    if (v > 100) return 100;
-    return v;
-  }
-
-  // ===============================================
-  // ✅ الدالة المساعدة (Method) لعرض النص المئوي
-  // ===============================================
-  Widget _buildLabel(Color color, String label, double value) {
-    // إظهار النص فقط إذا كانت النسبة أكبر من 1%
-    if (value < 1.0) return const SizedBox.shrink();
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 6,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          '$label ${value.toStringAsFixed(0)}%',
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: darkGreenColor,
-          ),
-        ),
-      ],
-    );
-  }
+class _CardLuxBackground extends StatelessWidget {
+  const _CardLuxBackground();
 
   @override
   Widget build(BuildContext context) {
-    // نعرض الهيلث فقط إذا التحليل مكتمل وفيه بيانات
-    if (status != 'done') return const SizedBox.shrink();
-    if (healthyPct == null && monitorPct == null && criticalPct == null) {
-      return const SizedBox.shrink();
-    }
-
-    // تحويل النسب إلى قيمة بين 0 و 1000 لخاصية flex
-    final h = (_clampPct(healthyPct) * 10).toInt();
-    final m = (_clampPct(monitorPct) * 10).toInt();
-    final c = (_clampPct(criticalPct) * 10).toInt();
-
-    // الألوان المستخدمة في الشريط (مستمدة من الألوان الأصلية)
-    const Color healthyColor = Color(0xFF1E8D5F); // أخضر
-    const Color monitorColor = Color(0xFFF9A825); // أصفر/برتقالي
-    const Color criticalColor = Color(0xFFB00020); // أحمر
-
-    final healthBar = LayoutBuilder(
-      builder: (context, constraints) {
-        final barWidth = constraints.maxWidth * 0.80;
-        return SizedBox(
-          width: barWidth, // 👈 ياخذ كل العرض المتاح
-          child: Row(
-            children: [
-              // الأحمر (حرج) - يسار
-              if (c > 0)
-                Expanded(
-                  flex: c,
-                  child: Container(
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: criticalColor,
-                      borderRadius: BorderRadius.only(
-                        topRight: Radius.circular(5),
-                        bottomRight: Radius.circular(5),
-                      ),
-                    ),
-                  ),
-                ),
-
-              // الأصفر (تحت المراقبة)
-              if (m > 0)
-                Expanded(
-                  flex: m,
-                  child: Container(height: 8, color: monitorColor),
-                ),
-
-              // الأخضر (سليم) - يمين
-              if (h > 0)
-                Expanded(
-                  flex: h,
-                  child: Container(
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: healthyColor,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(5),
-                        bottomLeft: Radius.circular(5),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [
+            Color(0xFFFFF8E6),
+            Color(0xFFF5E6C8),
+            Color(0xFFEAD8B0),
+          ],
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.10,
+              child: CustomPaint(painter: _DotPatternPainter()),
+            ),
           ),
-        );
-      },
-    );
-
-    // نصوص النسب المئوية (أسفل الشريط)
-    final textLabels = Row(
-      mainAxisAlignment: MainAxisAlignment.start, // 👈 بدل SpaceBetween
-      textDirection: TextDirection.rtl,
-      children: [
-        _buildLabel(criticalColor, 'حرج', _clampPct(criticalPct)),
-        const SizedBox(width: 10),
-        _buildLabel(monitorColor, 'مراقبة', _clampPct(monitorPct)),
-        const SizedBox(width: 10),
-        _buildLabel(healthyColor, 'سليم', _clampPct(healthyPct)),
-      ],
-    );
-
-    // تجميع الشريط والنصوص في عمود
-    // تجميع الشريط والنصوص في عمود
-    return Align(
-      alignment:
-          Alignment.centerLeft, // ✅ التعديل: المحاذاة الخارجية إلى اليسار
-      child: Column(
-        // محاذاة العناصر الداخلية لليسار (Start في سياق RTL)
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [healthBar, const SizedBox(height: 8), textLabels],
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment.topRight,
+                  radius: 1.2,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.06),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
+
+class _DotPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()..color = darkGreenColor.withValues(alpha: 0.22);
+    const step = 14.0;
+
+    for (double y = 0; y < size.height; y += step) {
+      for (double x = 0; x < size.width; x += step) {
+        if (((x + y).toInt() % 4) == 0) {
+          canvas.drawCircle(Offset(x, y), 1.2, p);
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+
+
+
+
+class _ImagePane extends StatelessWidget {
+  final String? imageURL;
+  final int farmIndex;
+
+  const _ImagePane({
+    required this.imageURL,
+    required this.farmIndex,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImg = imageURL != null && imageURL!.trim().isNotEmpty;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (hasImg)
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topRight: Radius.circular(22),
+              bottomRight: Radius.circular(22),
+            ),
+            child: _FarmImage(
+              url: imageURL!,
+              width: double.infinity,
+              height: 195,
+              key: ValueKey('farm-$farmIndex-${imageURL!}'),
+            ),
+          )
+        else
+         DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: [
+                  Color(0xFF0B3A31),
+                  Color(0xFF062A23),
+                ],
+              ),
+            ),
+            child: Center(
+             child: Center(
+  child: Image.asset(
+    'assets/images/PalmIcon.png', // 👈 غيري الاسم لمسارك
+    width: 72,
+    height: 72,
+    fit: BoxFit.contain,
+    colorBlendMode: BlendMode.srcIn,            // اختياري
+  ),
+),
+            ),
+          ),
+
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerRight,
+                end: Alignment.centerLeft,
+                colors: [
+                  Colors.black.withValues(alpha: 0.00),
+                  Colors.black.withValues(alpha: 0.35),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(
+                left: BorderSide(color: goldColor.withValues(alpha: 0.28), width: 1),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+class _InfoPane extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String? sizeText;
+  final DateTime? createdAt;
+  final String? lastAnalysisText;
+
+  final String? analysisStatus;
+  final int? analysisCount;
+  final double? analysisQuality;
+  final String? analysisError;
+
+  final double? healthyPct;
+  final double? monitorPct;
+  final double? criticalPct;
+  final Widget? healthRing;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+
+  const _InfoPane({
+    required this.title,
+    required this.subtitle,
+    required this.sizeText,
+    required this.createdAt,
+    required this.lastAnalysisText,
+    required this.analysisStatus,
+    required this.analysisCount,
+    required this.analysisQuality,
+    required this.analysisError,
+    required this.healthyPct,
+    required this.monitorPct,
+    required this.criticalPct,
+    required this.healthRing,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final safeTitle = title.isEmpty ? 'مزرعة بدون اسم' : title;
+
+    return Padding(
+      padding: const EdgeInsets.only(
+        right: defaultPadding,
+        left: 6,
+        top: 12,
+        bottom: 12,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  safeTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
+                    color: darkGreenColor,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                const SizedBox(height: 6),
+
+                Row(
+                  children: [
+                    const Icon(Icons.location_on, size: 14, color: darkGreenColor),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        subtitle.isEmpty ? '—' : subtitle,
+                        
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: darkGreenColor.withValues(alpha: 0.85),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 0),
+
+                Wrap(
+  spacing: 12,
+  runSpacing: 6,
+  crossAxisAlignment: WrapCrossAlignment.center,
+  children: [
+    if (sizeText != null) ...[
+      const Icon(Icons.straighten, size: 14, color: darkGreenColor),
+      Text(sizeText!, style: const TextStyle(color: darkGreenColor)),
+    ],
+  ],
+),
+
+if (createdAt != null) ...[
+  const SizedBox(height: 8),
+  Row(
+    children: [
+      const Icon(Icons.schedule, size: 14, color: darkGreenColor),
+      const SizedBox(width: 6),
+
+      // 👇 عرض ثابت لليبل
+      SizedBox(
+        width: 60,
+        child: Text(
+          'تاريخ الإضافة:',
+          style: const TextStyle(
+            color: darkGreenColor,
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+
+      const SizedBox(width: 6),
+
+      // 👇 التاريخ منفصل
+     SizedBox(
+  width: 25,
+  child: Directionality(
+    textDirection: TextDirection.ltr,
+    child: Text(
+      _formatDate(createdAt!),
+      textAlign: TextAlign.left,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(
+        color: darkGreenColor,
+        fontSize: 10,
+        fontWeight: FontWeight.w800,
+      ),
+    ),
+  ),
+),
+    ],
+  ),
+],
+
+                if (lastAnalysisText != null && lastAnalysisText!.isNotEmpty) ...[
+  const SizedBox(height: 8),
+  Row(
+    children: [
+      const Icon(Icons.analytics_outlined, size: 14, color: darkGreenColor),
+      const SizedBox(width: 6),
+
+      // 👇 عرض ثابت لليبل (نفس فكرة تاريخ الإضافة)
+      const SizedBox(
+        width: 50,
+        child: Text(
+          'آخر تحليل:',
+          style: TextStyle(
+            color: darkGreenColor,
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+
+      const SizedBox(width: 6),
+
+      // 👇 التاريخ فقط
+     SizedBox(
+  width: 35,
+  child: Directionality(
+    textDirection: TextDirection.ltr,
+    child: Text(
+      lastAnalysisText!,
+      textAlign: TextAlign.left,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(
+        color: darkGreenColor,
+        fontSize: 10,
+        fontWeight: FontWeight.w800,
+      ),
+    ),
+  ),
+),
+    ],
+  ),
+],
+
+                const SizedBox(height: 10),
+               Builder(
+  builder: (context) {
+    final s = (analysisStatus ?? '').toLowerCase().trim();
+
+    if (s == 'pending' || s == 'running' || s == 'processing') {
+      return _AnalysisBadge(
+        status: s,
+        count: analysisCount,
+        quality: analysisQuality,
+        error: analysisError,
+      );
+    }
+
+    if (s == 'done') {
+  return const SizedBox.shrink();
+}
+    return const SizedBox.shrink();
+  },
+),
+              ],
+            ),
+          ),
+
+          if (healthRing != null) ...[
+  const SizedBox(width: 6),
+Padding(
+  padding: const EdgeInsets.only(top: 20),
+  child: healthRing!,
+),  const SizedBox(width: 6),
+] else
+  const SizedBox(width: 8),
+
+          
+        ],
+      ),
+    );
+  }
+
+ String _formatDate(DateTime d) {
+  final dd = d.day.toString().padLeft(2, '0');
+  final mm = d.month.toString().padLeft(2, '0');
+  return '$dd/$mm';
+}
+}
+
+class _ActionButtons extends StatelessWidget {
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+
+  const _ActionButtons({
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          onPressed: onEdit,
+          tooltip: 'تعديل',
+          icon: const Icon(Icons.edit, color: lightGreenColor, size: 20),
+          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+          padding: EdgeInsets.zero,
+          visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+          splashRadius: 18,
+        ),
+        const SizedBox(width: 0),
+        IconButton(
+          onPressed: onDelete,
+          tooltip: 'حذف',
+          icon: const Icon(Icons.delete_outline, color: prownColor, size: 20),
+          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+          visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+
+          padding: EdgeInsets.zero,
+          splashRadius: 18,
+        ),
+      ],
+    );
+  }
+}
+
 
 class _FarmImage extends StatelessWidget {
   final String url;
@@ -563,38 +680,27 @@ class _FarmImage extends StatelessWidget {
     final fixed = _fixUrl(url);
     final uri = Uri.parse(fixed);
 
-    return Image.network(
-      uri.toString(),
-      width: width,
-      height: height,
-      fit: BoxFit.cover,
-      loadingBuilder: (ctx, child, progress) {
-        if (progress == null) return child;
-        return Container(
-          color: Colors.black12,
-          alignment: Alignment.center,
-          child: CircularProgressIndicator(
-            strokeWidth: 2.5,
-            value: progress.expectedTotalBytes != null
-                ? progress.cumulativeBytesLoaded /
-                      (progress.expectedTotalBytes ?? 1)
-                : null,
-          ),
-        );
-      },
-      errorBuilder: (ctx, error, stack) {
-        if (kDebugMode) {
-          debugPrint(
-            '[FarmCard][_FarmImage] load error -> $error\nTried URL:\n$fixed',
-          );
-        }
-        return const ColoredBox(
-          color: Colors.black26,
-          child: Center(
-            child: Icon(Icons.broken_image, color: Colors.white70, size: 36),
-          ),
-        );
-      },
-    );
+   return CachedNetworkImage(
+  imageUrl: uri.toString(),
+  width: width,
+  height: height,
+  fit: BoxFit.cover,
+  fadeInDuration: const Duration(milliseconds: 180),
+  placeholder: (ctx, _) => Container(
+    color: Colors.black12,
+    alignment: Alignment.center,
+    child: const SizedBox(
+      width: 18,
+      height: 18,
+      child: CircularProgressIndicator(strokeWidth: 2.5),
+    ),
+  ),
+  errorWidget: (ctx, _, __) => const ColoredBox(
+    color: Colors.black26,
+    child: Center(
+      child: Icon(Icons.broken_image, color: Colors.white70, size: 36),
+    ),
+  ),
+);
   }
 }
