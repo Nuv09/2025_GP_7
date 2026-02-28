@@ -34,38 +34,43 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
 
   // متغيرات الطقس
   String temp = "--";
+  String city = "--";
+  String humidity = "--";
+  String todayDate = "--";
   String weatherDesc = "جاري التحميل...";
   bool isLoadingWeather = true;
 
-  String _formatLastAnalysisDate() {
-    final raw = widget.farmData['lastAnalysisAt'];
+  String _formatNextAnalysisDate({int addDays = 6}) {
+  final raw = widget.farmData['lastAnalysisAt'];
+  if (raw == null) return "—";
 
-    if (raw == null) return "—";
+  try {
+    DateTime dt;
 
-    try {
-      DateTime dt;
-
-      // Firestore Timestamp
-      if (raw.runtimeType.toString() == 'Timestamp') {
-        dt = raw.toDate();
-      }
-      // milliseconds
-      else if (raw is int) {
-        dt = DateTime.fromMillisecondsSinceEpoch(raw);
-      }
-      // String
-      else if (raw is String) {
-        dt = DateTime.parse(raw);
-      } else {
-        return "—";
-      }
-
-      // التاريخ فقط بدون الوقت
-      return "${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}";
-    } catch (_) {
+    // Firestore Timestamp
+    if (raw.runtimeType.toString() == 'Timestamp') {
+      dt = raw.toDate();
+    }
+    // milliseconds
+    else if (raw is int) {
+      dt = DateTime.fromMillisecondsSinceEpoch(raw);
+    }
+    // String ISO
+    else if (raw is String) {
+      dt = DateTime.parse(raw);
+    } else {
       return "—";
     }
+
+    final next = dt.add(Duration(days: addDays));
+
+    final dd = next.day.toString().padLeft(2, '0');
+final mm = next.month.toString().padLeft(2, '0');
+return "$dd/$mm"; // ✅ DD/MM
+  } catch (_) {
+    return "—";
   }
+}
 
   @override
   void initState() {
@@ -108,11 +113,25 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (mounted) {
-          setState(() {
-            temp = "${data['current']['temp_c'].toInt()}°C";
-            weatherDesc = data['current']['condition']['text'];
-            isLoadingWeather = false;
-          });
+         
+         setState(() {
+  temp = "${data['current']['temp_c'].toInt()}°C";
+  weatherDesc = (data['current']['condition']['text'] ?? "—").toString();
+  humidity = "${data['current']['humidity']}%";
+
+ final farmCity = (widget.farmData['region'] ?? widget.farmData['city'] ?? '').toString();
+final apiCity  = (data['location']['region'] ?? data['location']['name'] ?? '').toString();
+
+final chosenCity = farmCity.trim().isNotEmpty ? farmCity : apiCity;
+
+city = _toArabicCity(
+  chosenCity.replaceAll('منطقة', '').trim(),
+);
+
+todayDate = _todayAr();
+
+  isLoadingWeather = false;
+});
         }
       } else {
         if (mounted) {
@@ -133,6 +152,40 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
       }
     }
   }
+  String _todayAr() {
+  final now = DateTime.now();
+  const monthsAr = [
+    "يناير","فبراير","مارس","أبريل","مايو","يونيو",
+    "يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"
+  ];
+  final m = monthsAr[(now.month - 1).clamp(0, 11)];
+  return "${now.day.toString().padLeft(2,'0')} $m ${now.year}";
+}
+String _toArabicCity(String s) {
+  final key = s.trim().toLowerCase();
+
+  const map = {
+    "ar riyad": "الرياض",
+    "riyadh": "الرياض",
+    "makkah": "مكة",
+    "mecca": "مكة",
+    "al madinah": "المدينة المنورة",
+    "medina": "المدينة المنورة",
+    "ash sharqiyah": "الشرقية",
+    "eastern province": "الشرقية",
+    "al qassim": "القصيم",
+    "tabuk": "تبوك",
+    "hail": "حائل",
+    "asir": "عسير",
+    "jazan": "جازان",
+    "najran": "نجران",
+    "al bahah": "الباحة",
+    "al jawf": "الجوف",
+    "northern borders": "الحدود الشمالية",
+  };
+
+  return map[key] ?? s; // إذا ما لقينا ترجمة نخليه زي ما هو
+}
 
   @override
   void dispose() {
@@ -440,17 +493,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
     );
   }
 
-  void _onExportPressed() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          "ميزة تصدير التقارير ستكون متاحة قريباً",
-          style: GoogleFonts.almarai(),
-        ),
-        backgroundColor: const Color(0xFF0A4D41),
-      ),
-    );
-  }
+
 
   Widget _buildModernHeader() {
     return Padding(
@@ -477,7 +520,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
               ),
               const SizedBox(height: 6),
               Text(
-                "آخر تحليل: ${_formatLastAnalysisDate()}",
+                "موعد التحليل القادم: ${_formatNextAnalysisDate()}",
                 style: GoogleFonts.almarai(
                   color: Colors.white.withValues(alpha: 0.65),
                   fontSize: 12,
@@ -708,9 +751,9 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
-                color: darkGreenColor.withOpacity(0.85),
+                color: darkGreenColor.withValues(alpha: 0.85),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: goldColor.withOpacity(0.3)),
+                border: Border.all(color: goldColor.withValues(alpha: 0.3)),
                 boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
               ),
               child: Row(
@@ -729,7 +772,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
                     scale: 0.8,
                     child: Switch(
                       value: _isForecastMode,
-                      activeColor: goldColor,
+                      activeThumbColor: goldColor,
                       onChanged: (val) {
                         setState(() {
                           _isForecastMode = val;
@@ -854,53 +897,104 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
     );
   }
 
-  Widget _buildWeatherCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "الطقس الآن",
-                style: GoogleFonts.almarai(color: goldColor, fontSize: 14),
-              ),
-              const SizedBox(height: 5),
-              isLoadingWeather
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: goldColor,
+ Widget _buildWeatherCard() {
+  return Container(
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.05),
+      borderRadius: BorderRadius.circular(25),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.18),
+          blurRadius: 14,
+          offset: const Offset(0, 10),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+// المدينة + التاريخ (فوق)
+Text(
+  isLoadingWeather ? "—" : "$city، $todayDate",
+  maxLines: 1,
+  overflow: TextOverflow.ellipsis,
+  textAlign: TextAlign.right,
+  style: GoogleFonts.almarai(
+    color: Colors.white.withValues(alpha: 0.80),
+    fontSize: 12,
+    fontWeight: FontWeight.w700,
+  ),
+),
+        const SizedBox(height: 10),
+
+        // الحرارة + الأيقونة + الحالة
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // يسار: الحرارة + الرطوبة
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                isLoadingWeather
+                    ? const SizedBox(
+                        width: 26,
+                        height: 26,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: goldColor,
+                        ),
+                      )
+                    : Text(
+                        temp,
+                        style: GoogleFonts.almarai(
+                          color: Colors.white,
+                          fontSize: 40,
+                          fontWeight: FontWeight.w600,
+                          height: 1.0,
+                        ),
                       ),
-                    )
-                  : Text(
-                      temp,
-                      style: GoogleFonts.almarai(
-                        color: Colors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-              Text(
-                isLoadingWeather ? "جاري التحديث..." : weatherDesc,
-                style: GoogleFonts.almarai(color: Colors.white60, fontSize: 13),
-              ),
-            ],
-          ),
-          Icon(_getWeatherIcon(weatherDesc), color: Colors.white70, size: 50),
-        ],
+                const SizedBox(height: 8),
+                Text(
+                  "الرطوبة $humidity",
+                  style: GoogleFonts.almarai(
+                    color: Colors.white.withValues(alpha: 0.75),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+
+// يسار: أيقونة + صافي تحتها (متمركزين)
+Column(
+  crossAxisAlignment: CrossAxisAlignment.center,
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    Icon(
+      _getWeatherIcon(weatherDesc),
+      color: Colors.white.withValues(alpha: 0.85),
+      size: 54,
+    ),
+    const SizedBox(height: 6),
+    Text(
+      isLoadingWeather ? "..." : weatherDesc,
+      textAlign: TextAlign.center,
+      style: GoogleFonts.almarai(
+        color: Colors.white.withValues(alpha: 0.85),
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
       ),
-    );
-  }
+    ),
+  ],
+),
+          ],
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildHealthStatsCard(int total, double h, double m, double c) {
     return Container(
@@ -1150,26 +1244,24 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
             ),
           ),
           const SizedBox(height: 25),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildSimpleLegend(
-                "مؤشر الغطاء النباتي",
-                const Color(0xFF69F0AE),
-              ),
-              const SizedBox(width: 20),
-              _buildSimpleLegend("مؤشر الرطوبه", Colors.blueAccent),
-              const SizedBox(width: 20),
-              _buildSimpleLegend("مؤشر الكلوروفيل", goldColor),
-            ],
-          ),
+         Row(
+  mainAxisAlignment: MainAxisAlignment.center,
+  children: [
+    _buildSimpleLegend("مؤشر الغطاء النباتي", const Color(0xFF69F0AE)),
+    const SizedBox(width: 15),
+    _buildSimpleLegend("مؤشر الرطوبه", Colors.blueAccent),
+    const SizedBox(width: 15),
+    _buildSimpleLegend("مؤشر الكلوروفيل", goldColor),
+  ],
+),
         ],
       ),
     );
   }
 
-  Widget _buildSimpleLegend(String label, Color color) {
-    return Row(
+ Widget _buildSimpleLegend(String label, Color color) {
+  return Flexible(
+    child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
@@ -1177,14 +1269,19 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
           height: 10,
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: GoogleFonts.almarai(color: Colors.white70, fontSize: 12),
+        const SizedBox(width: 5),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.almarai(color: Colors.white70, fontSize: 10),
+          ),
         ),
       ],
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildLegendItem(String label, Color color, double val) {
     return Padding(
@@ -1481,11 +1578,15 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
 
     if (s.contains("water")) return Icons.water_drop_rounded;
     if (s.contains("stress") || s.contains("rpw")) return Icons.opacity_rounded;
-    if (s.contains("growth") || s.contains("baseline"))
+    if (s.contains("growth") || s.contains("baseline")){
       return Icons.spa_rounded;
+    }
+      
     if (s.contains("forecast")) return Icons.auto_awesome_rounded;
-    if (s.contains("unusual") || s.contains("outlier"))
+    if (s.contains("unusual") || s.contains("outlier")) {
       return Icons.track_changes_rounded;
+
+    }
     if (s.contains("current")) return Icons.warning_amber_rounded;
 
     return Icons.lightbulb_rounded;

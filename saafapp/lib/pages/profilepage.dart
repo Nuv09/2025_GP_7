@@ -1017,7 +1017,7 @@ Future<void> _deleteAccountLogic() async {
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(colors: [kGold, kBeige]),
-                        borderRadius: BorderRadius.circular(15),
+                        borderRadius: BorderRadius.circular(35),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.25),

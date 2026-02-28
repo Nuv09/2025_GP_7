@@ -14,6 +14,7 @@ dependencies:
   universal_html: ^2.2.4
   path_provider: ^2.1.2
   share_plus: ^7.2.2
+  cached_network_image: ^3.3.1
 
   # 🗺️ الخرائط والموقع
   http: ^1.1.0
@@ -82,6 +83,7 @@ flutter:
     - assets/images/about2.png
     - assets/images/about3.png
     - assets/gif/loading.gif
+    - assets/images/PalmIcon.png
 
     
 

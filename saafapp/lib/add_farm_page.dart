@@ -1059,7 +1059,7 @@ Widget _buildMapSection() {
           borderRadius: BorderRadius.circular(25),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               blurRadius: 15,
               offset: const Offset(0, 8),
             ),
@@ -1238,7 +1238,7 @@ Widget _buildMapSection() {
   return Container(
     margin: const EdgeInsets.symmetric(vertical: 4),
     child: Material(
-      color: Colors.white.withOpacity(0.9), 
+      color: Colors.white.withValues(alpha: 0.9), 
       borderRadius: BorderRadius.circular(12),
       elevation: 4,
       child: InkWell(
@@ -1249,7 +1249,7 @@ Widget _buildMapSection() {
           height: 44,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: secondaryColor.withOpacity(0.5), width: 1),
+            border: Border.all(color: secondaryColor.withValues(alpha: 0.5), width: 1),
           ),
           child: Icon(
             icon,
