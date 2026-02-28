@@ -281,8 +281,17 @@ def analyze():
         }
 
         # ✅ Health + Alerts + Push
+        export_payload = {}
         try:
-            health_result = health_mod.analyze_farm_health(farm_id, farm_doc)
+            health_result = health_mod.analyze_farm_health(farm_id, farm_doc) 
+
+            # ✅ (جديد) تجهيز بيانات التصدير المختصرة
+            
+            try:
+                export_payload = health_mod.prepare_export_data(farm_doc, health_result)
+            except Exception as ee:
+                app.logger.error(f"⚠️ Failed to prepare export data: {ee}")
+
 
             from app.alerts_engine import build_alerts_and_recommendations
             from app.firestore_utils import set_alerts_and_recommendations
@@ -320,6 +329,7 @@ def analyze():
             finalQuality=count_summary["quality"],
             health=health_result,
             healthMap=h_map,
+            export_data=export_payload,
             lastAnalysisAt=firestore.SERVER_TIMESTAMP,
         )
 
@@ -387,6 +397,7 @@ def scheduled_update():
 
             # ✅ 2) Health
             health_result = health_mod.analyze_farm_health(farm_id, farm)
+            export_payload = health_mod.prepare_export_data(farm, health_result)
             h_map = list(health_result.pop("health_map", []))
 
             # ✅ 3) Alerts + Recommendations (هذا اللي كان ناقص!)
@@ -411,6 +422,7 @@ def scheduled_update():
                 finalQuality=float(picked["score"]),
                 health=health_result,
                 healthMap=h_map,
+                export_data=export_payload,
                 lastAnalysisAt=firestore.SERVER_TIMESTAMP,
             )
 

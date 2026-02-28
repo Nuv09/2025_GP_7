@@ -1331,3 +1331,48 @@ def get_health_map_points(df_all: pd.DataFrame) -> List[Dict[str, Any]]:
         })
     return map_points 
 
+#export data preparation for PDF/Excel report (single page summary)
+def prepare_export_data(farm_doc, health_result):
+    """
+    تجميع وتجهيز البيانات المختصرة لتقرير الـ PDF والإكسل (صفحة واحدة).
+    تُخزن في فيلد 'export_data' لتجنب الفوضى.
+    """
+    # 1. جلب السلسلة الزمنية لآخر أسبوعين للمقارنة (الأسهم)
+    history = health_result.get("indices_history_last_month", [])
+    curr = history[-1] if len(history) > 0 else {}
+    prev = history[-2] if len(history) > 1 else curr
+
+    def calculate_delta(key):
+        c_val = curr.get(key)
+        p_val = prev.get(key)
+        if c_val is not None and p_val is not None and p_val != 0:
+            return round(((c_val - p_val) / p_val) * 100, 1)
+        return 0.0
+
+    # 2. تحديد أهم 5 نقاط حرجة (Hotspots) للجدول الصغير
+    alerts = health_result.get("alert_signals", {})
+    critical_points = alerts.get("hotspots", {}).get("critical", [])[:5]
+
+    # 3. بناء هيكل البيانات الموحد
+    export_payload = {
+        "header": {
+            "name": farm_doc.get("farmName", "مزرعة سعف"),
+            "area": farm_doc.get("farmSize", "غير محدد"),
+            "date": alerts.get("latest_date"),
+            "total_palms": farm_doc.get("finalCount", 0)
+        },
+        "wellness_score": health_result.get("current_health", {}).get("Healthy_Pct", 0),
+        "biometrics": {
+            "ndvi": {"val": round(curr.get("NDVI", 0), 2), "delta": calculate_delta("NDVI")},
+            "ndmi": {"val": round(curr.get("NDMI", 0), 2), "delta": calculate_delta("NDMI")},
+            "ndre": {"val": round(curr.get("NDRE", 0), 2), "delta": calculate_delta("NDRE")}
+        },
+        "forecast": {
+            "text": f"يتوقع النظام تغيراً في الخضرة بنسبة {health_result.get('forecast_next_week', {}).get('ndvi_delta_next_mean', 0)*100:.1f}%",
+            "trend_data": [h.get("NDVI") for h in history] # للرسم البياني النحيف
+        },
+        "distribution": health_result.get("current_health", {}),
+        "critical_hotspots": critical_points,
+        "top_action": farm_doc.get("recommendations", [{}])[0] if farm_doc.get("recommendations") else None
+    }
+    return export_payload
