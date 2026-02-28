@@ -1332,7 +1332,7 @@ def get_health_map_points(df_all: pd.DataFrame) -> List[Dict[str, Any]]:
     return map_points 
 
 #export data preparation for PDF/Excel report (single page summary)
-def prepare_export_data(farm_doc, health_result):
+def prepare_export_data( farm_doc, health_result):
     """
     تجميع وتجهيز البيانات المختصرة لتقرير الـ PDF والإكسل (صفحة واحدة).
     تُخزن في فيلد 'export_data' لتجنب الفوضى.
