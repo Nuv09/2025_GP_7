@@ -1330,14 +1330,11 @@ def get_health_map_points(df_all: pd.DataFrame) -> List[Dict[str, Any]]:
             's': status_code
         })
     return map_points 
-
-#export data preparation for PDF/Excel report (single page summary)
-def prepare_export_data( farm_doc, health_result):
+def prepare_export_data(farm_doc, health_result):
     """
-    تجميع وتجهيز البيانات المختصرة لتقرير الـ PDF والإكسل (صفحة واحدة).
-    تُخزن في فيلد 'export_data' لتجنب الفوضى.
+    نسخة محسنة تضمن عدم انهيار التحليل وتوافق المسميات مع ملف التقارير.
     """
-    # 1. جلب السلسلة الزمنية لآخر أسبوعين للمقارنة (الأسهم)
+    # 1. جلب السلسلة الزمنية
     history = health_result.get("indices_history_last_month", [])
     curr = history[-1] if len(history) > 0 else {}
     prev = history[-2] if len(history) > 1 else curr
@@ -1349,16 +1346,19 @@ def prepare_export_data( farm_doc, health_result):
             return round(((c_val - p_val) / p_val) * 100, 1)
         return 0.0
 
-    # 2. تحديد أهم 5 نقاط حرجة (Hotspots) للجدول الصغير
+    # 2. النقاط الحرجة
     alerts = health_result.get("alert_signals", {})
     critical_points = alerts.get("hotspots", {}).get("critical", [])[:5]
+    
+    # تأكدي من جلب نسبة التغير بشكل آمن
+    forecast_delta = health_result.get('forecast_next_week', {}).get('ndvi_delta_next_mean') or 0
 
-    # 3. بناء هيكل البيانات الموحد
+    # 3. بناء الهيكل (تعديل المسميات لتطابق ملف reports_routes.py)
     export_payload = {
         "header": {
-            "name": farm_doc.get("farmName", "مزرعة سعف"),
-            "area": farm_doc.get("farmSize", "غير محدد"),
-            "date": alerts.get("latest_date"),
+            "name": farm_doc.get("name") or farm_doc.get("farmName") or "مزرعة سعف",
+            "area": farm_doc.get("area") or farm_doc.get("farmSize") or "غير محدد",
+            "date": alerts.get("latest_date") or datetime.now().strftime("%Y-%m-%d"),
             "total_palms": farm_doc.get("finalCount", 0)
         },
         "wellness_score": health_result.get("current_health", {}).get("Healthy_Pct", 0),
@@ -1368,11 +1368,12 @@ def prepare_export_data( farm_doc, health_result):
             "ndre": {"val": round(curr.get("NDRE", 0), 2), "delta": calculate_delta("NDRE")}
         },
         "forecast": {
-            "text": f"يتوقع النظام تغيراً في الخضرة بنسبة {health_result.get('forecast_next_week', {}).get('ndvi_delta_next_mean', 0)*100:.1f}%",
-            "trend_data": [h.get("NDVI") for h in history] # للرسم البياني النحيف
+            "text": f"يتوقع النظام تغيراً في الخضرة بنسبة {forecast_delta * 100:.1f}%",
+            "trend_data": [h.get("NDVI", 0) for h in history]
         },
         "distribution": health_result.get("current_health", {}),
         "critical_hotspots": critical_points,
-        "top_action": farm_doc.get("recommendations", [{}])[0] if farm_doc.get("recommendations") else None
+        # تجنب الخطأ إذا لم تكن هناك توصيات بعد
+        "top_action": (farm_doc.get("recommendations") or [None])[0] 
     }
     return export_payload
