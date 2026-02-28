@@ -41,36 +41,36 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
   bool isLoadingWeather = true;
 
   String _formatNextAnalysisDate({int addDays = 6}) {
-  final raw = widget.farmData['lastAnalysisAt'];
-  if (raw == null) return "—";
+    final raw = widget.farmData['lastAnalysisAt'];
+    if (raw == null) return "—";
 
-  try {
-    DateTime dt;
+    try {
+      DateTime dt;
 
-    // Firestore Timestamp
-    if (raw.runtimeType.toString() == 'Timestamp') {
-      dt = raw.toDate();
-    }
-    // milliseconds
-    else if (raw is int) {
-      dt = DateTime.fromMillisecondsSinceEpoch(raw);
-    }
-    // String ISO
-    else if (raw is String) {
-      dt = DateTime.parse(raw);
-    } else {
+      // Firestore Timestamp
+      if (raw.runtimeType.toString() == 'Timestamp') {
+        dt = raw.toDate();
+      }
+      // milliseconds
+      else if (raw is int) {
+        dt = DateTime.fromMillisecondsSinceEpoch(raw);
+      }
+      // String ISO
+      else if (raw is String) {
+        dt = DateTime.parse(raw);
+      } else {
+        return "—";
+      }
+
+      final next = dt.add(Duration(days: addDays));
+
+      final dd = next.day.toString().padLeft(2, '0');
+      final mm = next.month.toString().padLeft(2, '0');
+      return "$dd/$mm"; // ✅ DD/MM
+    } catch (_) {
       return "—";
     }
-
-    final next = dt.add(Duration(days: addDays));
-
-    final dd = next.day.toString().padLeft(2, '0');
-final mm = next.month.toString().padLeft(2, '0');
-return "$dd/$mm"; // ✅ DD/MM
-  } catch (_) {
-    return "—";
   }
-}
 
   @override
   void initState() {
@@ -113,25 +113,27 @@ return "$dd/$mm"; // ✅ DD/MM
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (mounted) {
-         
-         setState(() {
-  temp = "${data['current']['temp_c'].toInt()}°C";
-  weatherDesc = (data['current']['condition']['text'] ?? "—").toString();
-  humidity = "${data['current']['humidity']}%";
+          setState(() {
+            temp = "${data['current']['temp_c'].toInt()}°C";
+            weatherDesc = (data['current']['condition']['text'] ?? "—")
+                .toString();
+            humidity = "${data['current']['humidity']}%";
 
- final farmCity = (widget.farmData['region'] ?? widget.farmData['city'] ?? '').toString();
-final apiCity  = (data['location']['region'] ?? data['location']['name'] ?? '').toString();
+            final farmCity =
+                (widget.farmData['region'] ?? widget.farmData['city'] ?? '')
+                    .toString();
+            final apiCity =
+                (data['location']['region'] ?? data['location']['name'] ?? '')
+                    .toString();
 
-final chosenCity = farmCity.trim().isNotEmpty ? farmCity : apiCity;
+            final chosenCity = farmCity.trim().isNotEmpty ? farmCity : apiCity;
 
-city = _toArabicCity(
-  chosenCity.replaceAll('منطقة', '').trim(),
-);
+            city = _toArabicCity(chosenCity.replaceAll('منطقة', '').trim());
 
-todayDate = _todayAr();
+            todayDate = _todayAr();
 
-  isLoadingWeather = false;
-});
+            isLoadingWeather = false;
+          });
         }
       } else {
         if (mounted) {
@@ -152,40 +154,52 @@ todayDate = _todayAr();
       }
     }
   }
+
   String _todayAr() {
-  final now = DateTime.now();
-  const monthsAr = [
-    "يناير","فبراير","مارس","أبريل","مايو","يونيو",
-    "يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"
-  ];
-  final m = monthsAr[(now.month - 1).clamp(0, 11)];
-  return "${now.day.toString().padLeft(2,'0')} $m ${now.year}";
-}
-String _toArabicCity(String s) {
-  final key = s.trim().toLowerCase();
+    final now = DateTime.now();
+    const monthsAr = [
+      "يناير",
+      "فبراير",
+      "مارس",
+      "أبريل",
+      "مايو",
+      "يونيو",
+      "يوليو",
+      "أغسطس",
+      "سبتمبر",
+      "أكتوبر",
+      "نوفمبر",
+      "ديسمبر",
+    ];
+    final m = monthsAr[(now.month - 1).clamp(0, 11)];
+    return "${now.day.toString().padLeft(2, '0')} $m ${now.year}";
+  }
 
-  const map = {
-    "ar riyad": "الرياض",
-    "riyadh": "الرياض",
-    "makkah": "مكة",
-    "mecca": "مكة",
-    "al madinah": "المدينة المنورة",
-    "medina": "المدينة المنورة",
-    "ash sharqiyah": "الشرقية",
-    "eastern province": "الشرقية",
-    "al qassim": "القصيم",
-    "tabuk": "تبوك",
-    "hail": "حائل",
-    "asir": "عسير",
-    "jazan": "جازان",
-    "najran": "نجران",
-    "al bahah": "الباحة",
-    "al jawf": "الجوف",
-    "northern borders": "الحدود الشمالية",
-  };
+  String _toArabicCity(String s) {
+    final key = s.trim().toLowerCase();
 
-  return map[key] ?? s; // إذا ما لقينا ترجمة نخليه زي ما هو
-}
+    const map = {
+      "ar riyad": "الرياض",
+      "riyadh": "الرياض",
+      "makkah": "مكة",
+      "mecca": "مكة",
+      "al madinah": "المدينة المنورة",
+      "medina": "المدينة المنورة",
+      "ash sharqiyah": "الشرقية",
+      "eastern province": "الشرقية",
+      "al qassim": "القصيم",
+      "tabuk": "تبوك",
+      "hail": "حائل",
+      "asir": "عسير",
+      "jazan": "جازان",
+      "najran": "نجران",
+      "al bahah": "الباحة",
+      "al jawf": "الجوف",
+      "northern borders": "الحدود الشمالية",
+    };
+
+    return map[key] ?? s; // إذا ما لقينا ترجمة نخليه زي ما هو
+  }
 
   @override
   void dispose() {
@@ -435,65 +449,88 @@ String _toArabicCity(String s) {
     try {
       _showLoading("جاري تجهيز PDF...");
 
+      // تغيير المسار ليتوافق مع الـ Route الجديد في الباك-إند
       final uri = Uri.parse(
         "${Secrets.apiBaseUrl}/reports/${widget.farmId}/pdf",
       );
 
-      final res = await http
-          .post(
-            uri,
-            headers: {"Content-Type": "application/json"},
-            body: jsonEncode({
-              // خطوة 1: نرسل farmData نفسها للسيرفر
-              "farmData": widget.farmData,
-            }),
-          )
-          .timeout(const Duration(seconds: 30));
+      // استخدام GET بدلاً من POST لأن البيانات تُسحب من السيرفر مباشرة
+      final res = await http.get(uri).timeout(const Duration(seconds: 30));
 
       if (!mounted) return;
-      Navigator.pop(context); // close loading
+      Navigator.pop(context); // إغلاق التحميل
 
       if (res.statusCode != 200) {
-        _toast("تعذر إنشاء التقرير");
+        _toast("تعذر إنشاء التقرير: تأكد من تشغيل التحليل أولاً");
         return;
       }
 
       final data = jsonDecode(res.body);
-      final String b64 = data["base64"] ?? "";
-      final String fileName = data["fileName"] ?? "report.pdf";
+      final String b64 = data["pdfBase64"] ?? ""; // التأكد من مسمى الحقل الجديد
+      final String fileName = data["fileName"] ?? "Saaf_Report.pdf";
 
       if (b64.isEmpty) {
-        _toast("التقرير رجع فاضي");
+        _toast("لم يتم استلام بيانات التقرير");
         return;
       }
 
       final bytes = base64Decode(b64);
-
       final dir = await getTemporaryDirectory();
       final file = File("${dir.path}/$fileName");
       await file.writeAsBytes(bytes, flush: true);
 
-      await Share.shareXFiles([XFile(file.path)], text: "تقرير المزرعة (PDF)");
+      await Share.shareXFiles([
+        XFile(file.path),
+      ], text: "تقرير المزرعة - سعف 🌴");
     } catch (e) {
       if (mounted) {
         try {
           Navigator.pop(context);
         } catch (_) {}
-        _toast("حدث خطأ تأكد من الاتصال");
+        _toast("حدث خطأ في الاتصال بالسيرفر");
       }
     }
   }
 
   Future<void> _exportExcel() async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Excel قريباً", style: GoogleFonts.almarai()),
-        backgroundColor: const Color(0xFF0A4D41),
-      ),
-    );
+    try {
+      _showLoading("جاري تجهيز ملف Excel...");
+
+      final uri = Uri.parse(
+        "${Secrets.apiBaseUrl}/reports/${widget.farmId}/excel",
+      );
+
+      final res = await http.get(uri).timeout(const Duration(seconds: 30));
+
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      if (res.statusCode != 200) {
+        _toast("تعذر إنشاء ملف البيانات");
+        return;
+      }
+
+      final data = jsonDecode(res.body);
+      final String b64 = data["excelBase64"] ?? "";
+      final String fileName = data["fileName"] ?? "Saaf_Data.xlsx";
+
+      final bytes = base64Decode(b64);
+      final dir = await getTemporaryDirectory();
+      final file = File("${dir.path}/$fileName");
+      await file.writeAsBytes(bytes, flush: true);
+
+      await Share.shareXFiles([
+        XFile(file.path),
+      ], text: "بيانات المزرعة - سعف (Excel)");
+    } catch (e) {
+      if (mounted) {
+        try {
+          Navigator.pop(context);
+        } catch (_) {}
+        _toast("خطأ في تصدير البيانات");
+      }
+    }
   }
-
-
 
   Widget _buildModernHeader() {
     return Padding(
@@ -897,104 +934,104 @@ String _toArabicCity(String s) {
     );
   }
 
- Widget _buildWeatherCard() {
-  return Container(
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.05),
-      borderRadius: BorderRadius.circular(25),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.18),
-          blurRadius: 14,
-          offset: const Offset(0, 10),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-// المدينة + التاريخ (فوق)
-Text(
-  isLoadingWeather ? "—" : "$city، $todayDate",
-  maxLines: 1,
-  overflow: TextOverflow.ellipsis,
-  textAlign: TextAlign.right,
-  style: GoogleFonts.almarai(
-    color: Colors.white.withValues(alpha: 0.80),
-    fontSize: 12,
-    fontWeight: FontWeight.w700,
-  ),
-),
-        const SizedBox(height: 10),
-
-        // الحرارة + الأيقونة + الحالة
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // يسار: الحرارة + الرطوبة
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                isLoadingWeather
-                    ? const SizedBox(
-                        width: 26,
-                        height: 26,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: goldColor,
-                        ),
-                      )
-                    : Text(
-                        temp,
-                        style: GoogleFonts.almarai(
-                          color: Colors.white,
-                          fontSize: 40,
-                          fontWeight: FontWeight.w600,
-                          height: 1.0,
-                        ),
-                      ),
-                const SizedBox(height: 8),
-                Text(
-                  "الرطوبة $humidity",
-                  style: GoogleFonts.almarai(
-                    color: Colors.white.withValues(alpha: 0.75),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-
-// يسار: أيقونة + صافي تحتها (متمركزين)
-Column(
-  crossAxisAlignment: CrossAxisAlignment.center,
-  mainAxisSize: MainAxisSize.min,
-  children: [
-    Icon(
-      _getWeatherIcon(weatherDesc),
-      color: Colors.white.withValues(alpha: 0.85),
-      size: 54,
-    ),
-    const SizedBox(height: 6),
-    Text(
-      isLoadingWeather ? "..." : weatherDesc,
-      textAlign: TextAlign.center,
-      style: GoogleFonts.almarai(
-        color: Colors.white.withValues(alpha: 0.85),
-        fontSize: 13,
-        fontWeight: FontWeight.w700,
+  Widget _buildWeatherCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 14,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
-    ),
-  ],
-),
-          ],
-        ),
-      ],
-    ),
-  );
-}
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // المدينة + التاريخ (فوق)
+          Text(
+            isLoadingWeather ? "—" : "$city، $todayDate",
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.right,
+            style: GoogleFonts.almarai(
+              color: Colors.white.withValues(alpha: 0.80),
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // الحرارة + الأيقونة + الحالة
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // يسار: الحرارة + الرطوبة
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  isLoadingWeather
+                      ? const SizedBox(
+                          width: 26,
+                          height: 26,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: goldColor,
+                          ),
+                        )
+                      : Text(
+                          temp,
+                          style: GoogleFonts.almarai(
+                            color: Colors.white,
+                            fontSize: 40,
+                            fontWeight: FontWeight.w600,
+                            height: 1.0,
+                          ),
+                        ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "الرطوبة $humidity",
+                    style: GoogleFonts.almarai(
+                      color: Colors.white.withValues(alpha: 0.75),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+
+              // يسار: أيقونة + صافي تحتها (متمركزين)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _getWeatherIcon(weatherDesc),
+                    color: Colors.white.withValues(alpha: 0.85),
+                    size: 54,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    isLoadingWeather ? "..." : weatherDesc,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.almarai(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildHealthStatsCard(int total, double h, double m, double c) {
     return Container(
@@ -1244,44 +1281,47 @@ Column(
             ),
           ),
           const SizedBox(height: 25),
-         Row(
-  mainAxisAlignment: MainAxisAlignment.center,
-  children: [
-    _buildSimpleLegend("مؤشر الغطاء النباتي", const Color(0xFF69F0AE)),
-    const SizedBox(width: 15),
-    _buildSimpleLegend("مؤشر الرطوبه", Colors.blueAccent),
-    const SizedBox(width: 15),
-    _buildSimpleLegend("مؤشر الكلوروفيل", goldColor),
-  ],
-),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildSimpleLegend(
+                "مؤشر الغطاء النباتي",
+                const Color(0xFF69F0AE),
+              ),
+              const SizedBox(width: 15),
+              _buildSimpleLegend("مؤشر الرطوبه", Colors.blueAccent),
+              const SizedBox(width: 15),
+              _buildSimpleLegend("مؤشر الكلوروفيل", goldColor),
+            ],
+          ),
         ],
       ),
     );
   }
 
- Widget _buildSimpleLegend(String label, Color color) {
-  return Flexible(
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 5),
-        Flexible(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.almarai(color: Colors.white70, fontSize: 10),
+  Widget _buildSimpleLegend(String label, Color color) {
+    return Flexible(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
-        ),
-      ],
-    ),
-  );
-}
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.almarai(color: Colors.white70, fontSize: 10),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildLegendItem(String label, Color color, double val) {
     return Padding(
@@ -1578,14 +1618,13 @@ Column(
 
     if (s.contains("water")) return Icons.water_drop_rounded;
     if (s.contains("stress") || s.contains("rpw")) return Icons.opacity_rounded;
-    if (s.contains("growth") || s.contains("baseline")){
+    if (s.contains("growth") || s.contains("baseline")) {
       return Icons.spa_rounded;
     }
-      
+
     if (s.contains("forecast")) return Icons.auto_awesome_rounded;
     if (s.contains("unusual") || s.contains("outlier")) {
       return Icons.track_changes_rounded;
-
     }
     if (s.contains("current")) return Icons.warning_amber_rounded;
 
