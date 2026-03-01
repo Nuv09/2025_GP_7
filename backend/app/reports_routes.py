@@ -9,137 +9,152 @@ from fpdf import FPDF
 from flask import Blueprint, jsonify
 from google.cloud import firestore
 
-# تعريف قاعدة البيانات محلياً داخل الملف لضمان الاستقلالية وكسر حلقة الاستيراد الدائرية
-DB = firestore.Client()
-reports_bp = Blueprint("reports_bp", __name__)
+# إعداد السجلات (Logging)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# --- دالة إصلاح اللغة العربية للـ PDF ---
-def fix_arabic(text):
-    if not text: return ""
-    reshaped_text = arabic_reshaper.reshape(str(text))
-    return get_display(reshaped_text)
+DB = firestore.Client()
+reports_bp = Blueprint("reports_bp", __name__)
 
-# --- دالة بناء الـ PDF الإبداعي ---
+def fix_arabic(text):
+    """تحويل النص العربي ليظهر بشكل صحيح في الـ PDF"""
+    if not text: return ""
+    try:
+        reshaped_text = arabic_reshaper.reshape(str(text))
+        return get_display(reshaped_text)
+    except Exception as e:
+        logger.warning(f"Arabic Reshaper Error: {e}")
+        return str(text)
+
+def get_farm_safely(identifier):
+    """البحث عن المزرعة في Firestore عبر الـ ID أو رقم العقد"""
+    try:
+        doc_ref = DB.collection("farms").document(identifier).get()
+        if doc_ref.exists:
+            return doc_ref, "ID"
+    except Exception as e:
+        logger.error(f"Error fetching document: {e}")
+
+    try:
+        query = DB.collection("farms").where("contractNumber", "==", identifier).limit(1).get()
+        docs = list(query)
+        if docs:
+            return docs[0], "contractNumber"
+    except Exception as e:
+        logger.error(f"Error querying contractNumber: {e}")
+    
+    return None, None
+
 def generate_pdf_report(export_data):
+    """توليد ملف PDF بناءً على مسميات الصور في Firestore"""
     pdf = FPDF()
     pdf.add_page()
     
-    # تأكدي أن ملف الخط Cairo-Regular.ttf موجود في مسار app/fonts/
-    font_path = os.path.join("app", "fonts", "Cairo-Regular.ttf")
+    # تحديد مسار الخط (مجلد fonts بجانب مجلد app)
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(current_dir)
+    font_path = os.path.join(parent_dir, "fonts", "Cairo-Regular.ttf")
     
-    try:
-        pdf.add_font("Cairo", fname=font_path)
-    except:
-        # حل احتياطي في حال تعذر العثور على الخط المخصص أثناء التطوير
-        pdf.set_font("Arial", size=22)
+    if os.path.exists(font_path):
+        try:
+            pdf.add_font("Cairo", fname=font_path)
+            pdf.set_font("Cairo", size=22)
+            logger.info(f"✅ Custom font 'Cairo' loaded from: {font_path}")
+        except Exception as e:
+            logger.error(f"Error adding font: {e}")
+            pdf.set_font("Arial", size=22)
     else:
-        pdf.set_font("Cairo", size=22)
+        logger.warning(f"🚨 Font file NOT found at {font_path}")
+        pdf.set_font("Arial", size=22)
 
-    # 1. الهيدر (أخضر سعف)
+    # العنوان
     pdf.set_text_color(20, 80, 20)
     pdf.cell(190, 20, txt=fix_arabic("تقرير حالة المزرعة الذكي - سعف"), ln=True, align='C')
     
-    # 2. المعلومات الأساسية (Header)
-    pdf.set_font("Cairo", size=12) if "Cairo" in pdf.fonts else pdf.set_font("Arial", size=12)
-    pdf.set_text_color(0, 0, 0)
+    # جلب البيانات بالمسميات الظاهرة في صورك (header, distribution, biometrics)
     header = export_data.get('header', {})
+    dist = export_data.get('distribution', {})
+    biometrics = export_data.get('biometrics', {})
+
+    pdf.set_font("Arial", size=12)
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(10)
     
-    pdf.ln(10)
-    pdf.cell(95, 10, txt=fix_arabic(f"تاريخ التقرير: {header.get('date', '—')}"), align='L')
+    # مسميات الهيدر كما في الصورة: name, date, area
+    pdf.cell(95, 10, txt=fix_arabic(f"تاريخ التقرير: {header.get('date', '—')}"), align='R')
     pdf.cell(95, 10, txt=fix_arabic(f"اسم المزرعة: {header.get('name', '—')}"), ln=True, align='R')
-    pdf.cell(190, 10, txt=fix_arabic(f"المساحة: {header.get('area', '—')}"), ln=True, align='R')
+    pdf.cell(190, 10, txt=fix_arabic(f"المساحة الإجمالية: {header.get('area', '—')} م2"), ln=True, align='R')
 
-    # 3. مؤشر العافية
+    # مؤشر العافية من Healthy_Pct كما في الصورة
+    wellness = dist.get('Healthy_Pct', 0)
     pdf.ln(15)
-    pdf.set_font("Cairo", size=18) if "Cairo" in pdf.fonts else pdf.set_font("Arial", size=18)
-    score = export_data.get('wellness_score', 0)
-    pdf.cell(190, 15, txt=fix_arabic(f"مؤشر العافية العام للمزرعة: {score}%"), ln=True, align='C')
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(190, 15, txt=fix_arabic(f"مؤشر العافية العام: {wellness:.1f}%"), ln=True, align='C')
 
-    # 4. التوقعات (Forecast)
+    # عرض بيانات البيومتركس (ndvi, ndmi) بالأحرف الصغيرة كما في الصورة
     pdf.ln(10)
-    pdf.set_font("Cairo", size=11) if "Cairo" in pdf.fonts else pdf.set_font("Arial", size=11)
-    forecast_txt = export_data.get('forecast', {}).get('text', "لا توجد توقعات حالية")
-    pdf.multi_cell(190, 10, txt=fix_arabic(forecast_txt), align='R')
+    pdf.set_font("Arial", size=12)
+    pdf.cell(190, 10, txt=fix_arabic(f"مؤشر الخضرة (NDVI): {biometrics.get('ndvi', {}).get('val', '—')}"), ln=True, align='R')
+    pdf.cell(190, 10, txt=fix_arabic(f"مؤشر الرطوبة (NDMI): {biometrics.get('ndmi', {}).get('val', '—')}"), ln=True, align='R')
 
     file_path = "/tmp/farm_report.pdf"
     pdf.output(file_path)
     return file_path
 
-# --- المسارات (Routes) ---
-
-# 1. مسار تصدير الـ PDF
 @reports_bp.route('/reports/<farm_id>/pdf', methods=['GET'])
 def export_pdf(farm_id):
     try:
-        farm_ref = DB.collection("farms").document(farm_id)
-        doc = farm_ref.get()
-        
-        if not doc.exists:
+        doc, method = get_farm_safely(farm_id)
+        if not doc:
             return jsonify({"ok": False, "error": "المزرعة غير موجودة"}), 404
             
         farm_data = doc.to_dict()
         export_data = farm_data.get('export_data') 
         
         if not export_data:
-            return jsonify({"ok": False, "error": "البيانات غير جاهزة، يرجى تشغيل التحليل أولاً"}), 400
+            return jsonify({"ok": False, "error": "بيانات التحليل ناقصة في السجل."}), 400
 
         pdf_path = generate_pdf_report(export_data)
-        
         with open(pdf_path, "rb") as f:
             encoded = base64.b64encode(f.read()).decode('utf-8')
             
-        return jsonify({
-            "ok": True, 
-            "pdfBase64": encoded, 
-            "fileName": f"Saaf_Report_{farm_id}.pdf"
-        }), 200
-
+        return jsonify({"ok": True, "pdfBase64": encoded, "fileName": f"Saaf_Report_{farm_id}.pdf"}), 200
     except Exception as e:
-        logger.error(f"❌ Error in export_pdf: {e}")
+        logger.error(f"💥 PDF Route Crash: {str(e)}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
-# 2. مسار تصدير الإكسل
 @reports_bp.route('/reports/<farm_id>/excel', methods=['GET'])
 def export_excel(farm_id):
     try:
-        farm_ref = DB.collection("farms").document(farm_id)
-        doc = farm_ref.get()
-        
-        if not doc.exists:
+        doc, method = get_farm_safely(farm_id)
+        if not doc:
             return jsonify({"ok": False, "error": "المزرعة غير موجودة"}), 404
             
         export_data = doc.to_dict().get('export_data', {})
-        
-        if not export_data:
-            return jsonify({"ok": False, "error": "البيانات غير جاهزة"}), 400
+        header = export_data.get('header', {})
+        dist = export_data.get('distribution', {})
+        biometrics = export_data.get('biometrics', {})
 
-        # تجهيز جدول البيانات مع التأكد من مطابقة المسميات الصغيرة (ndvi, ndmi)
         data_table = {
             "المؤشر": ["اسم المزرعة", "المساحة", "تاريخ التحليل", "مؤشر العافية", "NDVI", "NDMI"],
             "القيمة": [
-                export_data.get('header', {}).get('name', '—'),
-                export_data.get('header', {}).get('area', '—'),
-                export_data.get('header', {}).get('date', '—'),
-                f"{export_data.get('wellness_score', 0)}%",
-                export_data.get('biometrics', {}).get('ndvi', {}).get('val', '—'),
-                export_data.get('biometrics', {}).get('ndmi', {}).get('val', '—')
+                header.get('name', '—'),
+                header.get('area', '—'),
+                header.get('date', '—'),
+                f"{dist.get('Healthy_Pct', 0):.1f}%",
+                biometrics.get('ndvi', {}).get('val', '—'),
+                biometrics.get('ndmi', {}).get('val', '—')
             ]
         }
 
         df = pd.DataFrame(data_table)
-        excel_path = f"/tmp/farm_data_{farm_id}.xlsx"
+        excel_path = f"/tmp/farm_{farm_id}.xlsx"
         df.to_excel(excel_path, index=False)
 
         with open(excel_path, "rb") as f:
             encoded = base64.b64encode(f.read()).decode('utf-8')
 
-        return jsonify({
-            "ok": True, 
-            "excelBase64": encoded, 
-            "fileName": f"Saaf_Data_{farm_id}.xlsx"
-        }), 200
-
+        return jsonify({"ok": True, "excelBase64": encoded, "fileName": f"Saaf_Data_{farm_id}.xlsx"}), 200
     except Exception as e:
-        logger.error(f"❌ Error in export_excel: {e}")
+        logger.error(f"💥 Excel Route Crash: {str(e)}")
         return jsonify({"ok": False, "error": str(e)}), 500

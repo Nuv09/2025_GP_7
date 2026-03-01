@@ -510,30 +510,41 @@ body: Stack(
 
   Future<void> _exportPdf() async {
     try {
+      // 1. استخدام معرف الوثيقة (Document ID)
+      final farmDocId = widget.farmId;
+
       _showLoading("جاري تجهيز PDF...");
 
-      // تغيير المسار ليتوافق مع الـ Route الجديد في الباك-إند
-      final uri = Uri.parse(
-        "${Secrets.apiBaseUrl}/reports/${widget.farmId}/pdf",
-      );
+      // تم التعديل: إضافة /api للمسار ليطابق السيرفر
+      final uri = Uri.parse("${Secrets.apiBaseUrl}/api/reports/$farmDocId/pdf");
 
-      // استخدام GET بدلاً من POST لأن البيانات تُسحب من السيرفر مباشرة
-      final res = await http.get(uri).timeout(const Duration(seconds: 30));
+      // زيادة مدة الـ Timeout لأن توليد الـ PDF قد يستغرق وقتاً في السيرفر
+      final res = await http.get(uri).timeout(const Duration(seconds: 45));
 
       if (!mounted) return;
-      Navigator.pop(context); // إغلاق التحميل
+      Navigator.pop(context); // إغلاق لودينج
+
+      if (res.statusCode == 404) {
+        _toast("عذراً: المزرعة غير موجودة بالسيرفر");
+        return;
+      }
+
+      if (res.statusCode == 400) {
+        _toast("البيانات غير جاهزة: يرجى الضغط على زر التحليل أولاً");
+        return;
+      }
 
       if (res.statusCode != 200) {
-        _toast("تعذر إنشاء التقرير: تأكد من تشغيل التحليل أولاً");
+        _toast("فشل السيرفر في إنشاء التقرير (خطأ ${res.statusCode})");
         return;
       }
 
       final data = jsonDecode(res.body);
-      final String b64 = data["pdfBase64"] ?? ""; // التأكد من مسمى الحقل الجديد
-      final String fileName = data["fileName"] ?? "Saaf_Report.pdf";
+      final String b64 = data["pdfBase64"] ?? "";
+      final String fileName = data["fileName"] ?? "Saaf_Report_$farmDocId.pdf";
 
       if (b64.isEmpty) {
-        _toast("لم يتم استلام بيانات التقرير");
+        _toast("لم يتم استلام بيانات التقرير من السيرفر");
         return;
       }
 
@@ -544,38 +555,47 @@ body: Stack(
 
       await Share.shareXFiles([
         XFile(file.path),
-      ], text: "تقرير المزرعة - سعف 🌴");
+      ], text: "تقرير حالة نخل المزرعة - تطبيق سعف 🌴");
     } catch (e) {
       if (mounted) {
         try {
           Navigator.pop(context);
         } catch (_) {}
-        _toast("حدث خطأ في الاتصال بالسيرفر");
+        _toast("خطأ في الاتصال: تأكدي من جودة الإنترنت");
+        print("PDF Export Error: $e");
       }
     }
   }
 
   Future<void> _exportExcel() async {
     try {
+      final farmDocId = widget.farmId;
+
       _showLoading("جاري تجهيز ملف Excel...");
 
+      // تم التعديل: إضافة /api للمسار ليطابق السيرفر
       final uri = Uri.parse(
-        "${Secrets.apiBaseUrl}/reports/${widget.farmId}/excel",
+        "${Secrets.apiBaseUrl}/api/reports/$farmDocId/excel",
       );
 
-      final res = await http.get(uri).timeout(const Duration(seconds: 30));
+      final res = await http.get(uri).timeout(const Duration(seconds: 45));
 
       if (!mounted) return;
       Navigator.pop(context);
 
       if (res.statusCode != 200) {
-        _toast("تعذر إنشاء ملف البيانات");
+        _toast("تعذر إنشاء ملف البيانات: تأكد من اكتمال التحليل");
         return;
       }
 
       final data = jsonDecode(res.body);
       final String b64 = data["excelBase64"] ?? "";
-      final String fileName = data["fileName"] ?? "Saaf_Data.xlsx";
+      final String fileName = data["fileName"] ?? "Saaf_Data_$farmDocId.xlsx";
+
+      if (b64.isEmpty) {
+        _toast("ملف البيانات فارغ");
+        return;
+      }
 
       final bytes = base64Decode(b64);
       final dir = await getTemporaryDirectory();
@@ -584,13 +604,14 @@ body: Stack(
 
       await Share.shareXFiles([
         XFile(file.path),
-      ], text: "بيانات المزرعة - سعف (Excel)");
+      ], text: "بيانات المزرعة التفصيلية - تطبيق سعف (Excel)");
     } catch (e) {
       if (mounted) {
         try {
           Navigator.pop(context);
         } catch (_) {}
-        _toast("خطأ في تصدير البيانات");
+        _toast("حدث خطأ أثناء تصدير الإكسل");
+        print("Excel Export Error: $e");
       }
     }
   }
