@@ -447,13 +447,13 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
 
   Future<void> _exportPdf() async {
     try {
-      // 1. التأكد من وجود الـ ID الحقيقي للوثيقة
-      // ملاحظة: إذا كان widget.farmId هو رقم العقد، تأكدي من تمرير الـ doc.id من الشاشة السابقة
+      // 1. استخدام معرف الوثيقة (Document ID)
       final farmDocId = widget.farmId;
 
       _showLoading("جاري تجهيز PDF...");
 
-      final uri = Uri.parse("${Secrets.apiBaseUrl}/reports/$farmDocId/pdf");
+      // تم التعديل: إضافة /api للمسار ليطابق السيرفر
+      final uri = Uri.parse("${Secrets.apiBaseUrl}/api/reports/$farmDocId/pdf");
 
       // زيادة مدة الـ Timeout لأن توليد الـ PDF قد يستغرق وقتاً في السيرفر
       final res = await http.get(uri).timeout(const Duration(seconds: 45));
@@ -510,7 +510,10 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
 
       _showLoading("جاري تجهيز ملف Excel...");
 
-      final uri = Uri.parse("${Secrets.apiBaseUrl}/reports/$farmDocId/excel");
+      // تم التعديل: إضافة /api للمسار ليطابق السيرفر
+      final uri = Uri.parse(
+        "${Secrets.apiBaseUrl}/api/reports/$farmDocId/excel",
+      );
 
       final res = await http.get(uri).timeout(const Duration(seconds: 45));
 
