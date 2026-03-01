@@ -571,7 +571,7 @@ if (loggedInUser != null) {
                         top: 12,
                         right: 12,
                         child: Material(
-                          color: Colors.black45,
+                          color: Colors.white.withValues(alpha: 0.08),
                           shape: const CircleBorder(),
                           child: InkWell(
                             customBorder: const CircleBorder(),

@@ -140,7 +140,119 @@ class _ProfilePageState extends State<ProfilePage> {
     final sep = url.contains('?') ? '&' : '?';
     return '$url${sep}rev=$_avatarRev';
   }
+// ------------------ Luxury Background (مثل AboutUs) -----------------------
+Widget _buildLuxBackground() {
+  return Positioned.fill(
+    child: Stack(
+      children: [
+        // Base gradient
+        Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
+              colors: [
+                Color(0xFF05352D),
+                kDeepGreen,
+                Color(0xFF031E1A),
+              ],
+              stops: [0.0, 0.55, 1.0],
+            ),
+          ),
+        ),
 
+        // Radial glow (gold)
+        Positioned(
+          top: -120,
+          right: -80,
+          child: Container(
+            width: 320,
+            height: 320,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  kGold.withValues(alpha: 0.25),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 1.0],
+              ),
+            ),
+          ),
+        ),
+
+        // Radial glow (teal)
+        Positioned(
+          bottom: -140,
+          left: -120,
+          child: Container(
+            width: 360,
+            height: 360,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  const Color(0xFF0C6B5C).withValues(alpha: 0.18),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 1.0],
+              ),
+            ),
+          ),
+        ),
+
+        // Subtle vignette
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black.withValues(alpha: 0.18),
+                Colors.transparent,
+                Colors.black.withValues(alpha: 0.25),
+              ],
+              stops: const [0.0, 0.45, 1.0],
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// ------------------ Glass Card (مثل AboutUs) -----------------------
+Widget _glassCard({
+  required Widget child,
+  EdgeInsets padding = const EdgeInsets.all(18),
+  BorderRadius borderRadius = const BorderRadius.all(Radius.circular(22)),
+}) {
+  return ClipRRect(
+    borderRadius: borderRadius,
+    child: BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+      child: Container(
+        padding: padding,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.06),
+          borderRadius: borderRadius,
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.10),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.28),
+              blurRadius: 24,
+              offset: const Offset(0, 16),
+            ),
+          ],
+        ),
+        child: child,
+      ),
+    ),
+  );
+}
   // =========== صورة الأفاتار ===========
   static const bool _usePlainNetworkImage = false;
 
@@ -405,7 +517,9 @@ Widget _clickableAvatar() {
     final ctrl = TextEditingController();
     return await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => BackdropFilter(
+  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+  child: AlertDialog(
         backgroundColor: kDeepGreen,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text(
@@ -425,15 +539,15 @@ Widget _clickableAvatar() {
             labelText: 'كلمة المرور الحالية',
             labelStyle: GoogleFonts.almarai(color: Colors.white70),
             filled: true,
-            fillColor: const Color.fromARGB(25, 255, 255, 255),
+            fillColor: Colors.white.withValues(alpha: 0.06),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(15),
               borderSide: BorderSide.none,
             ),
-            enabledBorder: const OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(15.0)),
-              borderSide: BorderSide(color: Color.fromARGB(76, 253, 203, 110)),
-            ),
+            enabledBorder: OutlineInputBorder(
+  borderRadius: const BorderRadius.all(Radius.circular(15.0)),
+  borderSide: BorderSide(color: kGold.withValues(alpha: 0.25)),
+),
             focusedBorder: const OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(15.0)),
               borderSide: BorderSide(color: kAccent, width: 2),
@@ -467,6 +581,7 @@ Widget _clickableAvatar() {
             ),
           ),
         ],
+      ),
       ),
     ).then((ok) => ok == true ? ctrl.text.trim() : null);
   }
@@ -600,7 +715,7 @@ Widget _clickableAvatar() {
       builder: (ctx) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: AlertDialog(
-          backgroundColor: const Color(0xFF0D2B24).withValues(alpha: 0.4),
+          backgroundColor: kDeepGreen,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25),
             side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.3)),
@@ -836,18 +951,21 @@ Future<void> _deleteAccountLogic() async {
     }
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       backgroundColor: kDeepGreen,
       appBar: AppBar(
-        backgroundColor: kDeepGreen,
-        elevation: 0,
-        centerTitle: true,
-        automaticallyImplyLeading: false,
+  backgroundColor: Colors.transparent,
+  surfaceTintColor: Colors.transparent,
+  elevation: 0,
+  scrolledUnderElevation: 0,
+  centerTitle: true,
+  automaticallyImplyLeading: false,
 
         // زر الرجوع الدائري
         leading: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10.0),
           child: Material(
-            color: Colors.black45,
+            color: Colors.white.withValues(alpha: 0.08),
             shape: const CircleBorder(),
             child: InkWell(
               customBorder: const CircleBorder(),
@@ -879,25 +997,16 @@ Future<void> _deleteAccountLogic() async {
         ],
       ),
 
-      body: Container(
+    body: Stack(
+  children: [
+    _buildLuxBackground(),
+    SafeArea(
+      child: Container(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 120),
         child: SingleChildScrollView(
-          child: Container(
+          child: _glassCard(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: const Color.fromARGB(25, 255, 255, 255),
-              borderRadius: BorderRadius.circular(25),
-              border: Border.all(
-                color: const Color.fromARGB(51, 255, 255, 255),
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color.fromARGB(51, 0, 0, 0),
-                  blurRadius: 15,
-                  offset: Offset(0, 10),
-                ),
-              ],
-            ),
+            borderRadius: const BorderRadius.all(Radius.circular(25)),
             child: Form(
               // ✅ لفّينا الـ Column بـ Form
               key: _formKey,
@@ -974,17 +1083,15 @@ Future<void> _deleteAccountLogic() async {
                       labelStyle: GoogleFonts.almarai(color: Colors.white70),
                       prefixIcon: const Icon(Icons.location_on, color: kAccent),
                       filled: true,
-                      fillColor: const Color.fromARGB(25, 255, 255, 255),
+                      fillColor: Colors.white.withValues(alpha: 0.06),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(15),
                         borderSide: BorderSide.none,
                       ),
-                      enabledBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(15.0)),
-                        borderSide: BorderSide(
-                          color: Color.fromARGB(76, 253, 203, 110),
-                        ),
-                      ),
+                      enabledBorder: OutlineInputBorder(
+  borderRadius: const BorderRadius.all(Radius.circular(15.0)),
+  borderSide: BorderSide(color: kGold.withValues(alpha: 0.25)),
+),
                       focusedBorder: const OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(15.0)),
                         borderSide: BorderSide(color: kAccent, width: 2),
@@ -1029,7 +1136,7 @@ Future<void> _deleteAccountLogic() async {
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(15),
+                          borderRadius: BorderRadius.circular(35),
                           onTap: _saving ? null : _saveProfile,
                           child: Center(
                             child: Text(
@@ -1068,6 +1175,10 @@ Future<void> _deleteAccountLogic() async {
           ),
         ),
       ),
+     ),
+  ],
+  ),    
+      
     );
   }
 
@@ -1102,15 +1213,15 @@ Future<void> _deleteAccountLogic() async {
           ),
         ),
         filled: true,
-        fillColor: const Color.fromARGB(25, 255, 255, 255),
+        fillColor: Colors.white.withValues(alpha: 0.06),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15),
           borderSide: BorderSide.none,
         ),
-        enabledBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(15.0)),
-          borderSide: BorderSide(color: Color.fromARGB(76, 253, 203, 110)),
-        ),
+        enabledBorder: OutlineInputBorder(
+  borderRadius: const BorderRadius.all(Radius.circular(15.0)),
+  borderSide: BorderSide(color: kGold.withValues(alpha: 0.25)),
+),
         focusedBorder: const OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(15.0)),
           borderSide: BorderSide(color: kAccent, width: 2),

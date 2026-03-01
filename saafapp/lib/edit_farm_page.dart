@@ -13,6 +13,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:saafapp/constant.dart';
+import 'dart:ui';
 
 // // ✅ Reverse Geocoding
 // import 'package:geocoding/geocoding.dart' show Placemark, placemarkFromCoordinates, Location, locationFromAddress;
@@ -29,7 +30,7 @@ import 'package:flutter/services.dart';
 
 
 const Color primaryColor = Color(0xFF1E8D5F);
-const Color secondaryColor = Color(0xFFFDCB6E);
+const Color secondaryColor = Color(0xFFEBB974); 
 const Color darkBackground = Color(0xFF042C25);
 
 class EditFarmPage extends StatefulWidget {
@@ -448,7 +449,9 @@ Future<String?> _reverseRegionFromCentroid() async {
 Future<bool> _confirmDialog(String title, String message) async {
   return await showDialog<bool>(
         context: context,
-        builder: (ctx) => AlertDialog(
+        builder: (ctx) => BackdropFilter(
+  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+  child: AlertDialog(
           backgroundColor: const Color(0xFF042C25), // ← الخلفية المطلوبة
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
@@ -500,6 +503,7 @@ Future<bool> _confirmDialog(String title, String message) async {
               ),
             ),
           ],
+        ),
         ),
       ) ??
       false;
@@ -631,23 +635,112 @@ Future<bool> _confirmDialog(String title, String message) async {
       if (mounted) setState(() => _isSaving = false);
     }
   }
+Widget _buildLuxBackground() {
+  return Positioned.fill(
+    child: Stack(
+      children: [
+        // Base gradient
+        Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
+              colors: [
+                Color(0xFF05352D),
+                Color(0xFF042C25),
+                Color(0xFF031E1A),
+              ],
+              stops: [0.0, 0.55, 1.0],
+            ),
+          ),
+        ),
 
+        // Gold glow
+        Positioned(
+          top: -120,
+          right: -80,
+          child: Container(
+            width: 320,
+            height: 320,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  secondaryColor.withValues(alpha: 0.25),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 1.0],
+              ),
+            ),
+          ),
+        ),
+
+        // Teal glow
+        Positioned(
+          bottom: -140,
+          left: -120,
+          child: Container(
+            width: 360,
+            height: 360,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  const Color(0xFF0C6B5C).withValues(alpha: 0.18),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 1.0],
+              ),
+            ),
+          ),
+        ),
+
+        // Vignette
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black.withValues(alpha: 0.18),
+                Colors.transparent,
+                Colors.black.withValues(alpha: 0.25),
+              ],
+              stops: const [0.0, 0.45, 1.0],
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
   @override
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
+        extendBodyBehindAppBar: true,
         backgroundColor: darkBackground,
 
-        appBar: AppBar(
-          backgroundColor: darkBackground,
+  
+body: Stack(
+  children: [
+    _buildLuxBackground(),
+
+    CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        SliverAppBar(
+          pinned: true,
+          backgroundColor: const Color(0xFF042C25).withValues(alpha: 0.7),
+          surfaceTintColor: Colors.transparent,
           elevation: 0,
+          scrolledUnderElevation: 0,
           centerTitle: true,
-          automaticallyImplyLeading: false,
           leading: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10.0),
             child: Material(
-              color: Colors.black45,
+              color: Colors.white.withValues(alpha: 0.08),
               shape: const CircleBorder(),
               child: InkWell(
                 customBorder: const CircleBorder(),
@@ -663,27 +756,34 @@ Future<bool> _confirmDialog(String title, String message) async {
           actions: const [SizedBox(width: 56)],
         ),
 
-        body: SingleChildScrollView(
+        SliverToBoxAdapter(
           child: Padding(
             padding: EdgeInsets.fromLTRB(
               16,
               16,
               16,
-              16 + kBottomNavigationBarHeight + MediaQuery.of(context).viewPadding.bottom + 12,
+              16 +
+                  kBottomNavigationBarHeight +
+                  MediaQuery.of(context).viewPadding.bottom +
+                  40,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 10),
                 Center(
-                  child: Icon(Icons.agriculture_rounded, color: secondaryColor, size: 50),
+                  child: Icon(
+                    Icons.agriculture_rounded,
+                    color: secondaryColor,
+                    size: 50,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 _form(),
                 const SizedBox(height: 16),
                 _imagePreview(),
                 const SizedBox(height: 24),
-                _mapWithSearch(), // ✅ الخريطة مع شريط بحث + اقتراحات
+                _mapWithSearch(),
                 const SizedBox(height: 12),
                 _polygonActions(),
                 const SizedBox(height: 16),
@@ -692,25 +792,35 @@ Future<bool> _confirmDialog(String title, String message) async {
             ),
           ),
         ),
-      ),
-    );
+      ],
+    ),
+  ],
+),
+    ),
+  
+);
+      
+    
   }
 
   Widget _form() {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color.fromARGB(25, 255, 255, 255),
-        borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: const Color.fromARGB(51, 255, 255, 255)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromARGB(51, 0, 0, 0),
-            blurRadius: 15,
-            offset: Offset(0, 10),
-          ),
-        ],
-      ),
+  color: Colors.white.withValues(alpha: 0.06),
+  borderRadius: BorderRadius.circular(25),
+  border: Border.all(
+    color: secondaryColor.withValues(alpha: 0.25),
+    width: 1,
+  ),
+  boxShadow: [
+    BoxShadow(
+      color: Colors.black.withValues(alpha: 0.28),
+      blurRadius: 24,
+      offset: const Offset(0, 16),
+    ),
+  ],
+),
       child: Form(
         key: _formKey,
         child: Column(
@@ -734,7 +844,7 @@ Future<bool> _confirmDialog(String title, String message) async {
               icon: const Icon(Icons.add_photo_alternate_rounded, color: secondaryColor),
               label: const Text('تغيير الصورة', style: TextStyle(color: secondaryColor)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromARGB(25, 255, 255, 255),
+                backgroundColor: Colors.white.withValues(alpha: 0.06),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
                   side: const BorderSide(color: secondaryColor),
@@ -789,19 +899,17 @@ Future<bool> _confirmDialog(String title, String message) async {
         labelStyle: GoogleFonts.almarai(color: Colors.white70),
         prefixIcon: Icon(icon, color: secondaryColor),
         filled: true,
-        fillColor: const Color.fromARGB(25, 255, 255, 255),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15.0),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(15.0)),
-          borderSide: BorderSide(color: Color.fromARGB(76, 253, 203, 110)),
-        ),
-        focusedBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(15.0)),
-          borderSide: BorderSide(color: secondaryColor, width: 2),
-        ),
+fillColor: Colors.white.withValues(alpha: 0.06),
+
+enabledBorder: OutlineInputBorder(
+  borderRadius: BorderRadius.circular(15.0),
+  borderSide: BorderSide(color: secondaryColor.withValues(alpha: 0.25)),
+),
+
+focusedBorder: OutlineInputBorder(
+  borderRadius: const BorderRadius.all(Radius.circular(15.0)),
+  borderSide: BorderSide(color: secondaryColor.withValues(alpha: 0.55), width: 2),
+),
       ),
     );
   }
@@ -813,7 +921,7 @@ Future<bool> _confirmDialog(String title, String message) async {
         labelStyle: GoogleFonts.almarai(color: Colors.white70),
         prefixIcon: const Icon(Icons.location_on, color: secondaryColor),
         filled: true,
-        fillColor: const Color.fromARGB(25, 255, 255, 255),
+        fillColor: Colors.white.withValues(alpha: 0.06),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15.0),
           borderSide: BorderSide.none,
@@ -839,10 +947,13 @@ Future<bool> _confirmDialog(String title, String message) async {
     width: double.infinity,
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
     decoration: BoxDecoration(
-      color: const Color.fromARGB(25, 255, 255, 255),
-      borderRadius: BorderRadius.circular(15),
-      border: Border.all(color: const Color.fromARGB(76, 253, 203, 110)),
-    ),
+  color: Colors.white.withValues(alpha: 0.06), // ✅ نفس حقول البروفايل
+  borderRadius: BorderRadius.circular(15),
+  border: Border.all(
+    color: secondaryColor.withValues(alpha: 0.25), // ✅ نفس البوردر الذهبي
+    width: 1,
+  ),
+),
     child: Row(
       children: [
         const Icon(Icons.confirmation_number, color: secondaryColor),
@@ -1067,7 +1178,7 @@ onTap: () {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(35),
             onTap: _isSaving ? null : _updateFarm,
             child: Center(
               child: _isSaving

@@ -28,6 +28,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:saafapp/notifications_page.dart';
+import 'dashboard.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -217,6 +218,13 @@ class MyApp extends StatelessWidget {
           final farmId = (args?['farmId'] ?? '') as String;
           return AnalysisStatusPage(farmId: farmId);
         },
+        '/farm_dashboard': (ctx) {
+  final args = ModalRoute.of(ctx)!.settings.arguments as Map<String, dynamic>;
+  return FarmDashboardPage(
+    farmId: args['farmId'] as String,
+    farmData: args['farmData'] as Map<String, dynamic>,
+  );
+},
       },
     );
   }
@@ -248,7 +256,7 @@ class _MainShellState extends State<MainShell> {
       body: IndexedStack(index: _index, children: _pages),
       bottomNavigationBar: CurvedNavigationBar(
         height: 65,
-        color:const Color(0xFFEADEC4),
+        color:Color(0xFFE6D7B9),
         backgroundColor: darkGreenColor,
         animationDuration: const Duration(milliseconds: 300),
         index: _index,
@@ -273,7 +281,7 @@ Widget _navItem(IconData icon, String label, bool active) {
         Icon(
           icon,
           size: active ? 33 : 29,
-          color: goldColor,
+          color: Color(0xFFBC914E),
         ),
 
         AnimatedOpacity(
@@ -286,7 +294,7 @@ Widget _navItem(IconData icon, String label, bool active) {
               style: GoogleFonts.cairo(
                 fontWeight: FontWeight.w900, // أثقل خط
                 fontSize: 12,
-                color: goldColor,
+                color: Color(0xFFBC914E),
               ),
             ),
           ),

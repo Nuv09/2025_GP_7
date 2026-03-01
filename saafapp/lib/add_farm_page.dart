@@ -1,4 +1,3 @@
-// lib/add_farm_page.dart
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
@@ -24,11 +23,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:saafapp/secrets.dart';
+import 'dart:ui';
+
 
 
 // ألوان
 const Color primaryColor = Color(0xFF1E8D5F);
-const Color secondaryColor = Color(0xFFFDCB6E);
+const Color secondaryColor = Color(0xFFEBB974); 
 const Color darkBackground = Color(0xFF042C25);
 
 class AddFarmPage extends StatefulWidget {
@@ -54,7 +55,7 @@ class _AddFarmPageState extends State<AddFarmPage> {
   String? _selectedRegion;
 
   // صورة (ويب/موبايل)
-  File? _farmImage; // للأندرويد/‏iOS/‏دسكتوب
+  File? _farmImage; 
   Uint8List? _imageBytes; // للويب
 
 final MapController _mapController = MapController();
@@ -396,7 +397,9 @@ Future<String?> _reverseRegionFromCentroid() async {
  Future<bool> _confirmDialog(String title, String message) async {
   return await showDialog<bool>(
         context: context,
-        builder: (ctx) => AlertDialog(
+        builder: (ctx) => BackdropFilter(
+  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+  child: AlertDialog(
           backgroundColor: const Color(0xFF042C25), 
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
@@ -450,6 +453,7 @@ Future<String?> _reverseRegionFromCentroid() async {
             ),
           ],
         ),
+       ), 
       ) ??
       false;
 }
@@ -737,8 +741,85 @@ void _onSearchChanged(String value) {
   });
 }
 
-// ignore: unused_element
+Widget _buildLuxBackground() {
+  return Positioned.fill(
+    child: Stack(
+      children: [
+        // Base gradient
+        Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
+              colors: [
+                Color(0xFF05352D),
+                Color(0xFF042C25),
+                Color(0xFF031E1A),
+              ],
+              stops: [0.0, 0.55, 1.0],
+            ),
+          ),
+        ),
 
+        // Gold glow
+        Positioned(
+          top: -120,
+          right: -80,
+          child: Container(
+            width: 320,
+            height: 320,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  secondaryColor.withValues(alpha: 0.25),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 1.0],
+              ),
+            ),
+          ),
+        ),
+
+        // Teal glow
+        Positioned(
+          bottom: -140,
+          left: -120,
+          child: Container(
+            width: 360,
+            height: 360,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  const Color(0xFF0C6B5C).withValues(alpha: 0.18),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 1.0],
+              ),
+            ),
+          ),
+        ),
+
+        // Vignette
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black.withValues(alpha: 0.18),
+                Colors.transparent,
+                Colors.black.withValues(alpha: 0.25),
+              ],
+              stops: const [0.0, 0.45, 1.0],
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   // =================== واجهة المستخدم ===================
   @override
@@ -746,17 +827,18 @@ void _onSearchChanged(String value) {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
+        extendBodyBehindAppBar: true,
         backgroundColor: darkBackground,
 
         appBar: AppBar(
-          backgroundColor: darkBackground,
-          elevation: 0,
-          centerTitle: true,
-          automaticallyImplyLeading: false,
+  backgroundColor: const Color(0xFF042C25).withValues(alpha: 0.7),
+  surfaceTintColor: Colors.transparent,
+  elevation: 0,
+  scrolledUnderElevation: 0,
           leading: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10.0),
             child: Material(
-              color: Colors.black45,
+              color: Colors.white.withValues(alpha: 0.08),
               shape: const CircleBorder(),
               child: InkWell(
                 customBorder: const CircleBorder(),
@@ -772,40 +854,45 @@ void _onSearchChanged(String value) {
           title: Text('إضافة مزرعة جديدة', style: saafPageTitle),
         ),
 
-        body: SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              16,
-              16,
-              16,
-              16 +
-                  kBottomNavigationBarHeight +
-                  MediaQuery.of(context).viewPadding.bottom +
-                  40,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 10),
-                const SizedBox(height: 10),
-                Center(
-                  child: Icon(
-                    Icons.agriculture_rounded,
-                    color: secondaryColor,
-                    size: 50,
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                _buildFarmForm(),
-                const SizedBox(height: 30),
-                _buildMapSection(),
-                const SizedBox(height: 20),
-                _buildSubmitButton(),
-              ],
-            ),
-          ),
+        body: Stack(
+  children: [
+    _buildLuxBackground(),
+    SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16 + kToolbarHeight + MediaQuery.of(context).padding.top,
+          16,
+          16 +
+              kBottomNavigationBarHeight +
+              MediaQuery.of(context).viewPadding.bottom +
+              40,
         ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 10),
+            const SizedBox(height: 10),
+            Center(
+              child: Icon(
+                Icons.agriculture_rounded,
+                color: secondaryColor,
+                size: 50,
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            _buildFarmForm(),
+            const SizedBox(height: 30),
+            _buildMapSection(),
+            const SizedBox(height: 20),
+            _buildSubmitButton(),
+          ],
+        ),
+      ),
+    ),
+  ],
+),
       ),
     );
   }
@@ -814,19 +901,20 @@ void _onSearchChanged(String value) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color.fromARGB(25, 255, 255, 255),
-        borderRadius: BorderRadius.circular(25),
-        border: Border.all(
-          color: const Color.fromARGB(51, 255, 255, 255),
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromARGB(51, 0, 0, 0),
-            blurRadius: 15,
-            offset: Offset(0, 10),
-          ),
-        ],
-      ),
+  color: Colors.white.withValues(alpha: 0.06),
+  borderRadius: BorderRadius.circular(25),
+  border: Border.all(
+    color: secondaryColor.withValues(alpha: 0.25),
+    width: 1,
+  ),
+  boxShadow: [
+    BoxShadow(
+      color: Colors.black.withValues(alpha: 0.28),
+      blurRadius: 24,
+      offset: const Offset(0, 16),
+    ),
+  ],
+),
       child: Form(
         key: _formKey,
         child: Column(
@@ -927,20 +1015,17 @@ const SizedBox(height: 20),
         labelStyle: GoogleFonts.almarai(color: Colors.white70),
         prefixIcon: Icon(icon, color: secondaryColor),
         filled: true,
-        fillColor: const Color.fromARGB(25, 255, 255, 255),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15.0),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15.0),
-          borderSide:
-              const BorderSide(color: Color.fromARGB(76, 253, 203, 110)),
-        ),
-        focusedBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(15.0)),
-          borderSide: BorderSide(color: secondaryColor, width: 2),
-        ),
+fillColor: Colors.white.withValues(alpha: 0.06),
+
+enabledBorder: OutlineInputBorder(
+  borderRadius: BorderRadius.circular(15.0),
+  borderSide: BorderSide(color: secondaryColor.withValues(alpha: 0.25)),
+),
+
+focusedBorder: OutlineInputBorder(
+  borderRadius: const BorderRadius.all(Radius.circular(15.0)),
+  borderSide: BorderSide(color: secondaryColor.withValues(alpha: 0.55), width: 2),
+),
       ),
     );
   }
@@ -952,7 +1037,7 @@ const SizedBox(height: 20),
         labelStyle: GoogleFonts.almarai(color: Colors.white70),
         prefixIcon: const Icon(Icons.location_on, color: secondaryColor),
         filled: true,
-        fillColor: const Color.fromARGB(25, 255, 255, 255),
+        fillColor: Colors.white.withValues(alpha: 0.06),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15.0),
           borderSide: BorderSide.none,
@@ -986,7 +1071,7 @@ const SizedBox(height: 20),
           style: TextStyle(color: secondaryColor, fontWeight: FontWeight.bold),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color.fromARGB(25, 255, 255, 255),
+          backgroundColor: Colors.white.withValues(alpha: 0.06),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15),
             side: const BorderSide(color: secondaryColor),
@@ -1288,7 +1373,7 @@ Widget _mapActionButton({required String label, required IconData icon, required
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(35),
             onTap: _isSaving ? null : _submitFarmData,
             child: Center(
               child: _isSaving

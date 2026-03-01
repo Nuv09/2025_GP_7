@@ -8,7 +8,7 @@ import 'package:saafapp/dashboard.dart';
 import 'package:saafapp/widgets/farms/farm_card.dart';
 import 'package:saafapp/notifications_page.dart';
 import 'package:flutter/services.dart';
-
+import 'dart:ui';
 
 class FarmsScreen extends StatelessWidget {
   const FarmsScreen({super.key});
@@ -30,7 +30,7 @@ Widget build(BuildContext context) {
         children: [
     const _FarmsLuxBackground(),
     Padding(
-      padding: const EdgeInsets.only(top: 150),
+      padding: const EdgeInsets.only(top: 140),
       child: user == null
           ? _notLoggedIn(context)
           : _FarmsList(uid: user.uid),
@@ -346,7 +346,9 @@ class _FarmsListState extends State<_FarmsList> {
   ) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => BackdropFilter(
+  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+  child: AlertDialog(
         backgroundColor: const Color(0xFF042C25),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
         title: Icon(
@@ -396,6 +398,7 @@ class _FarmsListState extends State<_FarmsList> {
           ),
         ],
       ),
+     ), 
     );
   }
 
@@ -436,6 +439,7 @@ class _FarmsListState extends State<_FarmsList> {
             final vb = tb is Timestamp ? tb.millisecondsSinceEpoch : 0;
             return vb.compareTo(va);
           });
+          final int total = docs.length;
 
         final filteredDocs = _q.isEmpty
             ? docs
@@ -453,9 +457,72 @@ class _FarmsListState extends State<_FarmsList> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 0, 24, 8),
-                  child: Text('مزارعي', style: saafPageTitle),
-                ),
+  padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+  child: Row(
+    crossAxisAlignment: CrossAxisAlignment.end,
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      // ✅ العنوان + سطر صغير تحته
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'مزارعي',
+            style: GoogleFonts.almarai(
+              color: Colors.white,
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              height: 1.0,
+            ),
+          ),
+          const SizedBox(height: 6),
+         
+        ],
+      ),
+
+      // ✅ كبسولة الإجمالي (أصغر + أفخم)
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: const Color(0xFFEBB974).withValues(alpha: 0.22),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.grid_view_rounded,
+              size: 16,
+              color: const Color(0xFFEBB974).withValues(alpha: 0.9),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '$total',
+              style: GoogleFonts.almarai(
+                color: Colors.white.withValues(alpha: 0.92),
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'مزرعة',
+              style: GoogleFonts.almarai(
+                color: Colors.white.withValues(alpha: 0.65),
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  ),
+),
+                
                 _searchBar(),
                 Expanded(
                   child: Center(
@@ -474,10 +541,72 @@ class _FarmsListState extends State<_FarmsList> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(0, 0, 24, 8),
-                child: Text('مزارعي', style: saafPageTitle),
+             Padding(
+  padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+  child: Row(
+    crossAxisAlignment: CrossAxisAlignment.end,
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      // ✅ العنوان + سطر صغير تحته
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'مزارعي',
+            style: GoogleFonts.almarai(
+              color: Colors.white,
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              height: 1.0,
+            ),
+          ),
+          const SizedBox(height: 6),
+         
+        ],
+      ),
+
+      // ✅ كبسولة الإجمالي (أصغر + أفخم)
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: const Color(0xFFEBB974).withValues(alpha: 0.22),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.grid_view_rounded,
+              size: 16,
+              color: const Color(0xFFEBB974).withValues(alpha: 0.9),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '$total',
+              style: GoogleFonts.almarai(
+                color: Colors.white.withValues(alpha: 0.92),
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
               ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'مزرعة',
+              style: GoogleFonts.almarai(
+                color: Colors.white.withValues(alpha: 0.65),
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  ),
+),
               _searchBar(),
               Expanded(
                 child: Center(
@@ -495,10 +624,72 @@ class _FarmsListState extends State<_FarmsList> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(0, 0, 24, 8),
-              child: Text('مزارعي', style: saafPageTitle),
+           Padding(
+  padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+  child: Row(
+    crossAxisAlignment: CrossAxisAlignment.end,
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      // ✅ العنوان + سطر صغير تحته
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'مزارعي',
+            style: GoogleFonts.almarai(
+              color: Colors.white,
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              height: 1.0,
             ),
+          ),
+          const SizedBox(height: 6),
+          
+        ],
+      ),
+
+      // ✅ كبسولة الإجمالي (أصغر + أفخم)
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: const Color(0xFFEBB974).withValues(alpha: 0.22),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.grid_view_rounded,
+              size: 16,
+              color: const Color(0xFFEBB974).withValues(alpha: 0.9),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '$total',
+              style: GoogleFonts.almarai(
+                color: Colors.white.withValues(alpha: 0.92),
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'مزرعة',
+              style: GoogleFonts.almarai(
+                color: Colors.white.withValues(alpha: 0.65),
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  ),
+),
             _searchBar(),
             Expanded(
               child: ListView.separated(
@@ -584,7 +775,9 @@ class _FarmsListState extends State<_FarmsList> {
     bool confirmDelete =
         await showDialog<bool>(
               context: context,
-              builder: (ctx) => AlertDialog(
+              builder: (ctx) => BackdropFilter(
+  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+  child: AlertDialog(
                 backgroundColor: const Color(0xFF042C25),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
@@ -636,6 +829,7 @@ class _FarmsListState extends State<_FarmsList> {
                     ),
                   ),
                 ],
+              ),
               ),
             ) ??
             false;

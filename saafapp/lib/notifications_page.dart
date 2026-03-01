@@ -79,6 +79,56 @@ class _NotificationsPageState extends State<NotificationsPage>
     });
   }
 
+  Future<void> _openFarmDashboard(Map<String, dynamic> data, {required bool isRead, required String docId}) async {
+  // 1) نقرأ farmId من التنبيه (لازم يكون موجود داخل وثيقة التنبيه)
+  final farmId = (data['farmId'] ?? data['farm_id'] ?? '').toString();
+
+  if (farmId.isEmpty) {
+    _showSnack('لا يمكن فتح لوحة المزرعة لأن farmId غير موجود داخل التنبيه.');
+    return;
+  }
+
+  try {
+    // 2) (اختياري) اجعلي التنبيه مقروءًا عند الضغط
+    if (!isRead) {
+      await _markAsRead(docId);
+    }
+
+    // 3) نجلب بيانات المزرعة ثم نفتح صفحة الداشبورد
+    final snap = await FirebaseFirestore.instance.collection('farms').doc(farmId).get();
+
+    if (!snap.exists) {
+      _showSnack('هذه المزرعة غير موجودة.');
+      return;
+    }
+
+    final farmData = snap.data() as Map<String, dynamic>;
+
+    if (!mounted) return;
+
+    // ⚠️ يجب أن يكون لديك Route باسم /farm_dashboard
+    Navigator.pushNamed(
+      context,
+      '/farm_dashboard',
+      arguments: {
+        'farmId': farmId,
+        'farmData': farmData,
+      },
+    );
+  } catch (_) {
+    _showSnack('تعذر فتح لوحة المزرعة.');
+  }
+}
+
+void _showSnack(String msg) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(msg, style: GoogleFonts.almarai()),
+      backgroundColor: darkGreenColor,
+    ),
+  );
+}
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -165,10 +215,10 @@ class _NotificationsPageState extends State<NotificationsPage>
       child: TabBar(
         controller: _tabController,
         indicator: BoxDecoration(
-          color: goldColor,
+          color: Color(0xFFEBB974),
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
-            BoxShadow(color: goldColor.withValues(alpha: 0.3), blurRadius: 10),
+            BoxShadow(color: Color(0xFFEBB974).withValues(alpha: 0.1), blurRadius: 10),
           ],
         ),
         labelColor: darkGreenColor,
@@ -245,85 +295,89 @@ class _NotificationsPageState extends State<NotificationsPage>
             final col = _colorForSeverity(severity);
             final icon = _iconForType(type, severity);
 
-            return Container(
-              margin: const EdgeInsets.only(bottom: 18),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(25),
-                border: Border.all(
-                  color: isRead ? Colors.transparent : col.withValues(alpha: 0.35),
-                  width: 1.2,
-                ),
-              ),
-              child: Row(
+            return InkWell(
+  borderRadius: BorderRadius.circular(25),
+  onTap: () => _openFarmDashboard(data, isRead: isRead, docId: doc.id),
+  child: Container(
+    margin: const EdgeInsets.only(bottom: 18),
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.05),
+      borderRadius: BorderRadius.circular(25),
+      border: Border.all(
+        color: isRead ? Colors.transparent : col.withValues(alpha: 0.35),
+        width: 1.2,
+      ),
+    ),
+    child: Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: col.withValues(alpha: 0.10),
+            shape: BoxShape.circle,
+            border: Border.all(color: col.withValues(alpha: 0.30)),
+          ),
+          child: Icon(icon, color: col, size: 24),
+        ),
+        const SizedBox(width: 15),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: col.withValues(alpha: 0.10),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: col.withValues(alpha: 0.30)),
-                    ),
-                    child: Icon(icon, color: col, size: 24),
-                  ),
-                  const SizedBox(width: 15),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                farmName,
-                                style: GoogleFonts.almarai(
-                                  color: goldColor,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              _timeLabel(createdAt),
-                              style: GoogleFonts.almarai(
-                                color: Colors.white38,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          title,
-                          style: GoogleFonts.almarai(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          message,
-                          style: GoogleFonts.almarai(
-                            color: Colors.white60,
-                            fontSize: 12,
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      farmName,
+                      style: GoogleFonts.almarai(
+                        color: goldColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                  if (!isRead)
-                    IconButton(
-                      icon: Icon(Icons.done_all, color: col, size: 20),
-                      onPressed: () => _markAsRead(doc.id),
-                      tooltip: "وضع كمقروء",
+                  Text(
+                    _timeLabel(createdAt),
+                    style: GoogleFonts.almarai(
+                      color: Colors.white38,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
                     ),
+                  ),
                 ],
               ),
-            );
+              const SizedBox(height: 6),
+              Text(
+                title,
+                style: GoogleFonts.almarai(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                message,
+                style: GoogleFonts.almarai(
+                  color: Colors.white60,
+                  fontSize: 12,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (!isRead)
+          IconButton(
+            icon: Icon(Icons.done_all, color: col, size: 20),
+            onPressed: () => _markAsRead(doc.id),
+            tooltip: "وضع كمقروء",
+          ),
+      ],
+    ),
+  ),
+);
           },
         );
       },

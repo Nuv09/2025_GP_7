@@ -228,38 +228,101 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: darkGreenColor,
-        body: Stack(
-          children: [
-            Container(
+        backgroundColor: const Color(0xFF042C25),
+body: Stack(
+  children: [
+    // ✅ نفس خلفية AddFarm
+    Positioned.fill(
+      child: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: [
+                  Color(0xFF05352D),
+                  Color(0xFF042C25),
+                  Color(0xFF031E1A),
+                ],
+                stops: [0.0, 0.55, 1.0],
+              ),
+            ),
+          ),
+          Positioned(
+            top: -120,
+            right: -80,
+            child: Container(
+              width: 320,
+              height: 320,
               decoration: BoxDecoration(
+                shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  center: const Alignment(0.7, -0.8),
-                  radius: 1.8,
-                  colors: [const Color(0xFF0A4D41), darkGreenColor],
+                  colors: [
+                    const Color(0xFFEBB974).withValues(alpha: 0.25),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 1.0],
                 ),
               ),
             ),
-            SafeArea(
-              child: Column(
-                children: [
-                  _buildModernHeader(),
-                  _buildFloatingTabBar(),
-                  Expanded(
-                    child: TabBarView(
-                      controller: _tabController,
-                      children: [
-                        _buildMapSection(),
-                        _buildGeneralInfoSection(),
-                        _buildRecommendationsSection(),
-                      ],
-                    ),
-                  ),
-                ],
+          ),
+          Positioned(
+            bottom: -140,
+            left: -120,
+            child: Container(
+              width: 360,
+              height: 360,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF0C6B5C).withValues(alpha: 0.18),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 1.0],
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.18),
+                  Colors.transparent,
+                  Colors.black.withValues(alpha: 0.25),
+                ],
+                stops: const [0.0, 0.45, 1.0],
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+
+    SafeArea(
+      child: Column(
+        children: [
+          _buildModernHeader(),
+          _buildFloatingTabBar(),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildMapSection(),
+                _buildGeneralInfoSection(),
+                _buildRecommendationsSection(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  ],
+),
       ),
     );
   }
@@ -273,17 +336,17 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: goldColor.withValues(alpha: 0.35)),
+          border: Border.all(color: Color(0xFFEBB974).withValues(alpha: 0.35)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.ios_share_rounded, color: goldColor, size: 18),
+            Icon(Icons.ios_share_rounded, color: Color(0xFFEBB974), size: 18),
             const SizedBox(width: 8),
             Text(
               "تصدير",
               style: GoogleFonts.almarai(
-                color: goldColor,
+                color: Color(0xFFEBB974),
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
               ),
@@ -371,11 +434,11 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: goldColor.withValues(alpha: 0.12),
+                color: Color(0xFFEBB974).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: goldColor.withValues(alpha: 0.35)),
+                border: Border.all(color: Color(0xFFEBB974).withValues(alpha: 0.35)),
               ),
-              child: Icon(icon, color: goldColor),
+              child: Icon(icon, color: Color(0xFFEBB974)),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -423,7 +486,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
               height: 18,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: goldColor,
+                color: Color(0xFFEBB974),
               ),
             ),
             const SizedBox(width: 12),
@@ -553,7 +616,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
               ),
               Text(
                 "التحليل الذكي للمزرعة",
-                style: GoogleFonts.almarai(color: goldColor, fontSize: 12),
+                style: GoogleFonts.almarai(color: Color(0xFFEBB974), fontSize: 13),
               ),
               const SizedBox(height: 6),
               Text(
@@ -606,16 +669,16 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
       child: TabBar(
         controller: _tabController,
         indicator: BoxDecoration(
-          color: goldColor.withValues(alpha: 0.2),
+          color: Color(0xFFEBB974).withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: goldColor.withValues(alpha: 0.6),
+            color: Color(0xFFEBB974).withValues(alpha: 0.6),
             width: 1.5,
           ),
         ),
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
-        labelColor: goldColor,
+        labelColor: Color(0xFFEBB974),
         unselectedLabelColor: Colors.white38,
         labelStyle: GoogleFonts.almarai(
           fontWeight: FontWeight.bold,
@@ -769,7 +832,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
                   decoration: BoxDecoration(
                     color: darkGreenColor.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: goldColor.withValues(alpha: 0.4)),
+                    border: Border.all(color: Color(0xFFEBB974).withValues(alpha: 0.4)),
                   ),
                   child: _buildMapMiniStat(
                     Icons.square_foot_rounded,
@@ -790,7 +853,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
               decoration: BoxDecoration(
                 color: darkGreenColor.withValues(alpha: 0.85),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: goldColor.withValues(alpha: 0.3)),
+                border: Border.all(color: Color(0xFFEBB974).withValues(alpha: 0.3)),
                 boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
               ),
               child: Row(
@@ -809,7 +872,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
                     scale: 0.8,
                     child: Switch(
                       value: _isForecastMode,
-                      activeThumbColor: goldColor,
+                      activeThumbColor: Color(0xFFEBB974),
                       onChanged: (val) {
                         setState(() {
                           _isForecastMode = val;
@@ -876,7 +939,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: goldColor, size: 14),
+        Icon(icon, color: Color(0xFFEBB974), size: 14),
         const SizedBox(width: 8),
         Text(
           "$label: ",
@@ -980,7 +1043,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
                           height: 26,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: goldColor,
+                            color: Color(0xFFEBB974),
                           ),
                         )
                       : Text(
@@ -1088,7 +1151,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
           Text(
             "إجمالي النخيل: $total",
             style: GoogleFonts.almarai(
-              color: goldColor,
+              color: Color(0xFFEBB974),
               fontWeight: FontWeight.bold,
             ),
           ),
