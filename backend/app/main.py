@@ -354,6 +354,7 @@ def analyze():
 
 
 @app.post("/scheduled-update")
+@app.post("/scheduled-update")
 def scheduled_update():
     app.logger.info("⏰ /scheduled-update called")
 
@@ -367,6 +368,13 @@ def scheduled_update():
     for doc in farms:
         farm = doc.to_dict() or {}
         farm_id = doc.id
+
+        # 🛑 التعديل الأول: التحقق من سلامة المضلع (Polygon) لمنع انهيار السيرفر
+        poly = farm.get("polygon") or []
+        if len(poly) < 3:
+            app.logger.warning(f"⚠️ Skipping farm {farm_id}: Polygon is missing or invalid.")
+            skipped.append(f"{farm_id} (Invalid Polygon)")
+            continue 
 
         last = farm.get("lastAnalysisAt")
         if last is None:
@@ -400,7 +408,7 @@ def scheduled_update():
             export_payload = health_mod.prepare_export_data(farm, health_result)
             h_map = list(health_result.pop("health_map", []))
 
-            # ✅ 3) Alerts + Recommendations (هذا اللي كان ناقص!)
+            # ✅ 3) Alerts + Recommendations
             alerts_pkg = build_alerts_and_recommendations(farm_id, health_result)
 
             new_alerts_count = set_alerts_and_recommendations(
@@ -409,7 +417,7 @@ def scheduled_update():
                 alerts_pkg.get("recommendations", []),
             )
 
-            # ✅ 4) Push فقط لو فعلاً فيه تنبيه جديد
+            # ✅ 4) Push Notification
             owner_uid = farm.get("createdBy") or farm.get("ownerUid")
             if owner_uid and (new_alerts_count or 0) > 0:
                 maybe_send_push_for_alerts(owner_uid, alerts_pkg)
@@ -436,14 +444,16 @@ def scheduled_update():
             )
 
         except Exception as e:
-            app.logger.exception(f"❌ scheduled-update failed for farmId={farm_id}: {e}")
+            # 🛑 التعديل الثاني: استخدام continue لضمان عدم توقف الحلقة عند فشل مزرعة واحدة
+            app.logger.error(f"❌ scheduled-update failed for farmId={farm_id}: {e}")
             set_status(farm_id, status="failed", errorMessage=str(e))
             failed.append({"farmId": farm_id, "error": str(e)})
+            continue 
 
     return jsonify({"updated": updated, "skipped": skipped, "failed": failed}), 200
 
 from app.reports_routes import reports_bp
-app.register_blueprint(reports_bp)
+app.register_blueprint(reports_bp, url_prefix='/api')
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
