@@ -26,7 +26,7 @@ class Secrets {
   // ✅ غيريه حسب جهازك:
   // Android Emulator:
   static const String _mobileApiBaseUrl =
-      "https://saaf-analyzer-us-120954850101.us-central1.run.app";
+      "https://saaf-analyzer-new-120954850101.us-central1.run.app";
   // لو جهاز حقيقي (مثال):
   // static const String _mobileApiBaseUrl = "http://192.168.1.10:5000";
 

@@ -17,7 +17,7 @@ from google.cloud import storage
 
 from app.common import polygon_centroid
 
-
+from datetime import datetime
 
 PROJECT_ID = os.environ.get("GEE_PROJECT_ID", "saaf-97251")
 OUT_ROOT = os.environ.get("HEALTH_OUT_ROOT", "/tmp/saaf_health")
@@ -1330,6 +1330,8 @@ def get_health_map_points(df_all: pd.DataFrame) -> List[Dict[str, Any]]:
             's': status_code
         })
     return map_points 
+
+
 def prepare_export_data(farm_doc, health_result):
     """
     نسخة محسنة تضمن عدم انهيار التحليل وتوافق المسميات مع ملف التقارير.
@@ -1376,4 +1378,5 @@ def prepare_export_data(farm_doc, health_result):
         # تجنب الخطأ إذا لم تكن هناك توصيات بعد
         "top_action": (farm_doc.get("recommendations") or [None])[0] 
     }
-    return export_payload
+    return export_payload 
+#ee

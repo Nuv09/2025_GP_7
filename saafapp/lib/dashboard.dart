@@ -9,7 +9,13 @@ import 'package:flutter_map/flutter_map.dart'; // سنترك هذه كما هي 
 import 'package:latlong2/latlong.dart'; // سنتركها أيضاً
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
+
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+
+import 'package:universal_html/html.dart' as html;
 
 // خريطة جوجل نعطيها اسماً مستعاراً (gmaps) لكي لا تتدخل في هذه الصفحة
 
@@ -229,100 +235,100 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: const Color(0xFF042C25),
-body: Stack(
-  children: [
-    // ✅ نفس خلفية AddFarm
-    Positioned.fill(
-      child: Stack(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
-                colors: [
-                  Color(0xFF05352D),
-                  Color(0xFF042C25),
-                  Color(0xFF031E1A),
+        body: Stack(
+          children: [
+            // ✅ نفس خلفية AddFarm
+            Positioned.fill(
+              child: Stack(
+                children: [
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topRight,
+                        end: Alignment.bottomLeft,
+                        colors: [
+                          Color(0xFF05352D),
+                          Color(0xFF042C25),
+                          Color(0xFF031E1A),
+                        ],
+                        stops: [0.0, 0.55, 1.0],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: -120,
+                    right: -80,
+                    child: Container(
+                      width: 320,
+                      height: 320,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            const Color(0xFFEBB974).withValues(alpha: 0.25),
+                            Colors.transparent,
+                          ],
+                          stops: const [0.0, 1.0],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: -140,
+                    left: -120,
+                    child: Container(
+                      width: 360,
+                      height: 360,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            const Color(0xFF0C6B5C).withValues(alpha: 0.18),
+                            Colors.transparent,
+                          ],
+                          stops: const [0.0, 1.0],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.18),
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.25),
+                        ],
+                        stops: const [0.0, 0.45, 1.0],
+                      ),
+                    ),
+                  ),
                 ],
-                stops: [0.0, 0.55, 1.0],
               ),
             ),
-          ),
-          Positioned(
-            top: -120,
-            right: -80,
-            child: Container(
-              width: 320,
-              height: 320,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    const Color(0xFFEBB974).withValues(alpha: 0.25),
-                    Colors.transparent,
-                  ],
-                  stops: const [0.0, 1.0],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -140,
-            left: -120,
-            child: Container(
-              width: 360,
-              height: 360,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    const Color(0xFF0C6B5C).withValues(alpha: 0.18),
-                    Colors.transparent,
-                  ],
-                  stops: const [0.0, 1.0],
-                ),
-              ),
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withValues(alpha: 0.18),
-                  Colors.transparent,
-                  Colors.black.withValues(alpha: 0.25),
-                ],
-                stops: const [0.0, 0.45, 1.0],
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
 
-    SafeArea(
-      child: Column(
-        children: [
-          _buildModernHeader(),
-          _buildFloatingTabBar(),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildMapSection(),
-                _buildGeneralInfoSection(),
-                _buildRecommendationsSection(),
-              ],
+            SafeArea(
+              child: Column(
+                children: [
+                  _buildModernHeader(),
+                  _buildFloatingTabBar(),
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildMapSection(),
+                        _buildGeneralInfoSection(),
+                        _buildRecommendationsSection(),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    ),
-  ],
-),
+          ],
+        ),
       ),
     );
   }
@@ -436,7 +442,9 @@ body: Stack(
               decoration: BoxDecoration(
                 color: Color(0xFFEBB974).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Color(0xFFEBB974).withValues(alpha: 0.35)),
+                border: Border.all(
+                  color: Color(0xFFEBB974).withValues(alpha: 0.35),
+                ),
               ),
               child: Icon(icon, color: Color(0xFFEBB974)),
             ),
@@ -510,30 +518,23 @@ body: Stack(
 
   Future<void> _exportPdf() async {
     try {
-      // 1. استخدام معرف الوثيقة (Document ID)
       final farmDocId = widget.farmId;
-
       _showLoading("جاري تجهيز PDF...");
 
-      // تم التعديل: إضافة /api للمسار ليطابق السيرفر
       final uri = Uri.parse("${Secrets.apiBaseUrl}/api/reports/$farmDocId/pdf");
-
-      // زيادة مدة الـ Timeout لأن توليد الـ PDF قد يستغرق وقتاً في السيرفر
       final res = await http.get(uri).timeout(const Duration(seconds: 45));
 
       if (!mounted) return;
-      Navigator.pop(context); // إغلاق لودينج
+      Navigator.pop(context);
 
       if (res.statusCode == 404) {
         _toast("عذراً: المزرعة غير موجودة بالسيرفر");
         return;
       }
-
       if (res.statusCode == 400) {
         _toast("البيانات غير جاهزة: يرجى الضغط على زر التحليل أولاً");
         return;
       }
-
       if (res.statusCode != 200) {
         _toast("فشل السيرفر في إنشاء التقرير (خطأ ${res.statusCode})");
         return;
@@ -549,13 +550,25 @@ body: Stack(
       }
 
       final bytes = base64Decode(b64);
-      final dir = await getTemporaryDirectory();
-      final file = File("${dir.path}/$fileName");
-      await file.writeAsBytes(bytes, flush: true);
 
-      await Share.shareXFiles([
-        XFile(file.path),
-      ], text: "تقرير حالة نخل المزرعة - تطبيق سعف 🌴");
+      if (kIsWeb) {
+        // ✅ ويب: تحميل مباشر
+        final blob = html.Blob([bytes], 'application/pdf');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute('download', fileName)
+          ..click();
+        html.Url.revokeObjectUrl(url);
+        _toast("✅ تم تحميل PDF");
+      } else {
+        // ✅ موبايل: share sheet
+        final dir = await getTemporaryDirectory();
+        final file = File("${dir.path}/$fileName");
+        await file.writeAsBytes(bytes, flush: true);
+        await Share.shareXFiles([
+          XFile(file.path),
+        ], text: "تقرير حالة نخل المزرعة - تطبيق سعف 🌴");
+      }
     } catch (e) {
       if (mounted) {
         try {
@@ -570,19 +583,20 @@ body: Stack(
   Future<void> _exportExcel() async {
     try {
       final farmDocId = widget.farmId;
-
       _showLoading("جاري تجهيز ملف Excel...");
 
-      // تم التعديل: إضافة /api للمسار ليطابق السيرفر
       final uri = Uri.parse(
         "${Secrets.apiBaseUrl}/api/reports/$farmDocId/excel",
       );
-
       final res = await http.get(uri).timeout(const Duration(seconds: 45));
 
       if (!mounted) return;
       Navigator.pop(context);
 
+      if (res.statusCode == 404) {
+        _toast("عذراً: المزرعة غير موجودة بالسيرفر");
+        return;
+      }
       if (res.statusCode != 200) {
         _toast("تعذر إنشاء ملف البيانات: تأكد من اكتمال التحليل");
         return;
@@ -598,13 +612,27 @@ body: Stack(
       }
 
       final bytes = base64Decode(b64);
-      final dir = await getTemporaryDirectory();
-      final file = File("${dir.path}/$fileName");
-      await file.writeAsBytes(bytes, flush: true);
 
-      await Share.shareXFiles([
-        XFile(file.path),
-      ], text: "بيانات المزرعة التفصيلية - تطبيق سعف (Excel)");
+      if (kIsWeb) {
+        // ✅ ويب: تحميل مباشر
+        final blob = html.Blob([
+          bytes,
+        ], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute('download', fileName)
+          ..click();
+        html.Url.revokeObjectUrl(url);
+        _toast("✅ تم تحميل Excel");
+      } else {
+        // ✅ موبايل: share sheet
+        final dir = await getTemporaryDirectory();
+        final file = File("${dir.path}/$fileName");
+        await file.writeAsBytes(bytes, flush: true);
+        await Share.shareXFiles([
+          XFile(file.path),
+        ], text: "بيانات المزرعة التفصيلية - تطبيق سعف (Excel)");
+      }
     } catch (e) {
       if (mounted) {
         try {
@@ -637,7 +665,10 @@ body: Stack(
               ),
               Text(
                 "التحليل الذكي للمزرعة",
-                style: GoogleFonts.almarai(color: Color(0xFFEBB974), fontSize: 13),
+                style: GoogleFonts.almarai(
+                  color: Color(0xFFEBB974),
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(height: 6),
               Text(
@@ -853,7 +884,9 @@ body: Stack(
                   decoration: BoxDecoration(
                     color: darkGreenColor.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Color(0xFFEBB974).withValues(alpha: 0.4)),
+                    border: Border.all(
+                      color: Color(0xFFEBB974).withValues(alpha: 0.4),
+                    ),
                   ),
                   child: _buildMapMiniStat(
                     Icons.square_foot_rounded,
@@ -874,7 +907,9 @@ body: Stack(
               decoration: BoxDecoration(
                 color: darkGreenColor.withValues(alpha: 0.85),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Color(0xFFEBB974).withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: Color(0xFFEBB974).withValues(alpha: 0.3),
+                ),
                 boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
               ),
               child: Row(
