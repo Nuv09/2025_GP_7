@@ -57,7 +57,8 @@ def generate_pdf_report(export_data):
     
     if os.path.exists(font_path):
         try:
-            pdf.add_font("Cairo", fname=font_path)
+            # ✅ الإصلاح 1: إضافة uni=True لدعم العربية
+            pdf.add_font("Cairo", fname=font_path, uni=True)
             pdf.set_font("Cairo", size=22)
             logger.info(f"✅ Custom font 'Cairo' loaded from: {font_path}")
         except Exception as e:
@@ -76,7 +77,8 @@ def generate_pdf_report(export_data):
     dist = export_data.get('distribution', {})
     biometrics = export_data.get('biometrics', {})
 
-    pdf.set_font("Arial", size=12)
+    # ✅ الإصلاح 2: استخدام Cairo بدل Arial حتى يظهر النص العربي
+    pdf.set_font("Cairo", size=12)
     pdf.set_text_color(0, 0, 0)
     pdf.ln(10)
     
@@ -88,12 +90,14 @@ def generate_pdf_report(export_data):
     # مؤشر العافية من Healthy_Pct كما في الصورة
     wellness = dist.get('Healthy_Pct', 0)
     pdf.ln(15)
-    pdf.set_font("Arial", 'B', 16)
+    # ✅ الإصلاح 2 (تكملة): Cairo بدل Arial
+    pdf.set_font("Cairo", size=16)
     pdf.cell(190, 15, txt=fix_arabic(f"مؤشر العافية العام: {wellness:.1f}%"), ln=True, align='C')
 
     # عرض بيانات البيومتركس (ndvi, ndmi) بالأحرف الصغيرة كما في الصورة
     pdf.ln(10)
-    pdf.set_font("Arial", size=12)
+    # ✅ الإصلاح 2 (تكملة): Cairo بدل Arial
+    pdf.set_font("Cairo", size=12)
     pdf.cell(190, 10, txt=fix_arabic(f"مؤشر الخضرة (NDVI): {biometrics.get('ndvi', {}).get('val', '—')}"), ln=True, align='R')
     pdf.cell(190, 10, txt=fix_arabic(f"مؤشر الرطوبة (NDMI): {biometrics.get('ndmi', {}).get('val', '—')}"), ln=True, align='R')
 
@@ -149,7 +153,11 @@ def export_excel(farm_id):
 
         df = pd.DataFrame(data_table)
         excel_path = f"/tmp/farm_{farm_id}.xlsx"
-        df.to_excel(excel_path, index=False)
+        # ✅ الإصلاح 3: xlsxwriter مع right_to_left للعربية
+        with pd.ExcelWriter(excel_path, engine="xlsxwriter") as writer:
+            df.to_excel(writer, index=False, sheet_name="تقرير المزرعة")
+            worksheet = writer.sheets["تقرير المزرعة"]
+            worksheet.right_to_left()
 
         with open(excel_path, "rb") as f:
             encoded = base64.b64encode(f.read()).decode('utf-8')
