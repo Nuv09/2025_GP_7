@@ -594,7 +594,9 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
       Navigator.pop(context);
 
       if (res.statusCode == 404) {
-        _toast("عذراً: المزرعة غير موجودة بالسيرفر");
+        // ✅ مؤقت: نعرض الـ farm_id عشان نتحقق
+        final errData = jsonDecode(res.body);
+        _toast("404 | farmId: $farmDocId | ${errData['error'] ?? ''}");
         return;
       }
       if (res.statusCode != 200) {
@@ -614,7 +616,6 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
       final bytes = base64Decode(b64);
 
       if (kIsWeb) {
-        // ✅ ويب: تحميل مباشر
         final blob = html.Blob([
           bytes,
         ], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -625,7 +626,6 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
         html.Url.revokeObjectUrl(url);
         _toast("✅ تم تحميل Excel");
       } else {
-        // ✅ موبايل: share sheet
         final dir = await getTemporaryDirectory();
         final file = File("${dir.path}/$fileName");
         await file.writeAsBytes(bytes, flush: true);
@@ -638,7 +638,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
         try {
           Navigator.pop(context);
         } catch (_) {}
-        _toast("حدث خطأ أثناء تصدير الإكسل");
+        _toast("حدث خطأ أثناء تصدير الإكسل: $e");
         print("Excel Export Error: $e");
       }
     }

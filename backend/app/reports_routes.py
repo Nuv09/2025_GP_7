@@ -163,6 +163,8 @@ def export_excel(farm_id):
             encoded = base64.b64encode(f.read()).decode('utf-8')
 
         return jsonify({"ok": True, "excelBase64": encoded, "fileName": f"Saaf_Data_{farm_id}.xlsx"}), 200
+    
     except Exception as e:
-        logger.error(f"💥 Excel Route Crash: {str(e)}")
-        return jsonify({"ok": False, "error": str(e)}), 500
+        import traceback
+        logger.error(f"💥 Excel Route Crash: {traceback.format_exc()}")
+        return jsonify({"ok": False, "error": str(e), "trace": traceback.format_exc()}), 500
