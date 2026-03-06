@@ -41,15 +41,14 @@ No local backend setup is required.
 The backend logic is fully deployed on Google Cloud Run.
 Developers only need to update the Cloud Run API URL inside the Flutter app.
 
-4. **Frontend Setup (Flutter):**  
+3. **Frontend Setup (Flutter):**  
    ```bash
    cd saafapp
    flutter pub get
    flutter run
    ```
-
-
-5. **Database Setup:**
+   
+4. **Database Setup:**
 
 The Android Firebase configuration file google-services.json is already included in the project.
 Firebase services (Firestore, Storage, Authentication) connect automatically—no additional configuration is required.
