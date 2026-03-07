@@ -18,11 +18,26 @@ psutil
 lightgbm==4.5.0
 firebase-admin==6.5.0 
 
-fpdf2==2.7.8
-arabic-reshaper==3.0.0
 python-bidi==0.4.2 
-openpyxl 
+
 xlsxwriter
+
+# ── تقارير PDF (HTML → PDF) ──
+weasyprint
+
+# ── تقارير Excel ──
+openpyxl
+
+
+
+
+
+
+
+
+
+
+
 
 
 

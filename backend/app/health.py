@@ -1331,15 +1331,94 @@ def get_health_map_points(df_all: pd.DataFrame) -> List[Dict[str, Any]]:
         })
     return map_points 
 
+def _build_top_action(health_result: Dict[str, Any]) -> Dict[str, Any]:
+    dist    = health_result.get("current_health", {})
+    alerts  = health_result.get("alert_signals", {})
+    flags   = alerts.get("flag_counts_latest", {})
+
+    critical_pct = float(dist.get("Critical_Pct", 0))
+    monitor_pct  = float(dist.get("Monitor_Pct",  0))
+
+    # flags موجودة فعلاً في كودك من add_rpw_flags_and_score
+    flag_ndwi_low       = int(flags.get("flag_NDWI_low",        0) or 0)
+    flag_ndwi_below_025 = int(flags.get("flag_NDWI_below_025",  0) or 0)
+    flag_ndre_low       = int(flags.get("flag_NDRE_low",        0) or 0)
+    flag_ndre_below_035 = int(flags.get("flag_NDRE_below_035",  0) or 0)
+    flag_ndvi_below_030 = int(flags.get("flag_NDVI_below_030",  0) or 0)
+    flag_drop_siwsi     = int(flags.get("flag_drop_SIWSI10pct", 0) or 0)
+    flag_drop_ndwi      = int(flags.get("flag_drop_NDWI10pct",  0) or 0)
+    flag_drop_ndvi      = int(flags.get("flag_drop_NDVI005",    0) or 0)
+
+    # ── أولوية 1: حالة حرجة ──
+    if critical_pct >= 10:
+        hotspots = alerts.get("hotspots", {}).get("critical", [])
+        location = "بعض مناطق المزرعة"
+        if hotspots:
+            avg_lat   = sum(p.get("lat", 0) for p in hotspots) / len(hotspots)
+            avg_lng   = sum(p.get("lng", 0) for p in hotspots) / len(hotspots)
+            all_lats  = [p.get("lat", 0) for p in hotspots]
+            all_lngs  = [p.get("lng", 0) for p in hotspots]
+            vert      = "الشمالي" if avg_lat > sum(all_lats) / len(all_lats) else "الجنوبي"
+            horiz     = "الشرقي" if avg_lng > sum(all_lngs) / len(all_lngs) else "الغربي"
+            location  = f"الجزء {vert} {horiz}"
+        return {
+            "title_ar": "تدخل فوري — نخيل في حالة حرجة",
+            "text_ar": (
+                f"رصد النظام أن {critical_pct:.0f}% من النخيل في {location} "
+                f"تعاني من إجهاد حاد. يُوصى بمعاينة ميدانية فورية "
+                f"وتحليل التربة والتأكد من سلامة نظام الري."
+            ),
+        }
+
+    # ── أولوية 2: مشكلة مياه ──
+    if flag_ndwi_low > 0 or flag_ndwi_below_025 > 0 or flag_drop_ndwi > 0 or flag_drop_siwsi > 0:
+        affected = flag_ndwi_low + flag_ndwi_below_025
+        return {
+            "title_ar": "زيادة الري — مؤشرات المياه منخفضة",
+            "text_ar": (
+                f"رصد النظام انخفاضاً في مؤشرات الرطوبة "
+                f"({affected} بكسل تحت العتبة). "
+                f"يُنصح بزيادة كمية الري بنسبة 20-25% لمدة أسبوع ومتابعة التغيير."
+            ),
+        }
+
+    # ── أولوية 3: مشكلة تغذية ──
+    if flag_ndre_low > 0 or flag_ndre_below_035 > 0 or flag_ndvi_below_030 > 0 or flag_drop_ndvi > 0:
+        affected = flag_ndre_low + flag_ndvi_below_030
+        return {
+            "title_ar": "مراجعة التسميد — مؤشرات التغذية منخفضة",
+            "text_ar": (
+                f"رصد النظام ضعفاً في مؤشرات الخضرة والتغذية "
+                f"({affected} بكسل تحت العتبة). "
+                f"يُوصى بتحليل التربة والنظر في جرعة سماد إضافية."
+            ),
+        }
+
+    # ── أولوية 4: متابعة ──
+    if monitor_pct >= 20:
+        return {
+            "title_ar": "متابعة دورية — نسبة لا بأس بها تحتاج مراقبة",
+            "text_ar": (
+                f"{monitor_pct:.0f}% من النخيل في وضع المتابعة. "
+                f"استمر في جدول الري والتسميد الحالي وراجع التقرير القادم."
+            ),
+        }
+
+    # ── كل شي تمام ──
+    return {
+        "title_ar": "المزرعة بحالة جيدة — استمر في الروتين الحالي",
+        "text_ar": (
+            "جميع مؤشرات النظام ضمن النطاقات الطبيعية. "
+            "استمر في جدول الري والتسميد المعتاد."
+        ),
+    }
+
 
 def prepare_export_data(farm_doc, health_result):
-    """
-    نسخة محسنة تضمن عدم انهيار التحليل وتوافق المسميات مع ملف التقارير.
-    """
-    # 1. جلب السلسلة الزمنية
+    # 1. السلسلة الزمنية
     history = health_result.get("indices_history_last_month", [])
-    curr = history[-1] if len(history) > 0 else {}
-    prev = history[-2] if len(history) > 1 else curr
+    curr    = history[-1] if len(history) > 0 else {}
+    prev    = history[-2] if len(history) > 1 else curr
 
     def calculate_delta(key):
         c_val = curr.get(key)
@@ -1349,34 +1428,33 @@ def prepare_export_data(farm_doc, health_result):
         return 0.0
 
     # 2. النقاط الحرجة
-    alerts = health_result.get("alert_signals", {})
+    alerts          = health_result.get("alert_signals", {})
     critical_points = alerts.get("hotspots", {}).get("critical", [])[:5]
-    
-    # تأكدي من جلب نسبة التغير بشكل آمن
-    forecast_delta = health_result.get('forecast_next_week', {}).get('ndvi_delta_next_mean') or 0
 
-    # 3. بناء الهيكل (تعديل المسميات لتطابق ملف reports_routes.py)
+    # 3. نص التوقع
+    forecast_delta = health_result.get("forecast_next_week", {}).get("ndvi_delta_next_mean") or 0
+    direction      = "تحسناً" if forecast_delta >= 0 else "تراجعاً"
+
     export_payload = {
         "header": {
-            "name": farm_doc.get("name") or farm_doc.get("farmName") or "مزرعة سعف",
-            "area": farm_doc.get("area") or farm_doc.get("farmSize") or "غير محدد",
-            "date": alerts.get("latest_date") or datetime.now().strftime("%Y-%m-%d"),
-            "total_palms": farm_doc.get("finalCount", 0)
+            "name":        farm_doc.get("name") or farm_doc.get("farmName") or "مزرعة سعف",
+            "area":        farm_doc.get("area") or farm_doc.get("farmSize") or "غير محدد",
+            "date":        alerts.get("latest_date") or datetime.now().strftime("%Y-%m-%d"),
+            "total_palms": farm_doc.get("finalCount", 0),
         },
         "wellness_score": health_result.get("current_health", {}).get("Healthy_Pct", 0),
+        "distribution":   health_result.get("current_health", {}),
         "biometrics": {
-            "ndvi": {"val": round(curr.get("NDVI", 0), 2), "delta": calculate_delta("NDVI")},
-            "ndmi": {"val": round(curr.get("NDMI", 0), 2), "delta": calculate_delta("NDMI")},
-            "ndre": {"val": round(curr.get("NDRE", 0), 2), "delta": calculate_delta("NDRE")}
+            "ndvi": {"val": round(float(curr.get("NDVI") or 0), 2), "delta": calculate_delta("NDVI")},
+            "ndmi": {"val": round(float(curr.get("NDMI") or 0), 2), "delta": calculate_delta("NDMI")},
+            "ndre": {"val": round(float(curr.get("NDRE") or 0), 2), "delta": calculate_delta("NDRE")},
         },
         "forecast": {
-            "text": f"يتوقع النظام تغيراً في الخضرة بنسبة {forecast_delta * 100:.1f}%",
-            "trend_data": [h.get("NDVI", 0) for h in history]
+            "text":       f"يتوقع النظام {direction} في خضرة المزرعة بنسبة {abs(forecast_delta * 100):.1f}% خلال الأسبوع القادم.",
+            "trend_data": [h.get("NDVI") or 0 for h in history],
         },
-        "distribution": health_result.get("current_health", {}),
-        "critical_hotspots": critical_points,
-        # تجنب الخطأ إذا لم تكن هناك توصيات بعد
-        "top_action": (farm_doc.get("recommendations") or [None])[0] 
+        "critical_hotspots":  critical_points,
+        "health_map_points":  health_result.get("health_map", [])[:80],  # ✅ للخريطة الحرارية
+        "top_action":         _build_top_action(health_result),           # ✅ من البيانات الفعلية
     }
-    return export_payload 
-#ee
+    return export_payload
