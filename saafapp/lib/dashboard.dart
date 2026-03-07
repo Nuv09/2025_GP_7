@@ -11,8 +11,6 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
-
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'package:universal_html/html.dart' as html;
@@ -555,7 +553,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
         // ✅ ويب: تحميل مباشر
         final blob = html.Blob([bytes], 'application/pdf');
         final url = html.Url.createObjectUrlFromBlob(blob);
-        final anchor = html.AnchorElement(href: url)
+        html.AnchorElement(href: url)
           ..setAttribute('download', fileName)
           ..click();
         html.Url.revokeObjectUrl(url);
@@ -575,7 +573,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
           Navigator.pop(context);
         } catch (_) {}
         _toast("خطأ في الاتصال: تأكدي من جودة الإنترنت");
-        print("PDF Export Error: $e");
+        debugPrint("PDF Export Error: $e");
       }
     }
   }
@@ -620,7 +618,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
           bytes,
         ], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         final url = html.Url.createObjectUrlFromBlob(blob);
-        final anchor = html.AnchorElement(href: url)
+        html.AnchorElement(href: url)
           ..setAttribute('download', fileName)
           ..click();
         html.Url.revokeObjectUrl(url);
@@ -639,7 +637,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
           Navigator.pop(context);
         } catch (_) {}
         _toast("حدث خطأ أثناء تصدير الإكسل: $e");
-        print("Excel Export Error: $e");
+        debugPrint("Excel Export Error: $e");
       }
     }
   }
