@@ -14,7 +14,7 @@ from firebase_admin import messaging
 
 from app.firestore_utils import set_status, get_farm_doc
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="app/templates")
 CORS(app)
 
 # ✅ Firebase Admin init (يستخدم Service Account حق Cloud Run تلقائياً)
@@ -351,6 +351,7 @@ def analyze():
         set_status(farm_id, status="failed", errorMessage=str(e))
         app.logger.exception(f"❌ ERROR during /analyze: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500 
+@app.post("/scheduled-update")
 def scheduled_update():
     app.logger.info("⏰ /scheduled-update called")
 
@@ -441,6 +442,8 @@ def scheduled_update():
 
 from app.reports_routes import reports_bp
 app.register_blueprint(reports_bp, url_prefix='/api')
+
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
