@@ -288,6 +288,9 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
     farm_name     = header.get("name", "مزرعة سعف")
     farm_area     = header.get("area", "—")
     total_palms   = header.get("total_palms", "—")
+    # new metadata fields for enhanced report header
+    contract_number = header.get("contract_number") or header.get("contract") or ""
+    city            = header.get("city", "")
     forecast_text = forecast.get("text", "—")
 
     if heatmap_svg:
@@ -306,7 +309,7 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
 
     raw_hotspots = export_data.get("hotspots_table", [])
     hotspots = []
-    for pt in raw_hotspots[:5]:
+    for pt in raw_hotspots[:3]:
         hotspots.append({
             "lat": pt.get("lat", "—"),
             "lng": pt.get("lng", pt.get("lon", "—")),
@@ -347,7 +350,7 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
         "critical": f"{float(forecast_next.get('Critical_Pct_next', critical_pct)):.1f}%",
     }
 
-    risk_drivers = export_data.get("risk_drivers", [])[:4]
+    risk_drivers = export_data.get("risk_drivers", [])[:3]
 
 
 
@@ -415,6 +418,8 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
         extra_indices=extra_indices,
         risk_drivers=risk_drivers,
         hotspots=hotspots,
+        contract_number=contract_number,
+        city=city,
     )
 
     output_path = f"/tmp/saaf_report_{farm_id}.pdf"
@@ -493,10 +498,13 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     ws.row_dimensions[1].height = 36
 
     # Farm info row
-    info_labels = ["اسم المزرعة", "رقم المزرعة", "المساحة", "عدد النخيل",
+    info_labels = ["اسم المزرعة", "رقم العقد", "المدينة", "رقم المزرعة", "المساحة", "عدد النخيل",
                    "تاريخ التقرير", "مؤشر العافية"]
     info_vals   = [
-        header.get("name", "—"), farm_id,
+        header.get("name", "—"),
+        header.get("contract_number") or header.get("contract", "—"),
+        header.get("city", "—"),
+        farm_id,
         f"{header.get('area', '—')} م²",
         str(header.get("total_palms", "—")),
         header.get("date", datetime.now().strftime("%Y-%m-%d")),

@@ -4,6 +4,9 @@
   <meta charset="UTF-8"/>
   <title>تقرير صحة المزرعة - سعف</title>
   <style>
+    /* modern readable Arabic font */
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap&subset=arabic');
+
     @page {
       size: A4 portrait;
       margin: 0;
@@ -20,13 +23,13 @@
     }
 
     body {
-      font-family: sans-serif;
+      font-family: 'Cairo', sans-serif;
       color: #1e293b;
       font-size: 11px;
       direction: rtl;
       margin: 0;
       padding: 0;
-    }
+    
 
     .page {
       width: 210mm;
@@ -75,7 +78,7 @@
     .hdr-inner {
       position: relative;
       z-index: 1;
-      padding: 9mm 11mm 7mm;
+      padding: 8mm 10mm 6mm;
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
@@ -89,8 +92,8 @@
     }
 
     .brand-logo {
-      width: 84px;
-      height: 84px;
+      width: 120px;
+      height: 120px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -102,8 +105,8 @@
     }
 
     .brand-logo img {
-      width: 84px;
-      height: 84px;
+      width: 120px;
+      height: 120px;
       object-fit: contain;
       display: block;
       background: transparent;
@@ -117,7 +120,7 @@
     }
 
     .brand-title {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 900;
       line-height: 1.05;
       color: #ffffff;
@@ -143,13 +146,13 @@
     }
 
     .hdr-meta {
-      width: 240px;
+      width: 220px;
       text-align: left;
       background: rgba(255,255,255,0.08);
       border: 1px solid rgba(255,255,255,0.14);
       border-radius: 12px;
-      padding: 10px 12px;
-      font-size: 10px;
+      padding: 8px 10px;
+      font-size: 9px;
       color: #d1fae5;
       line-height: 1.7;
       flex-shrink: 0;
@@ -165,7 +168,8 @@
     .hdr-meta-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 4px 10px;
+      gap: 3px 8px;
+      /* allow more rows when we add extra fields */
     }
 
     .hdr-meta strong {
@@ -179,7 +183,7 @@
 
     .content {
       flex: 1;
-      padding: 7mm 11mm 6mm;
+      padding: 6mm 10mm 5mm;
       background: #f8fafc;
       overflow: hidden;
     }
@@ -190,22 +194,22 @@
       color: #064e3b;
       border-right: 4px solid #10b981;
       padding-right: 8px;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       line-height: 1.2;
     }
 
     .sp {
-      height: 8px;
+      height: 6px;
     }
 
     .sp-lg {
-      height: 10px;
+      height: 8px;
     }
 
     .grid-2 {
       display: grid;
       grid-template-columns: 1.05fr 0.95fr;
-      gap: 10px;
+      gap: 8px;
     }
 
     .grid-3 {
@@ -217,7 +221,7 @@
     .card {
       background: #ffffff;
       border-radius: 14px;
-      padding: 11px 12px;
+      padding: 8px 10px;
       border: 1px solid #e5ece8;
       box-shadow: none;
       overflow: hidden;
@@ -245,6 +249,18 @@
       font-size: 11px;
       color: #334155;
       line-height: 1.75;
+    }
+
+    .exec-list {
+      margin-top: 4px;
+      padding-left: 16px;
+      color: #334155;
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    .exec-list li {
+      margin-bottom: 4px;
     }
 
     .exec-next {
@@ -460,14 +476,14 @@
       color: #334155;
       font-size: 10px;
       font-weight: 800;
-      padding: 7px 5px;
+      padding: 5px 4px;
       border-bottom: 1px solid #e5ece8;
       text-align: center;
       line-height: 1.35;
     }
 
     td {
-      padding: 6px 5px;
+      padding: 4px 4px;
       font-size: 9px;
       color: #334155;
       border-bottom: 1px solid #eef3f1;
@@ -548,10 +564,10 @@
     }
 
     .ftr-info {
-      font-size: 9px;
+      font-size: 8px;
       color: #d1d5db;
       text-align: left;
-      line-height: 1.45;
+      line-height: 1.4;
     }
 
     .page-num {
@@ -561,7 +577,7 @@
 
     .tight-note-box {
       border-top: 1px solid #f1f5f9;
-      margin-top: 10px;
+      margin-top: 6px;
       padding-top: 8px;
       background: #f8fafc;
       border-radius: 8px;
@@ -574,7 +590,7 @@
     .map-holder svg {
       display: block;
       width: 100%;
-      height: 185px;
+      height: 160px;
     }
 
     .legend {
@@ -618,21 +634,21 @@
 
             <div>
               <div class="brand-title">تقرير صحة المزرعة</div>
-              <div class="brand-sub">Saaf Farm Health Report</div>
             </div>
           </div>
 
           <div class="farm-name">{{ farm_name }}</div>
-          <div class="farm-sub">ملخص إداري مبسط للحالة الحالية والإجراء المقترح</div>
         </div>
 
         <div class="hdr-meta">
           <div class="hdr-meta-title">بيانات التقرير</div>
           <div class="hdr-meta-grid">
-            <div><strong>رقم المزرعة:</strong> {{ farm_id }}</div>
-            <div><strong>تاريخ التقرير:</strong> {{ report_date }}</div>
+            <div><strong>رقم العقد:</strong> {{ contract_number or '—' }}</div>
+            <div><strong>اسم المزرعة:</strong> {{ farm_name }}</div>
+            <div><strong>المدينة/المنطقة:</strong> {{ city or '—' }}</div>
             <div><strong>المساحة:</strong> {{ farm_area }} م²</div>
             <div><strong>عدد النخيل:</strong> {{ total_palms }}</div>
+            <div><strong>تاريخ التقرير:</strong> {{ report_date }}</div>
           </div>
         </div>
       </div>
@@ -644,8 +660,19 @@
       {% if executive_summary %}
       <div class="sec">الملخص التنفيذي</div>
       <div class="card executive">
-        <div class="exec-pill">{{ executive_status or wellness_text }}</div>
+        {% if executive_status %}
+        <div class="exec-pill">{{ executive_status }}</div>
+        {% endif %}
+        {% set lines = executive_summary.split('\n') if executive_summary is string else [] %}
+        {% if lines and lines|length > 1 %}
+        <ul class="exec-list">
+          {% for line in lines %}
+          <li>{{ line }}</li>
+          {% endfor %}
+        </ul>
+        {% else %}
         <div class="exec-text">{{ executive_summary }}</div>
+        {% endif %}
         {% if executive_next_step %}
         <div class="exec-next">{{ executive_next_step }}</div>
         {% endif %}
@@ -684,63 +711,27 @@
       <div class="sp-lg"></div>
       {% endif %}
 
-      <div class="grid-2">
-        <div class="card">
-          <div class="sec" style="margin-bottom:8px;">خريطة المزرعة</div>
-          <div class="map-holder">
-            {{ map_block|safe }}
+      <div class="sec">خريطة المزرعة وحالة النخيل</div>
+      <div class="card">
+        <div class="map-holder" style="margin-bottom:8px;">
+          {{ map_block|safe }}
+        </div>
+        <div class="legend" style="justify-content:center;">
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#22c55e;width:12px;height:12px;"></div>
+            <span>سليم</span>
           </div>
-
-          <div class="legend">
-            <div class="legend-item">
-              <div class="legend-dot" style="background:#22c55e;"></div>
-              <span>نخلة سليمة</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-dot" style="background:#f59e0b;"></div>
-              <span>تحتاج متابعة</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-dot" style="background:#ef4444;"></div>
-              <span>حالة حرجة</span>
-            </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#f59e0b;width:12px;height:12px;"></div>
+            <span>متابعة</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#ef4444;width:12px;height:12px;"></div>
+            <span>حرج</span>
           </div>
         </div>
-
-        <div class="card">
-          <div class="sec" style="margin-bottom:10px;">توزيع صحة النخيل</div>
-
-          <div class="drow">
-            <div class="dtop">
-              <div class="dlbl" style="color:#15803d;">نخيل سليمة</div>
-              <div class="dpct" style="color:#22c55e;">{{ "%.1f"|format(healthy_pct) }}%</div>
-            </div>
-            <div class="dbg"><div class="dbar" style="width:{{ healthy_pct }}%;background:linear-gradient(90deg,#22c55e,#16a34a);"></div></div>
-            <div class="dnote">الحالة الغالبة حاليًا داخل المزرعة</div>
-          </div>
-
-          <div class="drow">
-            <div class="dtop">
-              <div class="dlbl" style="color:#a16207;">تحتاج متابعة</div>
-              <div class="dpct" style="color:#f59e0b;">{{ "%.1f"|format(monitor_pct) }}%</div>
-            </div>
-            <div class="dbg"><div class="dbar" style="width:{{ monitor_pct }}%;background:linear-gradient(90deg,#f59e0b,#d97706);"></div></div>
-            <div class="dnote">تحتاج مراجعة ومراقبة خلال الفترة القادمة</div>
-          </div>
-
-          <div class="drow">
-            <div class="dtop">
-              <div class="dlbl" style="color:#b91c1c;">حالة حرجة</div>
-              <div class="dpct" style="color:#ef4444;">{{ "%.1f"|format(critical_pct) }}%</div>
-            </div>
-            <div class="dbg"><div class="dbar" style="width:{{ critical_pct }}%;background:linear-gradient(90deg,#ef4444,#dc2626);"></div></div>
-            <div class="dnote">تحتاج تدخلًا أسرع من بقية المناطق</div>
-          </div>
-
-          <div class="tight-note-box">
-            <strong style="color:#064e3b;">ملاحظة:</strong><br/>
-            {{ map_note }}
-          </div>
+        <div class="tight-note-box" style="margin-top:10px;">
+          {{ map_note }}
         </div>
       </div>
 
@@ -781,18 +772,17 @@
             </div>
 
             <div>
-              <div class="brand-title">الصفحة التحليلية التفصيلية</div>
-              <div class="brand-sub">Supporting Analysis Page</div>
+              <div class="brand-title">التحليل التفصيلي</div>
             </div>
           </div>
 
           <div class="farm-name">{{ farm_name }}</div>
-          <div class="farm-sub">تفاصيل إضافية للمؤشرات والاتجاهات والمناطق الحرجة</div>
         </div>
 
         <div class="hdr-meta">
           <div class="hdr-meta-title">بيانات مرجعية</div>
           <div class="hdr-meta-grid">
+            <div><strong>رقم العقد:</strong> {{ contract_number or '—' }}</div>
             <div><strong>رقم المزرعة:</strong> {{ farm_id }}</div>
             <div><strong>التاريخ:</strong> {{ report_date }}</div>
             <div><strong>عدد النخيل:</strong> {{ total_palms }}</div>
@@ -807,30 +797,27 @@
       <div class="sec">مؤشرات صحة المزرعة</div>
       <div class="grid-3">
         <div class="bio" style="border-top:3px solid #22c55e;">
-          <div class="bio-lbl">خضرة المزرعة</div>
+          <div class="bio-lbl">خضرة</div>
           <div class="bio-sci">NDVI</div>
           <div class="bio-val" style="color:#22c55e;">{{ ndvi_val }}</div>
           <div class="bio-badge" style="background:{{ nb }};color:{{ nc }};">{{ nv }}</div>
           <div class="bio-delta">{{ ndvi_delta_badge|safe }} عن الأسبوع الماضي</div>
-          <div class="hint">القيمة المثالية: 0.60 فأكثر</div>
         </div>
 
         <div class="bio" style="border-top:3px solid #3b82f6;">
-          <div class="bio-lbl">رطوبة النخيل</div>
+          <div class="bio-lbl">رطوبة</div>
           <div class="bio-sci">NDMI</div>
           <div class="bio-val" style="color:#3b82f6;">{{ ndmi_val }}</div>
           <div class="bio-badge" style="background:{{ nmb }};color:{{ nmc }};">{{ nmv }}</div>
           <div class="bio-delta">{{ ndmi_delta_badge|safe }} عن الأسبوع الماضي</div>
-          <div class="hint">القيمة المثالية: 0.40 فأكثر</div>
         </div>
 
         <div class="bio" style="border-top:3px solid #10b981;">
-          <div class="bio-lbl">حيوية الأوراق</div>
+          <div class="bio-lbl">حيوية</div>
           <div class="bio-sci">NDRE</div>
           <div class="bio-val" style="color:#10b981;">{{ ndre_val }}</div>
           <div class="bio-badge" style="background:{{ nrb }};color:{{ nrc }};">{{ nrv }}</div>
           <div class="bio-delta">{{ ndre_delta_badge|safe }} عن الأسبوع الماضي</div>
-          <div class="hint">يعكس مستوى التغذية والنيتروجين</div>
         </div>
       </div>
 
@@ -843,28 +830,24 @@
             <table>
               <thead>
                 <tr>
-                  <th>المؤشر المبسط</th>
-                  <th>الرمز</th>
+                  <th>المؤشر</th>
                   <th>القيمة</th>
                   <th>الوصف</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>خضرة المزرعة</td>
-                  <td>NDVI</td>
+                  <td>خضرة (<span style="font-size:9px;color:#6b7280;">NDVI</span>)</td>
                   <td>{{ ndvi_val }}</td>
                   <td>{{ nv }}</td>
                 </tr>
                 <tr>
-                  <td>رطوبة النخيل</td>
-                  <td>NDMI</td>
+                  <td>رطوبة (<span style="font-size:9px;color:#6b7280;">NDMI</span>)</td>
                   <td>{{ ndmi_val }}</td>
                   <td>{{ nmv }}</td>
                 </tr>
                 <tr>
-                  <td>حيوية الأوراق</td>
-                  <td>NDRE</td>
+                  <td>حيوية (<span style="font-size:9px;color:#6b7280;">NDRE</span>)</td>
                   <td>{{ ndre_val }}</td>
                   <td>{{ nrv }}</td>
                 </tr>
@@ -949,7 +932,7 @@
               </tr>
             </thead>
             <tbody>
-              {% for item in risk_drivers[:4] %}
+              {% for item in risk_drivers[:3] %}
               <tr>
                 <td>{{ item.title }}</td>
                 <td>{{ item.count }}</td>
@@ -968,6 +951,11 @@
             </tbody>
           </table>
         </div>
+        {% if risk_drivers|length > 3 %}
+        <div class="tight-note-box" style="margin-top:6px;">
+          هناك أسباب أخرى متاحة عند الطلب.
+        </div>
+        {% endif %}
       </div>
       <div class="sp-lg"></div>
       {% endif %}
@@ -987,7 +975,7 @@
               </tr>
             </thead>
             <tbody>
-              {% for h in hotspots[:5] %}
+              {% for h in hotspots[:3] %}
               <tr>
                 <td>{{ loop.index }}</td>
                 <td>{{ h.lat }}</td>
@@ -1007,6 +995,11 @@
             </tbody>
           </table>
         </div>
+        {% if hotspots|length > 3 %}
+        <div class="tight-note-box" style="margin-top:6px;">
+          وهناك مواقع إضافية في النسخة الكاملة.
+        </div>
+        {% endif %}
       </div>
       {% endif %}
 
