@@ -14,7 +14,7 @@ from firebase_admin import messaging
 
 from app.firestore_utils import set_status, get_farm_doc
 
-app = Flask(__name__, template_folder="app/templates")
+app = Flask(__name__, template_folder="templates", static_folder="static")
 CORS(app)
 
 # ✅ Firebase Admin init (يستخدم Service Account حق Cloud Run تلقائياً)
