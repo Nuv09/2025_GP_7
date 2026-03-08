@@ -101,7 +101,7 @@ def _trend_sparkline(values: list, color: str = "#22c55e", width: int = 160, hei
 </svg>""".strip()
 
 
-def _heatmap_svg(map_points: list, width: int = 320, height: int = 210) -> str:
+def _heatmap_svg(map_points: list, width: int = 320, height: int = 185) -> str:
     """
     يرسم خريطة حرارية SVG حقيقية من نقاط health_map.
     كل نقطة: {"lat": float, "lng": float, "s": 0|1|2}
@@ -129,8 +129,21 @@ def _heatmap_svg(map_points: list, width: int = 320, height: int = 210) -> str:
 
     layers: dict = {0: [], 1: [], 2: []}
     for pt in map_points:
-        s = int(pt.get("s", 0))
-        layers[s].append(to_xy(pt.get("lat", 0), pt.get("lng", 0)))
+        try:
+            s = int(pt.get("s", 0))
+        except (TypeError, ValueError):
+            s = 0
+
+        if s not in layers:
+            s = 0
+
+        try:
+            lat = float(pt.get("lat", 0))
+            lng = float(pt.get("lng", 0))
+        except (TypeError, ValueError):
+            continue
+
+        layers[s].append(to_xy(lat, lng))
 
     circles = ""
     for s in [0, 1, 2]:
@@ -210,7 +223,7 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
     critical_pct  = float(dist.get("Critical_Pct", 0))
 
     gauge_color = _color_for_pct(wellness)
-    gauge_svg   = _gauge_svg(wellness, gauge_color, size=130)
+    gauge_svg   = _gauge_svg(wellness, gauge_color, size=120)
     sparkline   = _trend_sparkline(forecast.get("trend_data", []), color="#3b82f6")
     heatmap_svg = _heatmap_svg(map_points)
 
@@ -262,14 +275,11 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
     )
 
     wellness_desc = (
-        f"{healthy_pct:.0f} من كل 100 نخلة بحالة جيدة. "
-        f"{'لا توجد مشاكل تستوجب التدخل الفوري.' if critical_pct < 10 else f'يوجد {critical_pct:.0f}% تحتاج تدخل سريع.'}"
+        f"تُظهر النتائج أن نسبة الحالة السليمة تبلغ {healthy_pct:.0f}%. "
+        f"{'لا توجد مؤشرات حرجة تستوجب تدخلًا فوريًا.' if critical_pct < 10 else f'توجد نسبة حرجة تبلغ {critical_pct:.0f}% تحتاج تدخلًا أسرع.'}"
     )
 
-    palms_total = int(header.get("total_palms") or 0)
-    palms_healthy  = int(palms_total * healthy_pct / 100) if palms_total else "—"
-    palms_monitor  = int(palms_total * monitor_pct / 100) if palms_total else "—"
-    palms_critical = int(palms_total * critical_pct / 100) if palms_total else "—"
+  
 
     action_title = top_action.get("title_ar", "استمر في الروتين الحالي")
     action_text  = top_action.get("text_ar", "جميع المؤشرات ضمن النطاقات الطبيعية.")
@@ -285,21 +295,9 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
         <div style="background:#0f2027;border-radius:12px;overflow:hidden;">
           {heatmap_svg}
         </div>
-        <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;">
-          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#374151;">
-            <div style="width:11px;height:11px;border-radius:50%;background:#22c55e;"></div>نخلة سليمة
-          </div>
-          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#374151;">
-            <div style="width:11px;height:11px;border-radius:50%;background:#f59e0b;"></div>تحتاج متابعة
-          </div>
-          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#374151;">
-            <div style="width:11px;height:11px;border-radius:50%;background:#ef4444;box-shadow:0 0 5px #ef4444;"></div>حالة حرجة
-          </div>
-        </div>
         """
     else:
-        map_block = '<div style="color:#9ca3af;font-size:12px;padding:20px;text-align:center;">لا توجد بيانات خريطة بعد</div>'
-
+        map_block = '<div style="color:#9ca3af;font-size:11px;padding:20px;text-align:center;">لا توجد بيانات خريطة بعد</div>'
     map_note = (
         "النقاط الحمراء في الخريطة تحدد مواقع النخيل التي تحتاج تدخلًا أسرع."
         if critical_pct > 0 else
@@ -308,10 +306,10 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
 
     raw_hotspots = export_data.get("hotspots_table", [])
     hotspots = []
-    for pt in raw_hotspots[:8]:
+    for pt in raw_hotspots[:5]:
         hotspots.append({
             "lat": pt.get("lat", "—"),
-            "lon": pt.get("lon", "—"),
+            "lng": pt.get("lng", pt.get("lon", "—")),
             "status": pt.get("status", "—"),
             "note": pt.get("note", "—"),
         })
@@ -335,12 +333,12 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
     )
 
     key_findings = export_data.get("key_findings", [
-        f"{healthy_pct:.0f}% من النخيل يظهر حالة جيدة حاليًا.",
-        f"{monitor_pct:.0f}% من النخيل يحتاج متابعة دورية خلال الفترة القادمة.",
-        f"{critical_pct:.0f}% من النخيل يحتاج مراجعة أسرع ميدانيًا.",
-    ])
+        f"تبلغ نسبة الحالة السليمة حاليًا {healthy_pct:.0f}%.",
+        f"توجد نسبة متابعة تبلغ {monitor_pct:.0f}% وتحتاج مراقبة دورية.",
+        f"تم رصد نسبة حرجة تبلغ {critical_pct:.0f}% تحتاج مراجعة أسرع.",
+    ])[:3]
 
-    extra_indices = export_data.get("extra_indices", [])
+    extra_indices = export_data.get("extra_indices", [])[:4]
 
     forecast_next = export_data.get("forecast_next_week", {})
     forecast_summary = {
@@ -349,7 +347,7 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
         "critical": f"{float(forecast_next.get('Critical_Pct_next', critical_pct)):.1f}%",
     }
 
-    risk_drivers = export_data.get("risk_drivers", [])
+    risk_drivers = export_data.get("risk_drivers", [])[:4]
 
 
 
@@ -385,9 +383,7 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
         healthy_pct=healthy_pct,
         monitor_pct=monitor_pct,
         critical_pct=critical_pct,
-        palms_healthy=palms_healthy,
-        palms_monitor=palms_monitor,
-        palms_critical=palms_critical,
+       
 
         map_block=map_block,
         map_note=map_note,

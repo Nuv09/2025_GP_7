@@ -1586,7 +1586,7 @@ def _build_hotspots_table(alert_signals: Dict[str, Any]) -> list[dict]:
                 "note": pt.get("rule", "—"),
             })
 
-    return all_points[:8]
+    return all_points[:5]
 
 
 def prepare_export_data(farm_doc, health_result):
@@ -1659,7 +1659,7 @@ def prepare_export_data(farm_doc, health_result):
         "forecast_next_week": forecast_next,
 
         "critical_hotspots": critical_points,
-        "health_map_points": health_map[:80],
+        "health_map_points": health_map[:60],
         "top_action": top_action,
 
         "executive_status": executive_status,

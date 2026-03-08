@@ -4,578 +4,599 @@
   <meta charset="UTF-8"/>
   <title>تقرير صحة المزرعة - سعف</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
-
-    @page{
-      size:A4 portrait;
-      margin:0;
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      background: #ffffff;
+    }
+
+    body {
+      font-family: sans-serif;
+      color: #1e293b;
+      font-size: 11px;
+      direction: rtl;
+      margin: 0;
+      padding: 0;
+    }
+
+    .page {
+      width: 210mm;
+      height: 297mm;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      page-break-after: always;
+      overflow: hidden;
     }
 
-    *{
-      box-sizing:border-box;
-      margin:0;
-      padding:0;
+    .page:last-child {
+      page-break-after: auto;
     }
 
-    html, body{
-      background:#edf3f0;
+    .hdr {
+      background: linear-gradient(135deg, #052e16 0%, #064e3b 55%, #065f46 100%);
+      position: relative;
+      overflow: hidden;
+      color: #ffffff;
+      flex-shrink: 0;
     }
-
-    body{
-      font-family:'Cairo',sans-serif;
-      color:#1e293b;
-      font-size:13px;
-      direction:rtl;
-      margin:0;
-      padding:0;
-    }
-
-    .page{
-      width:210mm;
-      min-height:297mm;
-      margin:0 auto;
-      background:#ffffff;
-      display:flex;
-      flex-direction:column;
-      page-break-after:always;
-      overflow:hidden;
-    }
-
-    .page:last-child{
-      page-break-after:auto;
+
+    .hdr::before {
+      content: '';
+      position: absolute;
+      left: -60px;
+      bottom: -60px;
+      width: 210px;
+      height: 210px;
+      background: radial-gradient(circle, rgba(235,185,116,0.16), transparent 70%);
+      border-radius: 50%;
+    }
+
+    .hdr::after {
+      content: '';
+      position: absolute;
+      top: -70px;
+      right: -70px;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(255,255,255,0.08), transparent 70%);
+      border-radius: 50%;
     }
 
-    .hdr{
-      background:linear-gradient(135deg,#052e16 0%,#064e3b 55%,#065f46 100%);
-      position:relative;
-      overflow:hidden;
+    .hdr-inner {
+      position: relative;
+      z-index: 1;
+      padding: 9mm 11mm 7mm;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
     }
 
-    .hdr::before{
-      content:'';
-      position:absolute;
-      left:-60px;
-      bottom:-60px;
-      width:220px;
-      height:220px;
-      background:radial-gradient(circle,rgba(235,185,116,0.16),transparent 70%);
-      border-radius:50%;
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
-    .hdr::after{
-      content:'';
-      position:absolute;
-      top:-70px;
-      right:-70px;
-      width:240px;
-      height:240px;
-      background:radial-gradient(circle,rgba(255,255,255,0.08),transparent 70%);
-      border-radius:50%;
+    .brand-logo {
+      width: 84px;
+      height: 84px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      overflow: visible;
     }
 
-    .hdr-inner{
-      position:relative;
-      z-index:1;
-      padding:16mm 12mm 10mm;
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      gap:12px;
+    .brand-logo img {
+      width: 84px;
+      height: 84px;
+      object-fit: contain;
+      display: block;
+      background: transparent;
     }
 
-    .brand-wrap{
-      display:flex;
-      align-items:center;
-      gap:14px;
+    .brand-logo-fallback {
+      color: #ebd29b;
+      font-size: 40px;
+      font-weight: 900;
+      line-height: 1;
     }
 
-    .brand-logo{
-      width:68px;
-      height:68px;
-      border-radius:18px;
-      background:rgba(255,255,255,0.10);
-      border:1px solid rgba(255,255,255,0.18);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      overflow:hidden;
-      flex-shrink:0;
+    .brand-title {
+      font-size: 22px;
+      font-weight: 900;
+      line-height: 1.05;
+      color: #ffffff;
     }
 
-    .brand-logo img{
-      width:100%;
-      height:100%;
-      object-fit:contain;
-      display:block;
+    .brand-sub {
+      font-size: 10px;
+      color: #cfeee2;
+      margin-top: 3px;
     }
 
-    .brand-logo-fallback{
-      color:#ebd29b;
-      font-size:30px;
-      font-weight:900;
+    .farm-name {
+      font-size: 16px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-top: 8px;
     }
 
-    .brand-title{
-      font-size:24px;
-      font-weight:900;
-      color:#ffffff;
-      line-height:1.1;
+    .farm-sub {
+      font-size: 10px;
+      color: #a7f3d0;
+      margin-top: 2px;
     }
 
-    .brand-sub{
-      font-size:11px;
-      color:#cfeee2;
-      margin-top:4px;
+    .hdr-meta {
+      width: 240px;
+      text-align: left;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 10px;
+      color: #d1fae5;
+      line-height: 1.7;
+      flex-shrink: 0;
     }
 
-    .farm-name{
-      font-size:18px;
-      font-weight:800;
-      color:#ffffff;
-      margin-top:10px;
+    .hdr-meta-title {
+      color: #ebd29b;
+      font-weight: 800;
+      margin-bottom: 5px;
+      font-size: 11px;
     }
 
-    .farm-sub{
-      font-size:11px;
-      color:#a7f3d0;
-      margin-top:3px;
+    .hdr-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 10px;
     }
 
-    .hdr-meta{
-      min-width:255px;
-      text-align:left;
-      background:rgba(255,255,255,0.08);
-      border:1px solid rgba(255,255,255,0.14);
-      border-radius:14px;
-      padding:12px 14px;
-      font-size:11px;
-      color:#d1fae5;
-      line-height:1.9;
+    .hdr-meta strong {
+      color: #ffffff;
     }
 
-    .hdr-meta-title{
-      color:#ebd29b;
-      font-weight:800;
-      margin-bottom:6px;
-      font-size:12px;
+    .stripe {
+      height: 3px;
+      background: linear-gradient(90deg, #ebd29b, #10b981, #ebd29b);
     }
 
-    .hdr-meta-grid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:6px 12px;
+    .content {
+      flex: 1;
+      padding: 7mm 11mm 6mm;
+      background: #f8fafc;
+      overflow: hidden;
     }
 
-    .hdr-meta strong{
-      color:#ffffff;
+    .sec {
+      font-size: 13px;
+      font-weight: 900;
+      color: #064e3b;
+      border-right: 4px solid #10b981;
+      padding-right: 8px;
+      margin-bottom: 8px;
+      line-height: 1.2;
     }
 
-    .stripe{
-      height:4px;
-      background:linear-gradient(90deg,#ebd29b,#10b981,#ebd29b);
+    .sp {
+      height: 8px;
     }
 
-    .content{
-      flex:1;
-      padding:10mm 12mm 8mm;
-      background:#f8fafc;
+    .sp-lg {
+      height: 10px;
     }
 
-    .sec{
-      font-size:14px;
-      font-weight:900;
-      color:#064e3b;
-      border-right:5px solid #10b981;
-      padding-right:10px;
-      margin-bottom:12px;
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 10px;
     }
 
-    .sp{height:14px;}
-    .sp-lg{height:18px;}
-
-    .grid-2{
-      display:grid;
-      grid-template-columns:1.08fr 0.92fr;
-      gap:12px;
-    }
-
-    .grid-3{
-      display:grid;
-      grid-template-columns:1fr 1fr 1fr;
-      gap:10px;
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
     }
 
-    .card{
-      background:#ffffff;
-      border-radius:16px;
-      padding:14px 16px;
-      border:1px solid #e5ece8;
-      box-shadow:0 1px 6px rgba(0,0,0,0.06);
+    .card {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 11px 12px;
+      border: 1px solid #e5ece8;
+      box-shadow: none;
+      overflow: hidden;
     }
 
-    .executive{
-      background:linear-gradient(135deg,#ffffff,#f3fbf8);
-      border:1px solid #dcefe7;
+    .executive {
+      background: linear-gradient(135deg, #ffffff, #f3fbf8);
+      border: 1px solid #dcefe7;
     }
 
-    .exec-pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      border-radius:999px;
-      padding:5px 12px;
-      background:#dcfce7;
-      color:#166534;
-      font-size:11px;
-      font-weight:800;
-      margin-bottom:10px;
+    .exec-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 4px 10px;
+      background: #dcfce7;
+      color: #166534;
+      font-size: 10px;
+      font-weight: 800;
+      margin-bottom: 8px;
     }
 
-    .exec-text{
-      font-size:12px;
-      color:#334155;
-      line-height:1.95;
+    .exec-text {
+      font-size: 11px;
+      color: #334155;
+      line-height: 1.75;
     }
 
-    .exec-next{
-      margin-top:10px;
-      padding-top:10px;
-      border-top:1px dashed #d8e5df;
-      font-size:12px;
-      font-weight:700;
-      color:#065f46;
-      line-height:1.8;
+    .exec-next {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed #d8e5df;
+      font-size: 11px;
+      font-weight: 700;
+      color: #065f46;
+      line-height: 1.6;
     }
 
-    .score-band{
-      background:#ffffff;
-      border-radius:16px;
-      padding:18px 20px;
-      border:1px solid #e5ece8;
-      box-shadow:0 2px 8px rgba(0,0,0,0.06);
-      display:flex;
-      align-items:center;
-      gap:20px;
+    .score-band {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 12px 14px;
+      border: 1px solid #e5ece8;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      overflow: hidden;
     }
 
-    .score-verdict{
-      font-size:20px;
-      font-weight:900;
-      line-height:1.2;
+    .score-verdict {
+      font-size: 18px;
+      font-weight: 900;
+      line-height: 1.2;
     }
 
-    .score-desc{
-      font-size:12px;
-      color:#475569;
-      margin-top:6px;
-      line-height:1.8;
+    .score-desc {
+      font-size: 11px;
+      color: #475569;
+      margin-top: 4px;
+      line-height: 1.65;
     }
 
-    .chips{
-      display:flex;
-      gap:7px;
-      margin-top:12px;
-      flex-wrap:wrap;
+    .chips {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+      flex-wrap: wrap;
     }
 
-    .chip{
-      border-radius:999px;
-      padding:4px 12px;
-      font-size:11px;
-      font-weight:800;
+    .chip {
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 10px;
+      font-weight: 800;
+      white-space: nowrap;
     }
 
-    .drow{
-      margin-bottom:12px;
+    .drow {
+      margin-bottom: 9px;
     }
 
-    .drow:last-child{
-      margin-bottom:0;
+    .drow:last-child {
+      margin-bottom: 0;
     }
 
-    .dtop{
-      display:flex;
-      justify-content:space-between;
-      align-items:baseline;
-      margin-bottom:4px;
+    .dtop {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 3px;
     }
 
-    .dlbl{
-      font-size:12px;
-      font-weight:700;
+    .dlbl {
+      font-size: 11px;
+      font-weight: 700;
     }
 
-    .dpct{
-      font-size:15px;
-      font-weight:900;
+    .dpct {
+      font-size: 13px;
+      font-weight: 900;
     }
 
-    .dbg{
-      background:#f1f5f9;
-      border-radius:99px;
-      height:9px;
-      overflow:hidden;
+    .dbg {
+      background: #f1f5f9;
+      border-radius: 99px;
+      height: 8px;
+      overflow: hidden;
     }
 
-    .dbar{
-      height:100%;
-      border-radius:99px;
+    .dbar {
+      height: 100%;
+      border-radius: 99px;
     }
 
-    .dnote{
-      font-size:10px;
-      color:#6b7280;
-      margin-top:3px;
+    .dnote {
+      font-size: 9px;
+      color: #6b7280;
+      margin-top: 2px;
     }
 
-    .bio{
-      background:#ffffff;
-      border-radius:14px;
-      padding:13px 14px;
-      border:1px solid #e5ece8;
-      box-shadow:0 1px 5px rgba(0,0,0,0.05);
-      border-top:3px solid #e5e7eb;
+    .bio {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 10px 10px;
+      border: 1px solid #e5ece8;
+      overflow: hidden;
     }
 
-    .bio-emoji{
-      font-size:20px;
-      margin-bottom:4px;
-      display:block;
+    .bio-lbl {
+      font-size: 10px;
+      color: #94a3b8;
     }
 
-    .bio-lbl{
-      font-size:11px;
-      color:#94a3b8;
+    .bio-sci {
+      font-size: 9px;
+      color: #b0b8c1;
+      margin-bottom: 4px;
     }
 
-    .bio-sci{
-      font-size:10px;
-      color:#b0b8c1;
-      margin-bottom:6px;
+    .bio-val {
+      font-size: 22px;
+      font-weight: 900;
+      line-height: 1;
     }
 
-    .bio-val{
-      font-size:25px;
-      font-weight:900;
-      line-height:1;
+    .bio-badge {
+      font-size: 9px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 999px;
+      display: inline-block;
+      margin-top: 5px;
     }
 
-    .bio-badge{
-      font-size:10px;
-      font-weight:800;
-      padding:3px 9px;
-      border-radius:999px;
-      display:inline-block;
-      margin-top:6px;
+    .bio-delta {
+      font-size: 9px;
+      color: #6b7280;
+      margin-top: 4px;
+      line-height: 1.4;
     }
 
-    .bio-delta{
-      font-size:10px;
-      color:#6b7280;
-      margin-top:5px;
+    .hint {
+      font-size: 8px;
+      color: #9ca3af;
+      margin-top: 3px;
     }
 
-    .hint{
-      font-size:9px;
-      color:#9ca3af;
-      margin-top:4px;
+    .fcst {
+      background: linear-gradient(135deg, #eff6ff, #dbeafe);
+      border: 1px solid #bfdbfe;
+      border-radius: 12px;
+      padding: 10px 11px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      overflow: hidden;
     }
 
-    .fcst{
-      background:linear-gradient(135deg,#eff6ff,#dbeafe);
-      border:1px solid #bfdbfe;
-      border-radius:14px;
-      padding:14px 16px;
-      display:flex;
-      gap:14px;
-      align-items:flex-start;
+    .fcst-title {
+      font-size: 12px;
+      font-weight: 900;
+      color: #1e40af;
+      line-height: 1.2;
     }
 
-    .fcst-icon{
-      font-size:30px;
-      flex-shrink:0;
+    .fcst-desc {
+      font-size: 10px;
+      color: #334155;
+      margin-top: 3px;
+      line-height: 1.55;
     }
 
-    .fcst-title{
-      font-size:13px;
-      font-weight:900;
-      color:#1e40af;
+    .spark-cap {
+      font-size: 8px;
+      color: #6b7280;
+      text-align: center;
+      margin-top: 2px;
     }
 
-    .fcst-desc{
-      font-size:11px;
-      color:#334155;
-      margin-top:4px;
-      line-height:1.8;
+    .action {
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+      border: 1.5px solid #86efac;
+      border-radius: 13px;
+      padding: 12px 14px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      overflow: hidden;
     }
 
-    .spark-cap{
-      font-size:9px;
-      color:#6b7280;
-      text-align:center;
-      margin-top:3px;
+    .action-ico {
+      width: 36px;
+      height: 36px;
+      background: #22c55e;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      color: #fff;
+      flex-shrink: 0;
     }
 
-    .action{
-      background:linear-gradient(135deg,#f0fdf4,#dcfce7);
-      border:1.5px solid #86efac;
-      border-radius:15px;
-      padding:16px 18px;
-      display:flex;
-      gap:14px;
-      align-items:flex-start;
+    .table-wrap {
+      border: 1px solid #e5ece8;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #ffffff;
     }
 
-    .action-ico{
-      width:42px;
-      height:42px;
-      background:#22c55e;
-      border-radius:11px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:20px;
-      color:#fff;
-      flex-shrink:0;
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
     }
 
-    .action-title{
-      font-size:13px;
-      font-weight:900;
-      color:#15803d;
+    th {
+      background: #f3f7f5;
+      color: #334155;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 7px 5px;
+      border-bottom: 1px solid #e5ece8;
+      text-align: center;
+      line-height: 1.35;
     }
 
-    .action-txt{
-      font-size:11px;
-      color:#166534;
-      line-height:1.8;
-      margin-top:5px;
+    td {
+      padding: 6px 5px;
+      font-size: 9px;
+      color: #334155;
+      border-bottom: 1px solid #eef3f1;
+      text-align: center;
+      vertical-align: middle;
+      line-height: 1.35;
+      word-break: break-word;
     }
 
-    .table-wrap{
-      border:1px solid #e5ece8;
-      border-radius:16px;
-      overflow:hidden;
-      background:#ffffff;
+    tr:last-child td {
+      border-bottom: none;
     }
 
-    table{
-      width:100%;
-      border-collapse:collapse;
+    .badge {
+      display: inline-block;
+      padding: 3px 7px;
+      border-radius: 999px;
+      font-size: 9px;
+      font-weight: 800;
+      line-height: 1.2;
     }
 
-    th{
-      background:#f3f7f5;
-      color:#334155;
-      font-size:11px;
-      font-weight:800;
-      padding:10px 8px;
-      border-bottom:1px solid #e5ece8;
-      text-align:center;
-    }
+    .badge-green { background: #dcfce7; color: #166534; }
+    .badge-orange { background: #fef3c7; color: #92400e; }
+    .badge-red { background: #fee2e2; color: #b91c1c; }
+    .badge-blue { background: #dbeafe; color: #1d4ed8; }
 
-    td{
-      padding:9px 8px;
-      font-size:11px;
-      color:#334155;
-      border-bottom:1px solid #eef3f1;
-      text-align:center;
-      vertical-align:middle;
+    .findings {
+      display: grid;
+      gap: 7px;
     }
 
-    tr:last-child td{
-      border-bottom:none;
+    .finding {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      background: #fbfdfc;
+      border: 1px solid #e4ece8;
+      border-radius: 11px;
+      padding: 9px;
+      overflow: hidden;
     }
 
-    .badge{
-      display:inline-block;
-      padding:4px 8px;
-      border-radius:999px;
-      font-size:10px;
-      font-weight:800;
+    .finding-no {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: #ecfdf5;
+      color: #059669;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 900;
+      line-height: 1;
     }
 
-    .badge-green{background:#dcfce7;color:#166534;}
-    .badge-orange{background:#fef3c7;color:#92400e;}
-    .badge-red{background:#fee2e2;color:#b91c1c;}
-    .badge-blue{background:#dbeafe;color:#1d4ed8;}
-
-    .mini-note{
-      margin-top:8px;
-      font-size:10px;
-      color:#64748b;
-      line-height:1.7;
+    .finding-text {
+      font-size: 10px;
+      line-height: 1.55;
+      color: #334155;
     }
 
-    .findings{
-      display:grid;
-      gap:10px;
+    .ftr {
+      background: #052e16;
+      padding: 9px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
     }
 
-    .finding{
-      display:flex;
-      gap:10px;
-      align-items:flex-start;
-      background:#fbfdfc;
-      border:1px solid #e4ece8;
-      border-radius:14px;
-      padding:12px;
+    .ftr-brand {
+      font-size: 13px;
+      font-weight: 900;
+      color: #6ee7b7;
     }
 
-    .finding-no{
-      width:28px;
-      height:28px;
-      flex-shrink:0;
-      border-radius:50%;
-      background:#ecfdf5;
-      color:#059669;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:14px;
-      font-weight:900;
+    .ftr-info {
+      font-size: 9px;
+      color: #d1d5db;
+      text-align: left;
+      line-height: 1.45;
     }
 
-    .finding-text{
-      font-size:12px;
-      line-height:1.8;
-      color:#334155;
+    .page-num {
+      color: #ebd29b;
+      font-weight: 800;
     }
 
-    .ftr{
-      background:#052e16;
-      padding:12px 28px;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
+    .tight-note-box {
+      border-top: 1px solid #f1f5f9;
+      margin-top: 10px;
+      padding-top: 8px;
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 10px;
+      color: #374151;
+      line-height: 1.5;
     }
 
-    .ftr-brand{
-      font-size:15px;
-      font-weight:900;
-      color:#6ee7b7;
+    .map-holder svg {
+      display: block;
+      width: 100%;
+      height: 185px;
     }
 
-    .ftr-info{
-      font-size:10px;
-      color:#d1d5db;
-      text-align:left;
-      line-height:1.7;
+    .legend {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      flex-wrap: wrap;
     }
 
-    .page-num{
-      color:#ebd29b;
-      font-weight:800;
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      color: #374151;
     }
-
-    @media print{
-      html, body{
-        background:#ffffff;
-      }
 
-      .page{
-        margin:0;
-      }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
     }
   </style>
 </head>
@@ -588,12 +609,12 @@
         <div>
           <div class="brand-wrap">
             <div class="brand-logo">
-  {% if logo_data_uri %}
-    <img src="{{ logo_data_uri }}" alt="Saaf Logo">
-  {% else %}
-    <div class="brand-logo-fallback">س</div>
-  {% endif %}
-</div>
+              {% if logo_data_uri %}
+                <img src="{{ logo_data_uri }}" alt="Saaf Logo">
+              {% else %}
+                <div class="brand-logo-fallback">س</div>
+              {% endif %}
+            </div>
 
             <div>
               <div class="brand-title">تقرير صحة المزرعة</div>
@@ -612,8 +633,6 @@
             <div><strong>تاريخ التقرير:</strong> {{ report_date }}</div>
             <div><strong>المساحة:</strong> {{ farm_area }} م²</div>
             <div><strong>عدد النخيل:</strong> {{ total_palms }}</div>
-            <div><strong>نوع الصفحة:</strong> ملخص تنفيذي</div>
-            <div><strong>الصفحة:</strong> <span class="page-num">1 / 2</span></div>
           </div>
         </div>
       </div>
@@ -623,9 +642,9 @@
     <div class="content">
 
       {% if executive_summary %}
-      <div class="sec">📄 الملخص التنفيذي</div>
+      <div class="sec">الملخص التنفيذي</div>
       <div class="card executive">
-        <div class="exec-pill">● {{ executive_status or wellness_text }}</div>
+        <div class="exec-pill">{{ executive_status or wellness_text }}</div>
         <div class="exec-text">{{ executive_summary }}</div>
         {% if executive_next_step %}
         <div class="exec-next">{{ executive_next_step }}</div>
@@ -634,16 +653,16 @@
       <div class="sp-lg"></div>
       {% endif %}
 
-      <div class="sec">🌿 الحالة الصحية العامة</div>
+      <div class="sec">الحالة الصحية العامة</div>
       <div class="score-band">
         <div style="flex-shrink:0;">{{ gauge_svg|safe }}</div>
         <div style="flex:1;">
           <div class="score-verdict" style="color:{{ gauge_color }};">{{ wellness_text }}</div>
           <div class="score-desc">{{ wellness_desc }}</div>
           <div class="chips">
-            <span class="chip" style="background:#dcfce7;color:#15803d;">✅ {{ healthy_pct|round(0)|int }}% سليمة ({{ palms_healthy }} نخلة)</span>
-            <span class="chip" style="background:#fef9c3;color:#a16207;">⚠️ {{ monitor_pct|round(0)|int }}% متابعة ({{ palms_monitor }} نخلة)</span>
-            <span class="chip" style="background:#fee2e2;color:#b91c1c;">🚨 {{ critical_pct|round(0)|int }}% حرجة ({{ palms_critical }} نخلة)</span>
+            <span class="chip" style="background:#dcfce7;color:#15803d;">{{ healthy_pct|round(0)|int }}% سليمة</span>
+            <span class="chip" style="background:#fef9c3;color:#a16207;">{{ monitor_pct|round(0)|int }}% متابعة</span>
+            <span class="chip" style="background:#fee2e2;color:#b91c1c;">{{ critical_pct|round(0)|int }}% حرجة</span>
           </div>
         </div>
       </div>
@@ -651,10 +670,10 @@
       <div class="sp-lg"></div>
 
       {% if key_findings and key_findings|length > 0 %}
-      <div class="sec">📝 أهم الملاحظات</div>
+      <div class="sec">أهم الملاحظات</div>
       <div class="card">
         <div class="findings">
-          {% for item in key_findings %}
+          {% for item in key_findings[:3] %}
           <div class="finding">
             <div class="finding-no">{{ loop.index }}</div>
             <div class="finding-text">{{ item }}</div>
@@ -667,42 +686,59 @@
 
       <div class="grid-2">
         <div class="card">
-          <div class="sec" style="margin-bottom:10px;">🗺️ خريطة المزرعة</div>
-          {{ map_block|safe }}
+          <div class="sec" style="margin-bottom:8px;">خريطة المزرعة</div>
+          <div class="map-holder">
+            {{ map_block|safe }}
+          </div>
+
+          <div class="legend">
+            <div class="legend-item">
+              <div class="legend-dot" style="background:#22c55e;"></div>
+              <span>نخلة سليمة</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:#f59e0b;"></div>
+              <span>تحتاج متابعة</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:#ef4444;"></div>
+              <span>حالة حرجة</span>
+            </div>
+          </div>
         </div>
 
         <div class="card">
-          <div class="sec" style="margin-bottom:14px;">📊 توزيع صحة النخيل</div>
+          <div class="sec" style="margin-bottom:10px;">توزيع صحة النخيل</div>
 
           <div class="drow">
             <div class="dtop">
-              <div class="dlbl" style="color:#15803d;">✅ نخيل سليمة</div>
+              <div class="dlbl" style="color:#15803d;">نخيل سليمة</div>
               <div class="dpct" style="color:#22c55e;">{{ "%.1f"|format(healthy_pct) }}%</div>
             </div>
             <div class="dbg"><div class="dbar" style="width:{{ healthy_pct }}%;background:linear-gradient(90deg,#22c55e,#16a34a);"></div></div>
-            <div class="dnote">≈ {{ palms_healthy }} نخلة بحالة ممتازة</div>
+            <div class="dnote">الحالة الغالبة حاليًا داخل المزرعة</div>
           </div>
 
           <div class="drow">
             <div class="dtop">
-              <div class="dlbl" style="color:#a16207;">⚠️ تحتاج متابعة</div>
+              <div class="dlbl" style="color:#a16207;">تحتاج متابعة</div>
               <div class="dpct" style="color:#f59e0b;">{{ "%.1f"|format(monitor_pct) }}%</div>
             </div>
             <div class="dbg"><div class="dbar" style="width:{{ monitor_pct }}%;background:linear-gradient(90deg,#f59e0b,#d97706);"></div></div>
-            <div class="dnote">≈ {{ palms_monitor }} نخلة تحتاج مراجعة خلال الفترة القادمة</div>
+            <div class="dnote">تحتاج مراجعة ومراقبة خلال الفترة القادمة</div>
           </div>
 
           <div class="drow">
             <div class="dtop">
-              <div class="dlbl" style="color:#b91c1c;">🚨 حالة حرجة</div>
+              <div class="dlbl" style="color:#b91c1c;">حالة حرجة</div>
               <div class="dpct" style="color:#ef4444;">{{ "%.1f"|format(critical_pct) }}%</div>
             </div>
             <div class="dbg"><div class="dbar" style="width:{{ critical_pct }}%;background:linear-gradient(90deg,#ef4444,#dc2626);"></div></div>
-            <div class="dnote">≈ {{ palms_critical }} نخلة تحتاج تدخلًا أسرع</div>
+            <div class="dnote">تحتاج تدخلًا أسرع من بقية المناطق</div>
           </div>
 
-          <div style="border-top:1px solid #f1f5f9;margin-top:14px;padding-top:12px;background:#f8fafc;border-radius:9px;padding:10px;font-size:11px;color:#374151;line-height:1.8;">
-            <strong style="color:#064e3b;">📌 ملاحظة:</strong><br/>
+          <div class="tight-note-box">
+            <strong style="color:#064e3b;">ملاحظة:</strong><br/>
             {{ map_note }}
           </div>
         </div>
@@ -710,9 +746,9 @@
 
       <div class="sp-lg"></div>
 
-      <div class="sec">💡 ماذا تفعل الآن؟</div>
+      <div class="sec">ماذا تفعل الآن؟</div>
       <div class="action">
-        <div class="action-ico">💧</div>
+        <div class="action-ico">i</div>
         <div>
           <div class="action-title">{{ action_title }}</div>
           <div class="action-txt">{{ action_text }}</div>
@@ -722,7 +758,7 @@
     </div>
 
     <div class="ftr">
-      <div class="ftr-brand">🌴 سعف</div>
+      <div class="ftr-brand">سعف</div>
       <div class="ftr-info">
         {{ report_date }} · {{ farm_name }}<br/>
         صفحة الملخص التنفيذي — <span class="page-num">1 / 2</span>
@@ -737,12 +773,12 @@
         <div>
           <div class="brand-wrap">
             <div class="brand-logo">
-  {% if logo_data_uri %}
-    <img src="{{ logo_data_uri }}" alt="Saaf Logo">
-  {% else %}
-    <div class="brand-logo-fallback">س</div>
-  {% endif %}
-</div>
+              {% if logo_data_uri %}
+                <img src="{{ logo_data_uri }}" alt="Saaf Logo">
+              {% else %}
+                <div class="brand-logo-fallback">س</div>
+              {% endif %}
+            </div>
 
             <div>
               <div class="brand-title">الصفحة التحليلية التفصيلية</div>
@@ -760,9 +796,6 @@
             <div><strong>رقم المزرعة:</strong> {{ farm_id }}</div>
             <div><strong>التاريخ:</strong> {{ report_date }}</div>
             <div><strong>عدد النخيل:</strong> {{ total_palms }}</div>
-            <div><strong>نوع الصفحة:</strong> تحليل تفصيلي</div>
-            <div><strong>مصدر البيانات:</strong> Sentinel-2</div>
-            <div><strong>الصفحة:</strong> <span class="page-num">2 / 2</span></div>
           </div>
         </div>
       </div>
@@ -771,10 +804,9 @@
 
     <div class="content">
 
-      <div class="sec">🔬 مؤشرات صحة المزرعة</div>
+      <div class="sec">مؤشرات صحة المزرعة</div>
       <div class="grid-3">
-        <div class="bio" style="border-top-color:#22c55e;">
-          <span class="bio-emoji">🌱</span>
+        <div class="bio" style="border-top:3px solid #22c55e;">
           <div class="bio-lbl">خضرة المزرعة</div>
           <div class="bio-sci">NDVI</div>
           <div class="bio-val" style="color:#22c55e;">{{ ndvi_val }}</div>
@@ -783,8 +815,7 @@
           <div class="hint">القيمة المثالية: 0.60 فأكثر</div>
         </div>
 
-        <div class="bio" style="border-top-color:#3b82f6;">
-          <span class="bio-emoji">💧</span>
+        <div class="bio" style="border-top:3px solid #3b82f6;">
           <div class="bio-lbl">رطوبة النخيل</div>
           <div class="bio-sci">NDMI</div>
           <div class="bio-val" style="color:#3b82f6;">{{ ndmi_val }}</div>
@@ -793,8 +824,7 @@
           <div class="hint">القيمة المثالية: 0.40 فأكثر</div>
         </div>
 
-        <div class="bio" style="border-top-color:#10b981;">
-          <span class="bio-emoji">🍃</span>
+        <div class="bio" style="border-top:3px solid #10b981;">
           <div class="bio-lbl">حيوية الأوراق</div>
           <div class="bio-sci">NDRE</div>
           <div class="bio-val" style="color:#10b981;">{{ ndre_val }}</div>
@@ -808,7 +838,7 @@
 
       <div class="grid-2">
         <div class="card">
-          <div class="sec" style="margin-bottom:10px;">📋 جدول المؤشرات</div>
+          <div class="sec" style="margin-bottom:8px;">جدول المؤشرات</div>
           <div class="table-wrap">
             <table>
               <thead>
@@ -840,7 +870,7 @@
                 </tr>
 
                 {% if extra_indices and extra_indices|length > 0 %}
-                  {% for idx in extra_indices %}
+                  {% for idx in extra_indices[:4] %}
                   <tr>
                     <td>{{ idx.label }}</td>
                     <td>{{ idx.code }}</td>
@@ -852,13 +882,9 @@
               </tbody>
             </table>
           </div>
-          <div class="mini-note">
-            تم عرض أسماء مبسطة للمؤشرات لتكون أوضح للمزارع أو المسؤول، مع الإبقاء على الرمز العلمي كمرجع.
-          </div>
         </div>
 
         <div class="card fcst">
-          <div class="fcst-icon">📈</div>
           <div style="flex:1;">
             <div class="fcst-title">توقع الأسبوع القادم</div>
             <div class="fcst-desc">{{ forecast_text }}</div>
@@ -910,7 +936,7 @@
       <div class="sp-lg"></div>
 
       {% if risk_drivers and risk_drivers|length > 0 %}
-      <div class="sec">⚠️ أسباب الخطر الرئيسية</div>
+      <div class="sec">أسباب الخطر الرئيسية</div>
       <div class="card">
         <div class="table-wrap">
           <table>
@@ -923,7 +949,7 @@
               </tr>
             </thead>
             <tbody>
-              {% for item in risk_drivers %}
+              {% for item in risk_drivers[:4] %}
               <tr>
                 <td>{{ item.title }}</td>
                 <td>{{ item.count }}</td>
@@ -947,7 +973,7 @@
       {% endif %}
 
       {% if hotspots and hotspots|length > 0 %}
-      <div class="sec">📍 أهم المناطق التي تحتاج متابعة</div>
+      <div class="sec">أهم المناطق التي تحتاج متابعة</div>
       <div class="card">
         <div class="table-wrap">
           <table>
@@ -961,11 +987,11 @@
               </tr>
             </thead>
             <tbody>
-              {% for h in hotspots %}
+              {% for h in hotspots[:5] %}
               <tr>
                 <td>{{ loop.index }}</td>
                 <td>{{ h.lat }}</td>
-                <td>{{ h.lon }}</td>
+                <td>{{ h.lng }}</td>
                 <td>
                   {% if h.status == 'حرجة' %}
                     <span class="badge badge-red">{{ h.status }}</span>
@@ -987,7 +1013,7 @@
     </div>
 
     <div class="ftr">
-      <div class="ftr-brand">🌴 سعف</div>
+      <div class="ftr-brand">سعف</div>
       <div class="ftr-info">
         {{ report_date }} · {{ farm_name }}<br/>
         صفحة التحليل التفصيلي — <span class="page-num">2 / 2</span>
