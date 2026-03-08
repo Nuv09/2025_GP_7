@@ -101,17 +101,22 @@ def _trend_sparkline(values: list, color: str = "#22c55e", width: int = 160, hei
 </svg>""".strip()
 
 
-def _heatmap_svg(map_points: list, width: int = 320, height: int = 185) -> str:
+def _heatmap_svg(map_points: list, width: int = 320, height: int = 185, farm_polygon: list | None = None) -> str:
     """
-    يرسم خريطة حرارية SVG حقيقية من نقاط health_map.
+    يرسم خريطة حرارية SVG من نقاط health_map، ويرسم حدود المزرعة إذا توفرت.
     كل نقطة: {"lat": float, "lng": float, "s": 0|1|2}
     s=0 سليم (أخضر)، s=1 متابعة (برتقالي)، s=2 حرج (أحمر+توهج)
+    farm_polygon: قائمة من أزواج (lat, lng) تحدد محيط المزرعة
     """
-    if not map_points:
+    if not map_points and not farm_polygon:
         return ""
 
-    lats = [p.get("lat", 0) for p in map_points]
-    lngs = [p.get("lng", 0) for p in map_points]
+    lats = [p.get("lat", 0) for p in map_points] if map_points else []
+    lngs = [p.get("lng", 0) for p in map_points] if map_points else []
+    if farm_polygon and not lats:
+        lats = [lat for lat, lng in farm_polygon]
+        lngs = [lng for lat, lng in farm_polygon]
+
     min_lat, max_lat = min(lats), max(lats)
     min_lng, max_lng = min(lngs), max(lngs)
     lat_rng = max_lat - min_lat or 1e-6
@@ -225,7 +230,8 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
     gauge_color = _color_for_pct(wellness)
     gauge_svg   = _gauge_svg(wellness, gauge_color, size=120)
     sparkline   = _trend_sparkline(forecast.get("trend_data", []), color="#3b82f6")
-    heatmap_svg = _heatmap_svg(map_points)
+    farm_poly = export_data.get("farm_polygon", [])
+    heatmap_svg = _heatmap_svg(map_points, farm_polygon=farm_poly)
 
     ndvi = biometrics.get("ndvi", {})
     ndmi = biometrics.get("ndmi", {})

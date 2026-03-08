@@ -1194,6 +1194,7 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
         "health_map": health_map_data, # القائمة الموحدة التي تحتوي على s و ps
         "indices_history_last_month": history_last_month,
         "alert_signals": alert_signals,
+        "farm_polygon": poly,  # kept original farm polygon for map boundary
     }
 
 
@@ -1445,12 +1446,8 @@ def _build_executive_summary(current_health: Dict[str, Any], top_action: Dict[st
         status = "الحالة العامة تتطلب تدخلاً أسرع"
 
     summary = (
-        f"يبين التحليل الحالي أن وضع المزرعة {status.replace('الحالة العامة ', '')}، "
-        f"حيث تبلغ نسبة النخيل السليم {healthy_pct:.0f}%، "
-        f"ونسبة النخيل الذي يحتاج متابعة {monitor_pct:.0f}%، "
-        f"بينما وصلت الحالات التي تحتاج تدخلاً أسرع إلى {critical_pct:.0f}%. "
-        f"يعتمد هذا الملخص على قراءة صحة الغطاء النباتي، مستوى الرطوبة، حيوية الأوراق، "
-        f"وتوزيع المناطق المتأثرة داخل حدود المزرعة."
+        f"يُظهر التحليل أن المزرعة {status.replace('الحالة العامة ', '')}. "
+        f"الملخص يستند إلى مؤشرات الغطاء النباتي والرطوبة وحيوية الأوراق، مع التركيز على المناطق المتأثرة."
     )
 
     next_step = top_action.get("title_ar", "الاستمرار في المتابعة الحالية")
@@ -1462,26 +1459,32 @@ def _build_key_findings(
     alert_signals: Dict[str, Any],
     forecast_summary: Dict[str, Any],
 ) -> list[str]:
-    healthy_pct  = _safe_float(current_health.get("Healthy_Pct", 0))
-    monitor_pct  = _safe_float(current_health.get("Monitor_Pct", 0))
-    critical_pct = _safe_float(current_health.get("Critical_Pct", 0))
-
-    forecast_healthy  = _safe_float(forecast_summary.get("Healthy_Pct_next", healthy_pct))
-    forecast_monitor  = _safe_float(forecast_summary.get("Monitor_Pct_next", monitor_pct))
-    forecast_critical = _safe_float(forecast_summary.get("Critical_Pct_next", critical_pct))
-
+    # اللجنة الاستشارية: نركّز على الملاحظات لا الأرقام
     hotspots = alert_signals.get("hotspots", {}).get("critical", []) or []
     hotspot_text = (
-        f"تم رصد {len(hotspots)} نقاط حرجة بارزة داخل المزرعة."
+        f"رصد النظام {len(hotspots)} نقاط حرجة بارزة داخل حدود المزرعة."
         if hotspots else
-        "لا توجد نقاط حرجة بارزة ضمن أعلى المناطق المتأثرة."
+        "لا توجد نقاط حرجة بارزة في أعلى المناطق المتأثرة."
     )
 
-    return [
-        f"{healthy_pct:.0f}% من النخيل في حالة جيدة حاليًا، مقابل {monitor_pct:.0f}% يحتاج متابعة و{critical_pct:.0f}% يحتاج تدخلاً أسرع.",
-        hotspot_text,
-        f"تشير قراءة الأسبوع القادم إلى {forecast_healthy:.0f}% سليم متوقع، و{forecast_monitor:.0f}% متابعة، و{forecast_critical:.0f}% حالات حرجة متوقعة.",
-    ]
+    flags = alert_signals.get("flag_counts_latest", {}) or {}
+    water_flags = int(flags.get("flag_NDWI_low", 0) or 0) + int(flags.get("flag_NDWI_below_025", 0) or 0)
+    nutrition_flags = int(flags.get("flag_NDRE_low", 0) or 0) + int(flags.get("flag_NDRE_below_035", 0) or 0)
+
+    trends = []
+    d = _safe_float(forecast_summary.get("ndvi_delta_next_mean", 0))
+    if abs(d) >= 0.5:
+        trends.append(f"توقع تغيير في الخضرة بمقدار {d:.1f}% الأسبوع القادم.")
+
+    findings = [hotspot_text]
+    if water_flags:
+        findings.append(f"{water_flags} إشارات مياه منخفضة على الخريطة.")
+    if nutrition_flags:
+        findings.append(f"{nutrition_flags} إشارات ضعف تغذية.")
+    findings.extend(trends)
+    if not findings:
+        findings.append("لا توجد ملاحظات خاصة هذا الأسبوع.")
+    return findings
 
 
 def _build_extra_indices(history: list, current_health: Dict[str, Any], alert_signals: Dict[str, Any]) -> list[dict]:
@@ -1544,24 +1547,29 @@ def _build_risk_drivers(alert_signals: Dict[str, Any]) -> list[dict]:
     ndre_count  = int(flags.get("flag_NDRE_low", 0) or 0) + int(flags.get("flag_NDRE_below_035", 0) or 0)
     ndvi_count  = int(flags.get("flag_NDVI_below_030", 0) or 0) + int(flags.get("flag_drop_NDVI005", 0) or 0)
 
-    drivers = [
-        {
-            "title": "انخفاض مؤشرات المياه",
-            "count": water_count,
-            "note": "إشارة فعالة" if water_count > 0 else "لا توجد إشارة بارزة"
-        },
-        {
-            "title": "ضعف حيوية الأوراق",
-            "count": ndre_count,
-            "note": "إشارة فعالة" if ndre_count > 0 else "لا توجد إشارة بارزة"
-        },
-        {
-            "title": "هبوط الخضرة",
-            "count": ndvi_count,
-            "note": "إشارة فعالة" if ndvi_count > 0 else "لا توجد إشارة بارزة"
-        },
+    raw = [
+        ("انخفاض مؤشرات المياه", water_count),
+        ("ضعف حيوية الأوراق", ndre_count),
+        ("هبوط الخضرة", ndvi_count),
     ]
 
+    # sort by count descending so the most significant drivers appear first
+    raw.sort(key=lambda x: x[1], reverse=True)
+
+    drivers = []
+    for title, cnt in raw:
+        if cnt >= 5:
+            pr = "مرتفعة"
+        elif cnt >= 1:
+            pr = "متوسطة"
+        else:
+            pr = "منخفضة"
+        drivers.append({
+            "title": title,
+            "count": cnt,
+            "priority": pr,
+            "note": "إشارة فعالة" if cnt > 0 else "لا توجد إشارة بارزة"
+        })
     return drivers
 
 
@@ -1579,11 +1587,24 @@ def _build_hotspots_table(alert_signals: Dict[str, Any]) -> list[dict]:
             else:
                 status = "سليمة"
 
+            # translate internal rule codes into user‑friendly description
+            rule = str(pt.get("rule", ""))
+            rule_map = {
+                "Monitor_baseline_drop": "هبوط بسيط في الخضرة",
+                "Critical_baseline_drop": "هبوط واضح في الخضرة",
+                "Monitor_RPW_tail": "مؤشرات مياه منخفضة",
+                "Critical_RPW_tail": "مؤشرات مياه حرجة",
+                "Monitor_IF_outlier": "انحراف خفيف عن النمط",
+                "Critical_IF_outlier": "انحراف كبير عن النمط",
+                "Healthy": "سليم",
+            }
+            note_text = rule_map.get(rule, "—")
+
             all_points.append({
                 "lat": round(_safe_float(pt.get("lat"), 0), 6),
                 "lon": round(_safe_float(pt.get("lng"), 0), 6),
                 "status": status,
-                "note": pt.get("rule", "—"),
+                "note": note_text,
             })
 
     return all_points[:5]

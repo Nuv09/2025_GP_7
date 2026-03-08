@@ -92,8 +92,8 @@
     }
 
     .brand-logo {
-      width: 120px;
-      height: 120px;
+      width: 160px;
+      height: 160px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -105,8 +105,8 @@
     }
 
     .brand-logo img {
-      width: 120px;
-      height: 120px;
+      width: 160px;
+      height: 160px;
       object-fit: contain;
       display: block;
       background: transparent;
@@ -408,7 +408,8 @@
       border-radius: 12px;
       padding: 10px 11px;
       display: flex;
-      gap: 10px;
+      flex-direction: column;
+      gap: 8px;
       align-items: flex-start;
       overflow: hidden;
     }
@@ -620,6 +621,7 @@
 
   <!-- PAGE 1 -->
   <div class="page">
+    <!-- shared header used on both pages -->
     <div class="hdr">
       <div class="hdr-inner">
         <div>
@@ -772,7 +774,7 @@
             </div>
 
             <div>
-              <div class="brand-title">التحليل التفصيلي</div>
+              <div class="brand-title">تقرير صحة المزرعة</div>
             </div>
           </div>
 
@@ -780,12 +782,14 @@
         </div>
 
         <div class="hdr-meta">
-          <div class="hdr-meta-title">بيانات مرجعية</div>
+          <div class="hdr-meta-title">بيانات التقرير</div>
           <div class="hdr-meta-grid">
             <div><strong>رقم العقد:</strong> {{ contract_number or '—' }}</div>
-            <div><strong>رقم المزرعة:</strong> {{ farm_id }}</div>
-            <div><strong>التاريخ:</strong> {{ report_date }}</div>
+            <div><strong>اسم المزرعة:</strong> {{ farm_name }}</div>
+            <div><strong>المدينة/المنطقة:</strong> {{ city or '—' }}</div>
+            <div><strong>المساحة:</strong> {{ farm_area }} م²</div>
             <div><strong>عدد النخيل:</strong> {{ total_palms }}</div>
+            <div><strong>تاريخ التقرير:</strong> {{ report_date }}</div>
           </div>
         </div>
       </div>
@@ -839,17 +843,17 @@
                 <tr>
                   <td>خضرة (<span style="font-size:9px;color:#6b7280;">NDVI</span>)</td>
                   <td>{{ ndvi_val }}</td>
-                  <td>{{ nv }}</td>
+                  <td>يقيس كثافة الأوراق وسُمك الغطاء النباتي.</td>
                 </tr>
                 <tr>
                   <td>رطوبة (<span style="font-size:9px;color:#6b7280;">NDMI</span>)</td>
                   <td>{{ ndmi_val }}</td>
-                  <td>{{ nmv }}</td>
+                  <td>يعكس مستوى الرطوبة في الأوراق والنخلة.</td>
                 </tr>
                 <tr>
                   <td>حيوية (<span style="font-size:9px;color:#6b7280;">NDRE</span>)</td>
                   <td>{{ ndre_val }}</td>
-                  <td>{{ nrv }}</td>
+                  <td>يُظهر نشاط الضياء وحالة التغذية.</td>
                 </tr>
 
                 {% if extra_indices and extra_indices|length > 0 %}
@@ -868,10 +872,14 @@
         </div>
 
         <div class="card fcst">
-          <div style="flex:1;">
             <div class="fcst-title">توقع الأسبوع القادم</div>
             <div class="fcst-desc">{{ forecast_text }}</div>
-
+            {% if sparkline %}
+            <div style="direction:ltr; margin-top:6px;">
+              {{ sparkline|safe }}
+              <div class="spark-cap">مسار الخضرة — 5 أسابيع</div>
+            </div>
+            {% endif %}
             {% if forecast_summary %}
             <div class="sp"></div>
             <div class="table-wrap" style="background:rgba(255,255,255,0.65);">
@@ -905,14 +913,6 @@
               </table>
             </div>
             {% endif %}
-          </div>
-
-          <div style="direction:ltr;flex-shrink:0;">
-            {{ sparkline|safe }}
-            {% if sparkline %}
-              <div class="spark-cap">مسار الخضرة — 5 أسابيع</div>
-            {% endif %}
-          </div>
         </div>
       </div>
 
