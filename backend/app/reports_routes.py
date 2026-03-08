@@ -702,7 +702,11 @@ def export_pdf(farm_id):
 
     except Exception as e:
         logger.error(f"💥 PDF Route Crash: {traceback.format_exc()}")
-        return jsonify({"ok": False, "error": str(e)}), 500
+        return jsonify({
+    "ok": False,
+    "error": str(e),
+    "trace": traceback.format_exc()
+}), 500
 
 
 @reports_bp.route('/reports/<farm_id>/excel', methods=['GET'])
