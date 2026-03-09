@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8"/>
+  <meta charset="UTF-8" />
   <title>تقرير صحة المزرعة - سعف</title>
+
   <style>
-    /* modern readable Arabic font */
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap&subset=arabic');
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap&subset=arabic');
 
     @page {
       size: A4 portrait;
@@ -24,19 +24,19 @@
 
     body {
       font-family: 'Cairo', sans-serif;
-      color: #1e293b;
-      font-size: 11px;
+      color: #0f172a;
+      font-size: 10px;
       direction: rtl;
       margin: 0;
       padding: 0;
-    
+    }
 
     .page {
       width: 210mm;
       height: 297mm;
-      background: #ffffff;
       display: flex;
       flex-direction: column;
+      background: #ffffff;
       page-break-after: always;
       overflow: hidden;
     }
@@ -46,170 +46,169 @@
     }
 
     .hdr {
-      background: linear-gradient(135deg, #052e16 0%, #064e3b 55%, #065f46 100%);
+      background: linear-gradient(135deg, #053b2c 0%, #065f46 55%, #0b7b5f 100%);
+      color: #ffffff;
+      padding: 7mm 10mm 6mm;
       position: relative;
       overflow: hidden;
-      color: #ffffff;
       flex-shrink: 0;
+      min-height: 48mm;
     }
 
     .hdr::before {
-      content: '';
+      content: "";
       position: absolute;
-      left: -60px;
-      bottom: -60px;
-      width: 210px;
-      height: 210px;
-      background: radial-gradient(circle, rgba(235,185,116,0.16), transparent 70%);
+      width: 170px;
+      height: 170px;
+      left: -50px;
+      bottom: -65px;
+      background: radial-gradient(circle, rgba(235,185,116,0.18), transparent 70%);
       border-radius: 50%;
     }
 
     .hdr::after {
-      content: '';
+      content: "";
       position: absolute;
+      width: 180px;
+      height: 180px;
+      right: -55px;
       top: -70px;
-      right: -70px;
-      width: 220px;
-      height: 220px;
-      background: radial-gradient(circle, rgba(255,255,255,0.08), transparent 70%);
+      background: radial-gradient(circle, rgba(255,255,255,0.09), transparent 70%);
       border-radius: 50%;
     }
 
     .hdr-inner {
       position: relative;
       z-index: 1;
-      padding: 8mm 10mm 6mm;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 10px;
+      display: grid;
+      grid-template-columns: 1.25fr 0.95fr;
+      gap: 14px;
+      align-items: start;
     }
 
-    .brand-wrap {
+    .brand-col {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
+      min-width: 0;
     }
 
-    .brand-logo {
-      width: 160px;
-      height: 160px;
+    .logo-box {
+      width: 92px;
+      height: 92px;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      background: transparent;
-      border: none;
-      border-radius: 0;
-      overflow: visible;
     }
 
-    .brand-logo img {
-      width: 160px;
-      height: 160px;
+    .logo-box img {
+      width: 92px;
+      height: 92px;
       object-fit: contain;
       display: block;
-      background: transparent;
     }
 
-    .brand-logo-fallback {
+    .logo-fallback {
+      width: 92px;
+      height: 92px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.10);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 34px;
+      font-weight: 900;
       color: #ebd29b;
-      font-size: 40px;
-      font-weight: 900;
-      line-height: 1;
     }
 
-    .brand-title {
-      font-size: 20px;
+    .title-block {
+      min-width: 0;
+      padding-top: 2px;
+    }
+
+    .report-title {
+      font-size: 24px;
       font-weight: 900;
-      line-height: 1.05;
+      line-height: 1.15;
+      white-space: nowrap;
       color: #ffffff;
     }
 
-    .brand-sub {
-      font-size: 10px;
-      color: #cfeee2;
-      margin-top: 3px;
-    }
-
-    .farm-name {
-      font-size: 16px;
+    .farm-title {
+      margin-top: 7px;
+      font-size: 17px;
       font-weight: 800;
-      color: #ffffff;
-      margin-top: 8px;
+      color: #f8fafc;
+      line-height: 1.2;
     }
 
     .farm-sub {
+      margin-top: 3px;
       font-size: 10px;
-      color: #a7f3d0;
-      margin-top: 2px;
-    }
-
-    .hdr-meta {
-      width: 220px;
-      text-align: left;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.14);
-      border-radius: 12px;
-      padding: 8px 10px;
-      font-size: 9px;
       color: #d1fae5;
-      line-height: 1.7;
-      flex-shrink: 0;
     }
 
-    .hdr-meta-title {
-      color: #ebd29b;
-      font-weight: 800;
-      margin-bottom: 5px;
+    .meta-card {
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 14px;
+      padding: 9px 11px;
+      min-height: 92px;
+    }
+
+    .meta-title {
       font-size: 11px;
+      font-weight: 800;
+      color: #ebd29b;
+      margin-bottom: 7px;
     }
 
-    .hdr-meta-grid {
+    .meta-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 3px 8px;
-      /* allow more rows when we add extra fields */
+      gap: 5px 12px;
+      font-size: 9.6px;
+      color: #ecfeff;
+      line-height: 1.55;
     }
 
-    .hdr-meta strong {
+    .meta-item strong {
       color: #ffffff;
+      font-weight: 800;
     }
 
     .stripe {
-      height: 3px;
-      background: linear-gradient(90deg, #ebd29b, #10b981, #ebd29b);
+      height: 2.5px;
+      background: linear-gradient(90deg, #ebd29b, #34d399, #ebd29b);
+      margin: 6mm -10mm -6mm;
     }
 
     .content {
       flex: 1;
-      padding: 6mm 10mm 5mm;
       background: #f8fafc;
+      padding: 7mm 10mm 6mm;
       overflow: hidden;
     }
 
-    .sec {
+    .section-title {
       font-size: 13px;
       font-weight: 900;
-      color: #064e3b;
+      color: #065f46;
+      line-height: 1.2;
       border-right: 4px solid #10b981;
       padding-right: 8px;
-      margin-bottom: 6px;
-      line-height: 1.2;
+      margin-bottom: 7px;
     }
 
-    .sp {
-      height: 6px;
-    }
-
-    .sp-lg {
-      height: 8px;
-    }
+    .space-sm { height: 6px; }
+    .space-md { height: 8px; }
+    .space-lg { height: 10px; }
 
     .grid-2 {
       display: grid;
-      grid-template-columns: 1.05fr 0.95fr;
-      gap: 8px;
+      grid-template-columns: 1.12fr 0.88fr;
+      gap: 9px;
     }
 
     .grid-3 {
@@ -220,248 +219,198 @@
 
     .card {
       background: #ffffff;
-      border-radius: 14px;
-      padding: 8px 10px;
-      border: 1px solid #e5ece8;
-      box-shadow: none;
+      border: 1px solid #e2ebe6;
+      border-radius: 16px;
+      padding: 10px 11px;
       overflow: hidden;
     }
 
-    .executive {
-      background: linear-gradient(135deg, #ffffff, #f3fbf8);
-      border: 1px solid #dcefe7;
+    .summary-card {
+      background: linear-gradient(135deg, #ffffff, #f4fbf8);
     }
 
-    .exec-pill {
+    .status-pill {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      border-radius: 999px;
       padding: 4px 10px;
+      border-radius: 999px;
       background: #dcfce7;
       color: #166534;
       font-size: 10px;
       font-weight: 800;
-      margin-bottom: 8px;
+      margin-bottom: 7px;
     }
 
-    .exec-text {
-      font-size: 11px;
+    .summary-text {
+      font-size: 10.5px;
       color: #334155;
-      line-height: 1.75;
+      line-height: 1.8;
     }
 
-    .exec-list {
-      margin-top: 4px;
-      padding-left: 16px;
-      color: #334155;
-      font-size: 11px;
-      line-height: 1.6;
-    }
-
-    .exec-list li {
-      margin-bottom: 4px;
-    }
-
-    .exec-next {
+    .summary-next {
       margin-top: 8px;
       padding-top: 8px;
-      border-top: 1px dashed #d8e5df;
-      font-size: 11px;
-      font-weight: 700;
+      border-top: 1px dashed #d9e7df;
+      font-size: 10.2px;
       color: #065f46;
       line-height: 1.6;
+      font-weight: 700;
     }
 
-    .score-band {
-      background: #ffffff;
-      border-radius: 14px;
-      padding: 12px 14px;
-      border: 1px solid #e5ece8;
+    .health-card {
       display: flex;
       align-items: center;
-      gap: 14px;
-      overflow: hidden;
+      gap: 12px;
+      min-height: 115px;
     }
 
-    .score-verdict {
+    .health-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .health-title {
       font-size: 18px;
       font-weight: 900;
       line-height: 1.2;
+      margin-bottom: 4px;
     }
 
-    .score-desc {
-      font-size: 11px;
+    .health-desc {
+      font-size: 10px;
       color: #475569;
-      margin-top: 4px;
       line-height: 1.65;
     }
 
     .chips {
       display: flex;
       gap: 6px;
-      margin-top: 10px;
       flex-wrap: wrap;
+      margin-top: 10px;
     }
 
     .chip {
       border-radius: 999px;
       padding: 4px 10px;
-      font-size: 10px;
+      font-size: 9.5px;
       font-weight: 800;
       white-space: nowrap;
     }
 
-    .drow {
-      margin-bottom: 9px;
+    .chip-green  { background: #dcfce7; color: #166534; }
+    .chip-amber  { background: #fef3c7; color: #92400e; }
+    .chip-red    { background: #fee2e2; color: #b91c1c; }
+
+    .map-card {
+      padding: 10px;
     }
 
-    .drow:last-child {
-      margin-bottom: 0;
-    }
-
-    .dtop {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-bottom: 3px;
-    }
-
-    .dlbl {
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    .dpct {
-      font-size: 13px;
-      font-weight: 900;
-    }
-
-    .dbg {
-      background: #f1f5f9;
-      border-radius: 99px;
-      height: 8px;
-      overflow: hidden;
-    }
-
-    .dbar {
-      height: 100%;
-      border-radius: 99px;
-    }
-
-    .dnote {
-      font-size: 9px;
-      color: #6b7280;
-      margin-top: 2px;
-    }
-
-    .bio {
+    .map-frame {
       background: #ffffff;
-      border-radius: 12px;
-      padding: 10px 10px;
-      border: 1px solid #e5ece8;
+      border-radius: 14px;
       overflow: hidden;
+      border: 1px solid #dbe7df;
     }
 
-    .bio-lbl {
+    .map-svg svg {
+      width: 100%;
+      height: 235px;
+      display: block;
+    }
+
+    .legend {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 9px;
+      margin-bottom: 8px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 9.5px;
+      color: #334155;
+    }
+
+    .legend-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .legend-ring {
+      width: 13px;
+      height: 13px;
+      border: 2px solid #2563eb;
+      border-radius: 50%;
+      background: transparent;
+      flex-shrink: 0;
+    }
+
+    .map-note {
+      margin-top: 8px;
+      padding: 8px 10px;
+      background: #f8fafc;
+      border-radius: 10px;
+      font-size: 9.6px;
+      color: #475569;
+      line-height: 1.6;
+      border: 1px solid #e9eef3;
+    }
+
+    .metric-card {
+      min-height: 108px;
+      padding: 9px 10px;
+    }
+
+    .metric-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .metric-label {
       font-size: 10px;
+      color: #64748b;
+      margin-bottom: 2px;
+    }
+
+    .metric-code {
+      font-size: 9px;
       color: #94a3b8;
     }
 
-    .bio-sci {
-      font-size: 9px;
-      color: #b0b8c1;
-      margin-bottom: 4px;
-    }
-
-    .bio-val {
+    .metric-value {
+      margin-top: 10px;
       font-size: 22px;
       font-weight: 900;
       line-height: 1;
     }
 
-    .bio-badge {
-      font-size: 9px;
-      font-weight: 800;
+    .metric-badge {
+      display: inline-block;
+      margin-top: 6px;
       padding: 3px 8px;
       border-radius: 999px;
-      display: inline-block;
-      margin-top: 5px;
+      font-size: 9px;
+      font-weight: 800;
     }
 
-    .bio-delta {
+    .metric-delta {
+      margin-top: 7px;
       font-size: 9px;
-      color: #6b7280;
-      margin-top: 4px;
+      color: #64748b;
       line-height: 1.4;
     }
 
-    .hint {
-      font-size: 8px;
-      color: #9ca3af;
-      margin-top: 3px;
-    }
-
-    .fcst {
-      background: linear-gradient(135deg, #eff6ff, #dbeafe);
-      border: 1px solid #bfdbfe;
-      border-radius: 12px;
-      padding: 10px 11px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      align-items: flex-start;
-      overflow: hidden;
-    }
-
-    .fcst-title {
-      font-size: 12px;
-      font-weight: 900;
-      color: #1e40af;
-      line-height: 1.2;
-    }
-
-    .fcst-desc {
-      font-size: 10px;
-      color: #334155;
-      margin-top: 3px;
-      line-height: 1.55;
-    }
-
-    .spark-cap {
-      font-size: 8px;
-      color: #6b7280;
-      text-align: center;
-      margin-top: 2px;
-    }
-
-    .action {
-      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
-      border: 1.5px solid #86efac;
-      border-radius: 13px;
-      padding: 12px 14px;
-      display: flex;
-      gap: 10px;
-      align-items: flex-start;
-      overflow: hidden;
-    }
-
-    .action-ico {
-      width: 36px;
-      height: 36px;
-      background: #22c55e;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 17px;
-      color: #fff;
-      flex-shrink: 0;
-    }
-
     .table-wrap {
-      border: 1px solid #e5ece8;
-      border-radius: 12px;
+      border: 1px solid #e2ebe6;
+      border-radius: 14px;
       overflow: hidden;
       background: #ffffff;
     }
@@ -473,24 +422,24 @@
     }
 
     th {
-      background: #f3f7f5;
+      background: #f4f7f6;
       color: #334155;
-      font-size: 10px;
+      font-size: 9.5px;
       font-weight: 800;
-      padding: 5px 4px;
+      padding: 6px 5px;
       border-bottom: 1px solid #e5ece8;
       text-align: center;
       line-height: 1.35;
     }
 
     td {
-      padding: 4px 4px;
+      padding: 6px 5px;
       font-size: 9px;
       color: #334155;
       border-bottom: 1px solid #eef3f1;
       text-align: center;
       vertical-align: middle;
-      line-height: 1.35;
+      line-height: 1.45;
       word-break: break-word;
     }
 
@@ -498,11 +447,78 @@
       border-bottom: none;
     }
 
+    .forecast-card {
+      background: linear-gradient(135deg, #eef5ff, #f8fbff);
+      border-color: #cfe0ff;
+    }
+
+    .forecast-title {
+      font-size: 12px;
+      font-weight: 900;
+      color: #1d4ed8;
+      line-height: 1.2;
+      margin-bottom: 5px;
+    }
+
+    .forecast-text {
+      font-size: 10px;
+      color: #334155;
+      line-height: 1.6;
+    }
+
+    .forecast-change {
+      margin-top: 6px;
+      font-size: 9.5px;
+      color: #475569;
+      line-height: 1.4;
+    }
+
+    .spark-wrap {
+      margin-top: 8px;
+      text-align: center;
+      direction: ltr;
+    }
+
+    .spark-cap {
+      margin-top: 2px;
+      font-size: 8px;
+      color: #64748b;
+    }
+
+    .forecast-mini {
+      margin-top: 8px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+    }
+
+    .forecast-mini .mini {
+      background: rgba(255,255,255,0.88);
+      border: 1px solid #dbeafe;
+      border-radius: 12px;
+      padding: 6px 6px 7px;
+      text-align: center;
+    }
+
+    .mini .mini-label {
+      font-size: 8.5px;
+      color: #64748b;
+      line-height: 1.2;
+      margin-bottom: 4px;
+    }
+
+    .mini .mini-value {
+      font-size: 12px;
+      font-weight: 900;
+      color: #0f172a;
+      line-height: 1;
+    }
+
     .badge {
       display: inline-block;
-      padding: 3px 7px;
+      padding: 3px 8px;
       border-radius: 999px;
-      font-size: 9px;
+      font-size: 8.8px;
       font-weight: 800;
       line-height: 1.2;
     }
@@ -512,46 +528,9 @@
     .badge-red { background: #fee2e2; color: #b91c1c; }
     .badge-blue { background: #dbeafe; color: #1d4ed8; }
 
-    .findings {
-      display: grid;
-      gap: 7px;
-    }
-
-    .finding {
-      display: flex;
-      gap: 8px;
-      align-items: flex-start;
-      background: #fbfdfc;
-      border: 1px solid #e4ece8;
-      border-radius: 11px;
-      padding: 9px;
-      overflow: hidden;
-    }
-
-    .finding-no {
-      width: 22px;
-      height: 22px;
-      flex-shrink: 0;
-      border-radius: 50%;
-      background: #ecfdf5;
-      color: #059669;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 11px;
-      font-weight: 900;
-      line-height: 1;
-    }
-
-    .finding-text {
-      font-size: 10px;
-      line-height: 1.55;
-      color: #334155;
-    }
-
     .ftr {
-      background: #052e16;
-      padding: 9px 20px;
+      background: #053b2c;
+      padding: 8px 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -568,52 +547,12 @@
       font-size: 8px;
       color: #d1d5db;
       text-align: left;
-      line-height: 1.4;
+      line-height: 1.45;
     }
 
     .page-num {
       color: #ebd29b;
       font-weight: 800;
-    }
-
-    .tight-note-box {
-      border-top: 1px solid #f1f5f9;
-      margin-top: 6px;
-      padding-top: 8px;
-      background: #f8fafc;
-      border-radius: 8px;
-      padding: 8px;
-      font-size: 10px;
-      color: #374151;
-      line-height: 1.5;
-    }
-
-    .map-holder svg {
-      display: block;
-      width: 100%;
-      height: 160px;
-    }
-
-    .legend {
-      display: flex;
-      gap: 12px;
-      margin-top: 8px;
-      flex-wrap: wrap;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 10px;
-      color: #374151;
-    }
-
-    .legend-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      flex-shrink: 0;
     }
   </style>
 </head>
@@ -621,36 +560,33 @@
 
   <!-- PAGE 1 -->
   <div class="page">
-    <!-- shared header used on both pages -->
     <div class="hdr">
       <div class="hdr-inner">
-        <div>
-          <div class="brand-wrap">
-            <div class="brand-logo">
-              {% if logo_data_uri %}
-                <img src="{{ logo_data_uri }}" alt="Saaf Logo">
-              {% else %}
-                <div class="brand-logo-fallback">س</div>
-              {% endif %}
-            </div>
-
-            <div>
-              <div class="brand-title">تقرير صحة المزرعة</div>
-            </div>
+        <div class="brand-col">
+          <div class="logo-box">
+            {% if logo_data_uri %}
+              <img src="{{ logo_data_uri }}" alt="Saaf Logo" />
+            {% else %}
+              <div class="logo-fallback">س</div>
+            {% endif %}
           </div>
 
-          <div class="farm-name">{{ farm_name }}</div>
+          <div class="title-block">
+            <div class="report-title">تقرير صحة المزرعة</div>
+            <div class="farm-title">مزرعة {{ farm_name }}</div>
+            <div class="farm-sub">ملخص الحالة الحالية والتمثيل المكاني للنخيل</div>
+          </div>
         </div>
 
-        <div class="hdr-meta">
-          <div class="hdr-meta-title">بيانات التقرير</div>
-          <div class="hdr-meta-grid">
-            <div><strong>رقم العقد:</strong> {{ contract_number or '—' }}</div>
-            <div><strong>اسم المزرعة:</strong> {{ farm_name }}</div>
-            <div><strong>المدينة/المنطقة:</strong> {{ city or '—' }}</div>
-            <div><strong>المساحة:</strong> {{ farm_area }} م²</div>
-            <div><strong>عدد النخيل:</strong> {{ total_palms }}</div>
-            <div><strong>تاريخ التقرير:</strong> {{ report_date }}</div>
+        <div class="meta-card">
+          <div class="meta-title">بيانات التقرير</div>
+          <div class="meta-grid">
+            <div class="meta-item"><strong>رقم العقد:</strong> {{ contract_number }}</div>
+            <div class="meta-item"><strong>المنطقة:</strong> {{ region }}</div>
+            <div class="meta-item"><strong>المساحة:</strong> {{ farm_area }} م²</div>
+            <div class="meta-item"><strong>عدد النخيل:</strong> {{ total_palms }}</div>
+            <div class="meta-item"><strong>تاريخ التقرير:</strong> {{ report_date }}</div>
+            <div class="meta-item"><strong>المزرعة:</strong> {{ farm_name }}</div>
           </div>
         </div>
       </div>
@@ -658,103 +594,67 @@
     </div>
 
     <div class="content">
+      <div class="section-title">ملخص الحالة</div>
+      <div class="grid-2">
+        <div class="card summary-card">
+          <div class="status-pill">{{ executive_status }}</div>
+          <div class="summary-text">{{ executive_summary }}</div>
+          <div class="summary-next">الإجراء الأول المقترح: {{ executive_next_step }}</div>
+        </div>
 
-      {% if executive_summary %}
-      <div class="sec">الملخص التنفيذي</div>
-      <div class="card executive">
-        {% if executive_status %}
-        <div class="exec-pill">{{ executive_status }}</div>
-        {% endif %}
-        {% set lines = executive_summary.split('\n') if executive_summary is string else [] %}
-        {% if lines and lines|length > 1 %}
-        <ul class="exec-list">
-          {% for line in lines %}
-          <li>{{ line }}</li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <div class="exec-text">{{ executive_summary }}</div>
-        {% endif %}
-        {% if executive_next_step %}
-        <div class="exec-next">{{ executive_next_step }}</div>
-        {% endif %}
-      </div>
-      <div class="sp-lg"></div>
-      {% endif %}
+        <div class="card health-card">
+          <div style="flex-shrink:0;">{{ gauge_svg|safe }}</div>
+          <div class="health-body">
+            <div class="health-title" style="color:{{ gauge_color }};">{{ wellness_text }}</div>
+            <div class="health-desc">{{ wellness_desc }}</div>
 
-      <div class="sec">الحالة الصحية العامة</div>
-      <div class="score-band">
-        <div style="flex-shrink:0;">{{ gauge_svg|safe }}</div>
-        <div style="flex:1;">
-          <div class="score-verdict" style="color:{{ gauge_color }};">{{ wellness_text }}</div>
-          <div class="score-desc">{{ wellness_desc }}</div>
-          <div class="chips">
-            <span class="chip" style="background:#dcfce7;color:#15803d;">{{ healthy_pct|round(0)|int }}% سليمة</span>
-            <span class="chip" style="background:#fef9c3;color:#a16207;">{{ monitor_pct|round(0)|int }}% متابعة</span>
-            <span class="chip" style="background:#fee2e2;color:#b91c1c;">{{ critical_pct|round(0)|int }}% حرجة</span>
+            <div class="chips">
+              <span class="chip chip-green">{{ healthy_pct|round(0)|int }}% سليم</span>
+              <span class="chip chip-amber">{{ monitor_pct|round(0)|int }}% متابعة</span>
+              <span class="chip chip-red">{{ critical_pct|round(0)|int }}% حرج</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="sp-lg"></div>
+      <div class="space-lg"></div>
 
-      {% if key_findings and key_findings|length > 0 %}
-      <div class="sec">أهم الملاحظات</div>
-      <div class="card">
-        <div class="findings">
-          {% for item in key_findings[:3] %}
-          <div class="finding">
-            <div class="finding-no">{{ loop.index }}</div>
-            <div class="finding-text">{{ item }}</div>
+      <div class="section-title">الخريطة المكانية لحالة النخيل</div>
+      <div class="card map-card">
+        <div class="map-frame">
+          <div class="map-svg">
+            {{ map_svg|safe }}
           </div>
-          {% endfor %}
         </div>
-      </div>
-      <div class="sp-lg"></div>
-      {% endif %}
 
-      <div class="sec">خريطة المزرعة وحالة النخيل</div>
-      <div class="card">
-        <div class="map-holder" style="margin-bottom:8px;">
-          {{ map_block|safe }}
-        </div>
-        <div class="legend" style="justify-content:center;">
+        <div class="legend">
           <div class="legend-item">
-            <div class="legend-dot" style="background:#22c55e;width:12px;height:12px;"></div>
+            <span class="legend-dot" style="background:#22c55e;"></span>
             <span>سليم</span>
           </div>
           <div class="legend-item">
-            <div class="legend-dot" style="background:#f59e0b;width:12px;height:12px;"></div>
+            <span class="legend-dot" style="background:#f59e0b;"></span>
             <span>متابعة</span>
           </div>
           <div class="legend-item">
-            <div class="legend-dot" style="background:#ef4444;width:12px;height:12px;"></div>
+            <span class="legend-dot" style="background:#ef4444;"></span>
             <span>حرج</span>
           </div>
+          <div class="legend-item">
+            <span class="legend-ring"></span>
+            <span>تغير متوقع</span>
+          </div>
         </div>
-        <div class="tight-note-box" style="margin-top:10px;">
-          {{ map_note }}
-        </div>
+
+        <div class="map-note">{{ map_note }}</div>
       </div>
-
-      <div class="sp-lg"></div>
-
-      <div class="sec">ماذا تفعل الآن؟</div>
-      <div class="action">
-        <div class="action-ico">i</div>
-        <div>
-          <div class="action-title">{{ action_title }}</div>
-          <div class="action-txt">{{ action_text }}</div>
-        </div>
-      </div>
-
     </div>
 
     <div class="ftr">
       <div class="ftr-brand">سعف</div>
       <div class="ftr-info">
-        {{ report_date }} · {{ farm_name }}<br/>
-        صفحة الملخص التنفيذي — <span class="page-num">1 / 2</span>
+        {{ report_date }} · {{ farm_name }}<br />
+        الصفحة الأولى — <span class="page-num">1 / 2</span>
       </div>
     </div>
   </div>
@@ -763,33 +663,31 @@
   <div class="page">
     <div class="hdr">
       <div class="hdr-inner">
-        <div>
-          <div class="brand-wrap">
-            <div class="brand-logo">
-              {% if logo_data_uri %}
-                <img src="{{ logo_data_uri }}" alt="Saaf Logo">
-              {% else %}
-                <div class="brand-logo-fallback">س</div>
-              {% endif %}
-            </div>
-
-            <div>
-              <div class="brand-title">تقرير صحة المزرعة</div>
-            </div>
+        <div class="brand-col">
+          <div class="logo-box">
+            {% if logo_data_uri %}
+              <img src="{{ logo_data_uri }}" alt="Saaf Logo" />
+            {% else %}
+              <div class="logo-fallback">س</div>
+            {% endif %}
           </div>
 
-          <div class="farm-name">{{ farm_name }}</div>
+          <div class="title-block">
+            <div class="report-title">التحليل التفصيلي للمزرعة</div>
+            <div class="farm-title">مزرعة {{ farm_name }}</div>
+            <div class="farm-sub">المؤشرات الرئيسية والتوقعات والأسباب المفسرة</div>
+          </div>
         </div>
 
-        <div class="hdr-meta">
-          <div class="hdr-meta-title">بيانات التقرير</div>
-          <div class="hdr-meta-grid">
-            <div><strong>رقم العقد:</strong> {{ contract_number or '—' }}</div>
-            <div><strong>اسم المزرعة:</strong> {{ farm_name }}</div>
-            <div><strong>المدينة/المنطقة:</strong> {{ city or '—' }}</div>
-            <div><strong>المساحة:</strong> {{ farm_area }} م²</div>
-            <div><strong>عدد النخيل:</strong> {{ total_palms }}</div>
-            <div><strong>تاريخ التقرير:</strong> {{ report_date }}</div>
+        <div class="meta-card">
+          <div class="meta-title">بيانات التقرير</div>
+          <div class="meta-grid">
+            <div class="meta-item"><strong>رقم العقد:</strong> {{ contract_number }}</div>
+            <div class="meta-item"><strong>المنطقة:</strong> {{ region }}</div>
+            <div class="meta-item"><strong>المساحة:</strong> {{ farm_area }} م²</div>
+            <div class="meta-item"><strong>عدد النخيل:</strong> {{ total_palms }}</div>
+            <div class="meta-item"><strong>تاريخ التقرير:</strong> {{ report_date }}</div>
+            <div class="meta-item"><strong>المزرعة:</strong> {{ farm_name }}</div>
           </div>
         </div>
       </div>
@@ -797,142 +695,119 @@
     </div>
 
     <div class="content">
-
-      <div class="sec">مؤشرات صحة المزرعة</div>
+      <div class="section-title">مؤشرات صحة المزرعة</div>
       <div class="grid-3">
-        <div class="bio" style="border-top:3px solid #22c55e;">
-          <div class="bio-lbl">خضرة</div>
-          <div class="bio-sci">NDVI</div>
-          <div class="bio-val" style="color:#22c55e;">{{ ndvi_val }}</div>
-          <div class="bio-badge" style="background:{{ nb }};color:{{ nc }};">{{ nv }}</div>
-          <div class="bio-delta">{{ ndvi_delta_badge|safe }} عن الأسبوع الماضي</div>
+        <div class="card metric-card">
+          <div class="metric-head">
+            <div>
+              <div class="metric-label">الخضرة</div>
+              <div class="metric-code">NDVI</div>
+            </div>
+          </div>
+          <div class="metric-value" style="color:#16a34a;">{{ ndvi_val }}</div>
+          <div class="metric-badge" style="background:{{ ndvi_bg }}; color:{{ ndvi_fg }};">{{ ndvi_state }}</div>
+          <div class="metric-delta">{{ ndvi_delta_badge|safe }} عن الأسبوع الماضي</div>
         </div>
 
-        <div class="bio" style="border-top:3px solid #3b82f6;">
-          <div class="bio-lbl">رطوبة</div>
-          <div class="bio-sci">NDMI</div>
-          <div class="bio-val" style="color:#3b82f6;">{{ ndmi_val }}</div>
-          <div class="bio-badge" style="background:{{ nmb }};color:{{ nmc }};">{{ nmv }}</div>
-          <div class="bio-delta">{{ ndmi_delta_badge|safe }} عن الأسبوع الماضي</div>
+        <div class="card metric-card">
+          <div class="metric-head">
+            <div>
+              <div class="metric-label">الرطوبة</div>
+              <div class="metric-code">NDMI</div>
+            </div>
+          </div>
+          <div class="metric-value" style="color:#2563eb;">{{ ndmi_val }}</div>
+          <div class="metric-badge" style="background:{{ ndmi_bg }}; color:{{ ndmi_fg }};">{{ ndmi_state }}</div>
+          <div class="metric-delta">{{ ndmi_delta_badge|safe }} عن الأسبوع الماضي</div>
         </div>
 
-        <div class="bio" style="border-top:3px solid #10b981;">
-          <div class="bio-lbl">حيوية</div>
-          <div class="bio-sci">NDRE</div>
-          <div class="bio-val" style="color:#10b981;">{{ ndre_val }}</div>
-          <div class="bio-badge" style="background:{{ nrb }};color:{{ nrc }};">{{ nrv }}</div>
-          <div class="bio-delta">{{ ndre_delta_badge|safe }} عن الأسبوع الماضي</div>
+        <div class="card metric-card">
+          <div class="metric-head">
+            <div>
+              <div class="metric-label">حيوية الأوراق</div>
+              <div class="metric-code">NDRE</div>
+            </div>
+          </div>
+          <div class="metric-value" style="color:#0f766e;">{{ ndre_val }}</div>
+          <div class="metric-badge" style="background:{{ ndre_bg }}; color:{{ ndre_fg }};">{{ ndre_state }}</div>
+          <div class="metric-delta">{{ ndre_delta_badge|safe }} عن الأسبوع الماضي</div>
         </div>
       </div>
 
-      <div class="sp-lg"></div>
+      <div class="space-lg"></div>
 
       <div class="grid-2">
         <div class="card">
-          <div class="sec" style="margin-bottom:8px;">جدول المؤشرات</div>
+          <div class="section-title" style="margin-bottom:8px;">جدول المؤشرات</div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>المؤشر</th>
-                  <th>القيمة</th>
-                  <th>الوصف</th>
+                  <th style="width:24%;">المؤشر</th>
+                  <th style="width:14%;">الرمز</th>
+                  <th style="width:16%;">القيمة</th>
+                  <th style="width:46%;">التفسير</th>
                 </tr>
               </thead>
               <tbody>
+                {% for row in indicator_rows %}
                 <tr>
-                  <td>خضرة (<span style="font-size:9px;color:#6b7280;">NDVI</span>)</td>
-                  <td>{{ ndvi_val }}</td>
-                  <td>يقيس كثافة الأوراق وسُمك الغطاء النباتي.</td>
+                  <td>{{ row.label }}</td>
+                  <td>{{ row.code }}</td>
+                  <td>{{ row.value }}</td>
+                  <td>{{ row.note }}</td>
                 </tr>
-                <tr>
-                  <td>رطوبة (<span style="font-size:9px;color:#6b7280;">NDMI</span>)</td>
-                  <td>{{ ndmi_val }}</td>
-                  <td>يعكس مستوى الرطوبة في الأوراق والنخلة.</td>
-                </tr>
-                <tr>
-                  <td>حيوية (<span style="font-size:9px;color:#6b7280;">NDRE</span>)</td>
-                  <td>{{ ndre_val }}</td>
-                  <td>يُظهر نشاط الضياء وحالة التغذية.</td>
-                </tr>
-
-                {% if extra_indices and extra_indices|length > 0 %}
-                  {% for idx in extra_indices[:4] %}
-                  <tr>
-                    <td>{{ idx.label }}</td>
-                    <td>{{ idx.code }}</td>
-                    <td>{{ idx.value }}</td>
-                    <td>{{ idx.note }}</td>
-                  </tr>
-                  {% endfor %}
-                {% endif %}
+                {% endfor %}
               </tbody>
             </table>
           </div>
         </div>
 
-        <div class="card fcst">
-            <div class="fcst-title">توقع الأسبوع القادم</div>
-            <div class="fcst-desc">{{ forecast_text }}</div>
-            {% if sparkline %}
-            <div style="direction:ltr; margin-top:6px;">
-              {{ sparkline|safe }}
-              <div class="spark-cap">مسار الخضرة — 5 أسابيع</div>
+        <div class="card forecast-card">
+          <div class="forecast-title">توقع الأسبوع القادم</div>
+          <div class="forecast-text">{{ forecast_text }}</div>
+          <div class="forecast-change">اتجاه الخضرة المتوقع: {{ forecast_change_text|safe }}</div>
+
+          {% if sparkline %}
+          <div class="spark-wrap">
+            {{ sparkline|safe }}
+            <div class="spark-cap">مسار NDVI خلال آخر 5 أسابيع</div>
+          </div>
+          {% endif %}
+
+          <div class="forecast-mini">
+            <div class="mini">
+              <div class="mini-label">السليم المتوقع</div>
+              <div class="mini-value">{{ forecast_summary.healthy }}</div>
             </div>
-            {% endif %}
-            {% if forecast_summary %}
-            <div class="sp"></div>
-            <div class="table-wrap" style="background:rgba(255,255,255,0.65);">
-              <table>
-                <thead>
-                  <tr>
-                    <th>البند</th>
-                    <th>القيمة المتوقعة</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% if forecast_summary.healthy is defined %}
-                  <tr>
-                    <td>نسبة السليم المتوقعة</td>
-                    <td>{{ forecast_summary.healthy }}</td>
-                  </tr>
-                  {% endif %}
-                  {% if forecast_summary.monitor is defined %}
-                  <tr>
-                    <td>نسبة المتابعة المتوقعة</td>
-                    <td>{{ forecast_summary.monitor }}</td>
-                  </tr>
-                  {% endif %}
-                  {% if forecast_summary.critical is defined %}
-                  <tr>
-                    <td>نسبة الحرج المتوقعة</td>
-                    <td>{{ forecast_summary.critical }}</td>
-                  </tr>
-                  {% endif %}
-                </tbody>
-              </table>
+            <div class="mini">
+              <div class="mini-label">المتابعة المتوقعة</div>
+              <div class="mini-value">{{ forecast_summary.monitor }}</div>
             </div>
-            {% endif %}
+            <div class="mini">
+              <div class="mini-label">الحرج المتوقع</div>
+              <div class="mini-value">{{ forecast_summary.critical }}</div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="sp-lg"></div>
+      <div class="space-lg"></div>
 
-      {% if risk_drivers and risk_drivers|length > 0 %}
-      <div class="sec">أسباب الخطر الرئيسية</div>
+      <div class="section-title">أسباب الخطر الرئيسية</div>
       <div class="card">
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>السبب</th>
-                <th>عدد الإشارات</th>
-                <th>الأولوية</th>
-                <th>الشرح</th>
+                <th style="width:26%;">السبب</th>
+                <th style="width:16%;">عدد الإشارات</th>
+                <th style="width:16%;">الأولوية</th>
+                <th style="width:42%;">التفسير</th>
               </tr>
             </thead>
             <tbody>
-              {% for item in risk_drivers[:3] %}
+              {% for item in risk_drivers %}
               <tr>
                 <td>{{ item.title }}</td>
                 <td>{{ item.count }}</td>
@@ -951,35 +826,29 @@
             </tbody>
           </table>
         </div>
-        {% if risk_drivers|length > 3 %}
-        <div class="tight-note-box" style="margin-top:6px;">
-          هناك أسباب أخرى متاحة عند الطلب.
-        </div>
-        {% endif %}
       </div>
-      <div class="sp-lg"></div>
-      {% endif %}
 
-      {% if hotspots and hotspots|length > 0 %}
-      <div class="sec">أهم المناطق التي تحتاج متابعة</div>
+      <div class="space-lg"></div>
+
+      <div class="section-title">أهم المناطق التي تحتاج متابعة</div>
       <div class="card">
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>#</th>
-                <th>خط العرض</th>
-                <th>خط الطول</th>
-                <th>الحالة</th>
-                <th>الوصف</th>
+                <th style="width:8%;">#</th>
+                <th style="width:20%;">خط العرض</th>
+                <th style="width:20%;">خط الطول</th>
+                <th style="width:16%;">الحالة</th>
+                <th style="width:36%;">الوصف</th>
               </tr>
             </thead>
             <tbody>
-              {% for h in hotspots[:3] %}
+              {% for h in hotspots %}
               <tr>
                 <td>{{ loop.index }}</td>
                 <td>{{ h.lat }}</td>
-                <td>{{ h.lng }}</td>
+                <td>{{ h.lon }}</td>
                 <td>
                   {% if h.status == 'حرجة' %}
                     <span class="badge badge-red">{{ h.status }}</span>
@@ -995,21 +864,14 @@
             </tbody>
           </table>
         </div>
-        {% if hotspots|length > 3 %}
-        <div class="tight-note-box" style="margin-top:6px;">
-          وهناك مواقع إضافية في النسخة الكاملة.
-        </div>
-        {% endif %}
       </div>
-      {% endif %}
-
     </div>
 
     <div class="ftr">
       <div class="ftr-brand">سعف</div>
       <div class="ftr-info">
-        {{ report_date }} · {{ farm_name }}<br/>
-        صفحة التحليل التفصيلي — <span class="page-num">2 / 2</span>
+        {{ report_date }} · {{ farm_name }}<br />
+        الصفحة الثانية — <span class="page-num">2 / 2</span>
       </div>
     </div>
   </div>

@@ -1,4 +1,3 @@
-# app/reports_routes.py
 import base64
 import os
 import logging
@@ -14,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 DB = firestore.Client()
 reports_bp = Blueprint("reports_bp", __name__)
+
 
 # ─────────────────────────────────────────────
 # helpers
@@ -39,16 +39,25 @@ def get_farm_safely(identifier):
     return None, None
 
 
+def _safe_float(v, default=0.0):
+    try:
+        if v is None:
+            return default
+        return float(v)
+    except Exception:
+        return default
+
+
 def _color_for_pct(pct: float) -> str:
     """لون حسب النسبة: أخضر / برتقالي / أحمر"""
-    if pct >= 70:
-        return "#22c55e"
-    if pct >= 40:
+    if pct >= 75:
+        return "#16a34a"
+    if pct >= 45:
         return "#f59e0b"
-    return "#ef4444"
+    return "#dc2626"
 
 
-def _gauge_svg(pct: float, color: str, size: int = 120) -> str:
+def _gauge_svg(pct: float, color: str, size: int = 122) -> str:
     """
     SVG نصف دائرة (Gauge) يعرض نسبة مئوية.
     pct: 0–100
@@ -56,152 +65,208 @@ def _gauge_svg(pct: float, color: str, size: int = 120) -> str:
     pct = max(0.0, min(100.0, float(pct)))
     r = 46
     cx = cy = size / 2
-    circumference = 3.14159 * r          # نصف الدائرة فقط
+    circumference = 3.14159 * r
     stroke_dash = (pct / 100) * circumference
     stroke_gap = circumference - stroke_dash
 
     return f"""
-<svg width="{size}" height="{size // 2 + 20}" viewBox="0 0 {size} {size // 2 + 20}">
-  <!-- خلفية رمادية -->
+<svg width="{size}" height="{size // 2 + 22}" viewBox="0 0 {size} {size // 2 + 22}">
   <path d="M {cx - r} {cy} A {r} {r} 0 0 1 {cx + r} {cy}"
         fill="none" stroke="#e5e7eb" stroke-width="10" stroke-linecap="round"/>
-  <!-- القوس الملون -->
   <path d="M {cx - r} {cy} A {r} {r} 0 0 1 {cx + r} {cy}"
         fill="none" stroke="{color}" stroke-width="10" stroke-linecap="round"
-        stroke-dasharray="{stroke_dash:.1f} {stroke_gap:.1f}"
-        transform="rotate(0, {cx}, {cy})"/>
-  <!-- النص -->
+        stroke-dasharray="{stroke_dash:.1f} {stroke_gap:.1f}"/>
   <text x="{cx}" y="{cy + 8}" text-anchor="middle"
-        font-family="Cairo, sans-serif" font-size="18" font-weight="700" fill="{color}">
+        font-family="Cairo, sans-serif" font-size="20" font-weight="800" fill="{color}">
     {pct:.0f}%
   </text>
-</svg>""".strip()
+</svg>
+""".strip()
 
 
-def _trend_sparkline(values: list, color: str = "#22c55e", width: int = 160, height: int = 40) -> str:
-    """رسم خط بياني بسيط SVG من قائمة أرقام"""
-    if not values or len(values) < 2:
+def _trend_sparkline(values: list, color: str = "#2563eb", width: int = 210, height: int = 62) -> str:
+    """رسم خط بياني بسيط SVG من قائمة أرقام مع نقاط وخط أساس"""
+    if not values:
         return ""
-    vals = [float(v) for v in values if v is not None]
+
+    vals = []
+    for v in values:
+        try:
+            vals.append(float(v))
+        except Exception:
+            pass
+
     if len(vals) < 2:
         return ""
+
     mn, mx = min(vals), max(vals)
-    rng = mx - mn if mx != mn else 1
+    rng = mx - mn if mx != mn else 1.0
     step = width / (len(vals) - 1)
+
     pts = []
+    circles = []
     for i, v in enumerate(vals):
         x = i * step
-        y = height - ((v - mn) / rng) * (height - 6) - 3
+        y = height - ((v - mn) / rng) * (height - 16) - 8
         pts.append(f"{x:.1f},{y:.1f}")
+        circles.append(
+            f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3.2" fill="{color}" />'
+        )
+
     polyline = " ".join(pts)
+
     return f"""
 <svg width="{width}" height="{height}" viewBox="0 0 {width} {height}">
-  <polyline points="{polyline}" fill="none" stroke="{color}" stroke-width="2.5"
+  <line x1="0" y1="{height-8}" x2="{width}" y2="{height-8}" stroke="#dbeafe" stroke-width="1"/>
+  <polyline points="{polyline}" fill="none" stroke="{color}" stroke-width="3"
             stroke-linejoin="round" stroke-linecap="round"/>
-</svg>""".strip()
+  {''.join(circles)}
+</svg>
+""".strip()
 
 
-def _heatmap_svg(map_points: list, width: int = 320, height: int = 185, farm_polygon: list | None = None) -> str:
+def _normalize_polygon(poly: list | None) -> list[tuple[float, float]]:
     """
-    يرسم خريطة حرارية SVG من نقاط health_map، ويرسم حدود المزرعة إذا توفرت.
-    كل نقطة: {"lat": float, "lng": float, "s": 0|1|2}
-    s=0 سليم (أخضر)، s=1 متابعة (برتقالي)، s=2 حرج (أحمر+توهج)
-    farm_polygon: قائمة من أزواج (lat, lng) تحدد محيط المزرعة
+    يقبل:
+    - [{"lat":..,"lng":..}, ...]
+    - [(lat,lng), ...]
+    - [(lng,lat), ...]  ← نحاول تمييزه بشكل محافظ
+    ويعيد دائمًا [(lat,lng), ...]
     """
-    if not map_points and not farm_polygon:
+    out = []
+    if not poly:
+        return out
+
+    for item in poly:
+        try:
+            if isinstance(item, dict):
+                lat = float(item.get("lat"))
+                lng = float(item.get("lng"))
+                out.append((lat, lng))
+            elif isinstance(item, (list, tuple)) and len(item) >= 2:
+                a = float(item[0])
+                b = float(item[1])
+
+                # إذا الأول يشبه lat والثاني يشبه lng
+                if abs(a) <= 90 and abs(b) <= 180:
+                    out.append((a, b))
+                else:
+                    out.append((b, a))
+        except Exception:
+            continue
+
+    return out
+
+
+def _heatmap_svg(
+    map_points: list,
+    width: int = 620,
+    height: int = 260,
+    farm_polygon: list | None = None
+) -> str:
+    """
+    يرسم تمثيل مكاني واضح:
+    - حدود المزرعة الفعلية إذا توفرت
+    - نقاط الحالة الحالية
+    - حلقة زرقاء حول النقاط التي يتوقع تغير حالتها لاحقًا
+    """
+    norm_poly = _normalize_polygon(farm_polygon)
+
+    if not map_points and not norm_poly:
         return ""
 
-    lats = [p.get("lat", 0) for p in map_points] if map_points else []
-    lngs = [p.get("lng", 0) for p in map_points] if map_points else []
-    if farm_polygon and not lats:
-        lats = [lat for lat, lng in farm_polygon]
-        lngs = [lng for lat, lng in farm_polygon]
+    lats = []
+    lngs = []
+
+    for p in map_points or []:
+        try:
+            lats.append(float(p.get("lat")))
+            lngs.append(float(p.get("lng")))
+        except Exception:
+            pass
+
+    for lat, lng in norm_poly:
+        lats.append(lat)
+        lngs.append(lng)
+
+    if not lats or not lngs:
+        return ""
 
     min_lat, max_lat = min(lats), max(lats)
     min_lng, max_lng = min(lngs), max(lngs)
-    lat_rng = max_lat - min_lat or 1e-6
-    lng_rng = max_lng - min_lng or 1e-6
+
+    lat_rng = max(max_lat - min_lat, 1e-6)
+    lng_rng = max(max_lng - min_lng, 1e-6)
     pad = 18
 
     def to_xy(lat, lng):
-        x = pad + ((lng - min_lng) / lng_rng) * (width  - pad * 2)
-        y = pad + ((max_lat - lat)  / lat_rng) * (height - pad * 2)
+        x = pad + ((lng - min_lng) / lng_rng) * (width - pad * 2)
+        y = pad + ((max_lat - lat) / lat_rng) * (height - pad * 2)
         return round(x, 1), round(y, 1)
 
-    color_map   = {0: "#22c55e", 1: "#f59e0b", 2: "#ef4444"}
-    opacity_map = {0: "0.70",    1: "0.85",    2: "0.95"}
-    radius_map  = {0: 4,         1: 5.5,        2: 7}
+    color_map = {
+        0: "#22c55e",  # سليم
+        1: "#f59e0b",  # متابعة
+        2: "#ef4444",  # حرج
+    }
 
-    layers: dict = {0: [], 1: [], 2: []}
-    for pt in map_points:
-        try:
-            s = int(pt.get("s", 0))
-        except (TypeError, ValueError):
-            s = 0
-
-        if s not in layers:
-            s = 0
-
-        try:
-            lat = float(pt.get("lat", 0))
-            lng = float(pt.get("lng", 0))
-        except (TypeError, ValueError):
-            continue
-
-        layers[s].append(to_xy(lat, lng))
-
-    circles = ""
-    for s in [0, 1, 2]:
-        glow = 'filter="url(#glow)"' if s == 2 else ""
-        for x, y in layers[s]:
-            circles += (
-                f'<circle cx="{x}" cy="{y}" r="{radius_map[s]}" '
-                f'fill="{color_map[s]}" opacity="{opacity_map[s]}" {glow}/>\n'
-            )
-
-    corners = [
-        to_xy(min_lat, min_lng), to_xy(min_lat, max_lng),
-        to_xy(max_lat, max_lng), to_xy(max_lat, min_lng),
-    ]
-    pts_str = " ".join(f"{x},{y}" for x, y in corners)
-
-    crit_label = ""
-    if layers[2]:
-        avg_x = sum(x for x, _ in layers[2]) / len(layers[2])
-        avg_y = sum(y for _, y in layers[2]) / len(layers[2])
-        lbl_y = min(avg_y + 18, height - 6)
-        crit_label = (
-            f'<rect x="{avg_x-52}" y="{lbl_y-12}" width="104" height="16" '
-            f'rx="4" fill="#7f1d1d" opacity="0.85"/>'
-            f'<text x="{avg_x}" y="{lbl_y}" text-anchor="middle" '
-            f'font-family="Cairo,sans-serif" font-size="9" fill="#fca5a5">'
-            f'⚠ منطقة تحتاج تدخل</text>'
+    poly_svg = ""
+    if norm_poly:
+        pts = " ".join(f"{x},{y}" for x, y in [to_xy(lat, lng) for lat, lng in norm_poly])
+        poly_svg = (
+            f'<polygon points="{pts}" fill="#ecfdf5" stroke="#10b981" '
+            f'stroke-width="2" opacity="0.95"/>'
         )
 
-    return (
-        f'<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" '
-        f'xmlns="http://www.w3.org/2000/svg">'
-        f'<defs>'
-        f'<radialGradient id="mapbg" cx="50%" cy="50%" r="70%">'
-        f'<stop offset="0%" stop-color="#1a3a2a"/>'
-        f'<stop offset="100%" stop-color="#0a1f14"/></radialGradient>'
-        f'<filter id="glow"><feGaussianBlur stdDeviation="3" result="coloredBlur"/>'
-        f'<feMerge><feMergeNode in="coloredBlur"/>'
-        f'<feMergeNode in="SourceGraphic"/></feMerge></filter>'
-        f'</defs>'
-        f'<rect width="{width}" height="{height}" fill="url(#mapbg)"/>'
-        f'<line x1="{width//4}" y1="0" x2="{width//4}" y2="{height}" stroke="#1e4d30" stroke-width="0.4"/>'
-        f'<line x1="{width//2}" y1="0" x2="{width//2}" y2="{height}" stroke="#1e4d30" stroke-width="0.4"/>'
-        f'<line x1="{3*width//4}" y1="0" x2="{3*width//4}" y2="{height}" stroke="#1e4d30" stroke-width="0.4"/>'
-        f'<line x1="0" y1="{height//3}" x2="{width}" y2="{height//3}" stroke="#1e4d30" stroke-width="0.4"/>'
-        f'<line x1="0" y1="{2*height//3}" x2="{width}" y2="{2*height//3}" stroke="#1e4d30" stroke-width="0.4"/>'
-        f'<polygon points="{pts_str}" fill="none" stroke="#6ee7b7" '
-        f'stroke-width="1.5" stroke-dasharray="5,3" opacity="0.6"/>'
-        f'{circles}{crit_label}'
-        f'<text x="{width//2}" y="10" text-anchor="middle" '
-        f'font-family="Cairo,sans-serif" font-size="9" fill="#6ee7b7" opacity="0.7">شمال</text>'
-        f'</svg>'
-    )
+    circles = []
+    for pt in map_points or []:
+        try:
+            lat = float(pt.get("lat"))
+            lng = float(pt.get("lng"))
+            s = int(pt.get("s", 0))
+            ps = int(pt.get("ps", s))
+        except Exception:
+            continue
+
+        x, y = to_xy(lat, lng)
+        r = 5.2 if s == 2 else 4.6 if s == 1 else 4.2
+        fill = color_map.get(s, "#22c55e")
+
+        # حلقة زرقاء إذا متوقع أن تتغير الحالة لاحقًا
+        ring = ""
+        if ps != s:
+            ring = (
+                f'<circle cx="{x}" cy="{y}" r="{r + 3.2}" fill="none" '
+                f'stroke="#2563eb" stroke-width="1.8" opacity="0.9"/>'
+            )
+
+        circles.append(
+            ring +
+            f'<circle cx="{x}" cy="{y}" r="{r}" fill="{fill}" opacity="0.95" />'
+        )
+
+    return f"""
+<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}"
+     xmlns="http://www.w3.org/2000/svg">
+  <rect width="{width}" height="{height}" rx="16" fill="#ffffff"/>
+  <rect x="0.5" y="0.5" width="{width-1}" height="{height-1}" rx="16"
+        fill="none" stroke="#dbe7df"/>
+  {poly_svg}
+  {''.join(circles)}
+</svg>
+""".strip()
+
+
+def _delta_badge_html(delta_pct: float) -> str:
+    delta_pct = _safe_float(delta_pct, 0.0)
+
+    if abs(delta_pct) < 0.05:
+        return '<span style="color:#64748b;">بدون تغير ملحوظ</span>'
+
+    if delta_pct > 0:
+        return f'<span style="color:#16a34a;">▲ {abs(delta_pct):.1f}%</span>'
+
+    return f'<span style="color:#dc2626;">▼ {abs(delta_pct):.1f}%</span>'
 
 
 # ─────────────────────────────────────────────
@@ -215,150 +280,134 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
             "weasyprint غير مثبتة. أضف 'weasyprint' لـ requirements.txt"
         )
 
-    header        = export_data.get("header", {})
-    dist          = export_data.get("distribution", {})
-    biometrics    = export_data.get("biometrics", {})
-    forecast      = export_data.get("forecast", {})
-    top_action    = export_data.get("top_action") or {}
-    map_points    = export_data.get("health_map_points", [])
-    wellness      = float(export_data.get("wellness_score", dist.get("Healthy_Pct", 0)))
+    header = export_data.get("header", {})
+    dist = export_data.get("distribution", {})
+    biometrics = export_data.get("biometrics", {})
+    forecast = export_data.get("forecast", {})
+    forecast_next = export_data.get("forecast_next_week", {})
+    top_action = export_data.get("top_action") or {}
+    map_points = export_data.get("health_map_points", [])
+    farm_poly = export_data.get("farm_polygon", [])
+    extra_indices = export_data.get("extra_indices", [])
+    risk_drivers = export_data.get("risk_drivers", [])[:3]
+    hotspots = export_data.get("hotspots_table", [])[:5]
 
-    healthy_pct   = float(dist.get("Healthy_Pct", 0))
-    monitor_pct   = float(dist.get("Monitor_Pct", 0))
-    critical_pct  = float(dist.get("Critical_Pct", 0))
+    wellness = float(export_data.get("wellness_score", dist.get("Healthy_Pct", 0)))
+
+    healthy_pct = float(dist.get("Healthy_Pct", 0))
+    monitor_pct = float(dist.get("Monitor_Pct", 0))
+    critical_pct = float(dist.get("Critical_Pct", 0))
 
     gauge_color = _color_for_pct(wellness)
-    gauge_svg   = _gauge_svg(wellness, gauge_color, size=120)
-    sparkline   = _trend_sparkline(forecast.get("trend_data", []), color="#3b82f6")
-    farm_poly = export_data.get("farm_polygon", [])
-    heatmap_svg = _heatmap_svg(map_points, farm_polygon=farm_poly)
+    gauge_svg = _gauge_svg(wellness, gauge_color, size=122)
+    sparkline = _trend_sparkline(forecast.get("trend_data", []), color="#2563eb")
+    map_svg = _heatmap_svg(map_points, farm_polygon=farm_poly)
 
     ndvi = biometrics.get("ndvi", {})
     ndmi = biometrics.get("ndmi", {})
     ndre = biometrics.get("ndre", {})
 
-    def delta_badge(d):
-        d = float(d or 0)
-        clr   = "#22c55e" if d >= 0 else "#ef4444"
-        arrow = "▲" if d >= 0 else "▼"
-        return f'<span style="color:{clr};font-size:11px;">{arrow} {abs(d):.1f}%</span>'
+    def metric_verdict(code: str, value: float):
+        v = _safe_float(value, 0.0)
 
-    def ndvi_verdict(v):
-        v = float(v or 0)
-        if v >= 0.65:
-            return ("ممتاز 🌟", "#dcfce7", "#15803d")
-        if v >= 0.45:
-            return ("جيد ✅", "#d1fae5", "#065f46")
-        if v >= 0.30:
-            return ("مقبول ⚠️", "#fef9c3", "#a16207")
-        return ("منخفض 🚨", "#fee2e2", "#b91c1c")
+        if code == "NDVI":
+            if v >= 0.60:
+                return "جيدة", "#dcfce7", "#166534"
+            if v >= 0.35:
+                return "متوسطة", "#fef3c7", "#92400e"
+            return "منخفضة", "#fee2e2", "#b91c1c"
 
-    def ndmi_verdict(v):
-        v = float(v or 0)
-        if v >= 0.40:
-            return ("رطوبة جيدة ✅", "#d1fae5", "#065f46")
-        if v >= 0.25:
-            return ("رطوبة مقبولة ⚠️", "#fef9c3", "#a16207")
-        return ("جفاف 🚨", "#fee2e2", "#b91c1c")
+        if code == "NDMI":
+            if v >= 0.30:
+                return "جيدة", "#dbeafe", "#1d4ed8"
+            if v >= 0.10:
+                return "متوسطة", "#fef3c7", "#92400e"
+            return "منخفضة", "#fee2e2", "#b91c1c"
 
-    def ndre_verdict(v):
-        v = float(v or 0)
-        if v >= 0.50:
-            return ("أوراق صحية ✅", "#d1fae5", "#065f46")
-        if v >= 0.35:
-            return ("تغذية مقبولة ⚠️", "#fef9c3", "#a16207")
-        return ("نقص غذائي 🚨", "#fee2e2", "#b91c1c")
+        if code == "NDRE":
+            if v >= 0.45:
+                return "جيدة", "#dcfce7", "#166534"
+            if v >= 0.25:
+                return "متوسطة", "#fef3c7", "#92400e"
+            return "منخفضة", "#fee2e2", "#b91c1c"
 
-    nv, nb, nc = ndvi_verdict(ndvi.get("val", 0))
-    nmv, nmb, nmc = ndmi_verdict(ndmi.get("val", 0))
-    nrv, nrb, nrc = ndre_verdict(ndre.get("val", 0))
+        return "—", "#f1f5f9", "#475569"
 
-    wellness_text = (
-        "مزرعتك بصحة ممتازة 🌟" if wellness >= 75 else
-        "مزرعتك بصحة جيدة ✅" if wellness >= 55 else
-        "تحتاج متابعة ⚠️" if wellness >= 35 else
-        "تحتاج تدخل عاجل 🚨"
-    )
+    ndvi_state, ndvi_bg, ndvi_fg = metric_verdict("NDVI", ndvi.get("val", 0))
+    ndmi_state, ndmi_bg, ndmi_fg = metric_verdict("NDMI", ndmi.get("val", 0))
+    ndre_state, ndre_bg, ndre_fg = metric_verdict("NDRE", ndre.get("val", 0))
+
+    if healthy_pct >= 85 and critical_pct < 5:
+        wellness_text = "الحالة العامة جيدة جدًا"
+    elif healthy_pct >= 65 and critical_pct < 10:
+        wellness_text = "الحالة العامة جيدة"
+    elif critical_pct >= 10:
+        wellness_text = "الحالة العامة تتطلب تدخلًا أسرع"
+    else:
+        wellness_text = "الحالة العامة تحتاج متابعة"
 
     wellness_desc = (
-        f"تُظهر النتائج أن نسبة الحالة السليمة تبلغ {healthy_pct:.0f}%. "
-        f"{'لا توجد مؤشرات حرجة تستوجب تدخلًا فوريًا.' if critical_pct < 10 else f'توجد نسبة حرجة تبلغ {critical_pct:.0f}% تحتاج تدخلًا أسرع.'}"
+        f"يعرض هذا التقرير الوضع الحالي للمزرعة استنادًا إلى مؤشرات الخضرة والرطوبة وحيوية الأوراق، "
+        f"مع تمثيل مكاني للنقاط التي تحتاج متابعة داخل حدود المزرعة."
     )
 
-  
+    report_date = header.get("date") or datetime.now().strftime("%Y-%m-%d")
+    farm_name = header.get("name") or export_data.get("farmName") or "—"
+    farm_area = header.get("area") or export_data.get("farmSize") or "—"
+    total_palms = header.get("total_palms") or export_data.get("finalCount") or "—"
+    contract_number = header.get("contract_number") or "—"
+    region = header.get("city") or "—"
 
-    action_title = top_action.get("title_ar", "استمر في الروتين الحالي")
-    action_text  = top_action.get("text_ar", "جميع المؤشرات ضمن النطاقات الطبيعية.")
+    executive_status = export_data.get("executive_status", "ملخص الحالة")
+    executive_summary = export_data.get("executive_summary", "—")
+    executive_next_step = export_data.get("executive_next_step", top_action.get("title_ar", "—"))
 
-    report_date   = header.get("date") or datetime.now().strftime("%Y-%m-%d")
-    farm_name     = header.get("name", "مزرعة سعف")
-    farm_area     = header.get("area", "—")
-    total_palms   = header.get("total_palms", "—")
-    # new metadata fields for enhanced report header
-    contract_number = header.get("contract_number") or header.get("contract") or ""
-    city            = header.get("city", "")
-    forecast_text = forecast.get("text", "—")
-
-    if heatmap_svg:
-        map_block = f"""
-        <div style="background:#0f2027;border-radius:12px;overflow:hidden;">
-          {heatmap_svg}
-        </div>
-        """
-    else:
-        map_block = '<div style="color:#9ca3af;font-size:11px;padding:20px;text-align:center;">لا توجد بيانات خريطة بعد</div>'
     map_note = (
-        "النقاط الحمراء في الخريطة تحدد مواقع النخيل التي تحتاج تدخلًا أسرع."
-        if critical_pct > 0 else
-        "جميع مناطق المزرعة ضمن الحالة الطبيعية."
+        "تمثل النقاط داخل الشكل حدود المزرعة الفعلية. اللون يوضح الحالة الحالية، "
+        "والحلقة الزرقاء تشير إلى نقاط يُتوقع تغيّر حالتها الأسبوع القادم."
     )
 
-    raw_hotspots = export_data.get("hotspots_table", [])
-    hotspots = []
-    for pt in raw_hotspots[:3]:
-        hotspots.append({
-            "lat": pt.get("lat", "—"),
-            "lng": pt.get("lng", pt.get("lon", "—")),
-            "status": pt.get("status", "—"),
-            "note": pt.get("note", "—"),
-        })
-
-    # ========= إضافات القالب الجديد =========
-
-    logo_url = export_data.get("logo_url")
-
-    executive_status = export_data.get("executive_status", wellness_text)
-
-    executive_summary = export_data.get(
-        "executive_summary",
-        f"تُظهر نتائج التحليل أن المزرعة في وضع {'جيد' if wellness >= 55 else 'يحتاج متابعة'} حاليًا، "
-        f"حيث تبلغ نسبة النخيل السليم {healthy_pct:.0f}%، ونسبة المتابعة {monitor_pct:.0f}%، "
-        f"بينما تم رصد {critical_pct:.0f}% من النخيل بحاجة إلى تدخل أسرع."
-    )
-
-    executive_next_step = export_data.get(
-        "executive_next_step",
-        f"الخطوة التالية المقترحة: {action_title}."
-    )
-
-    key_findings = export_data.get("key_findings", [
-        f"تبلغ نسبة الحالة السليمة حاليًا {healthy_pct:.0f}%.",
-        f"توجد نسبة متابعة تبلغ {monitor_pct:.0f}% وتحتاج مراقبة دورية.",
-        f"تم رصد نسبة حرجة تبلغ {critical_pct:.0f}% تحتاج مراجعة أسرع.",
-    ])[:3]
-
-    extra_indices = export_data.get("extra_indices", [])[:4]
-
-    forecast_next = export_data.get("forecast_next_week", {})
+    forecast_text = forecast.get("text", "—")
     forecast_summary = {
-        "healthy": f"{float(forecast_next.get('Healthy_Pct_next', healthy_pct)):.1f}%",
-        "monitor": f"{float(forecast_next.get('Monitor_Pct_next', monitor_pct)):.1f}%",
-        "critical": f"{float(forecast_next.get('Critical_Pct_next', critical_pct)):.1f}%",
+        "healthy": f"{_safe_float(forecast_next.get('Healthy_Pct_next', healthy_pct), 0):.1f}%",
+        "monitor": f"{_safe_float(forecast_next.get('Monitor_Pct_next', monitor_pct), 0):.1f}%",
+        "critical": f"{_safe_float(forecast_next.get('Critical_Pct_next', critical_pct), 0):.1f}%",
     }
 
-    risk_drivers = export_data.get("risk_drivers", [])[:3]
+    forecast_change_text = _delta_badge_html(_safe_float(forecast_next.get("ndvi_delta_next_mean"), 0) * 100.0)
 
+    indicator_rows = [
+        {
+            "label": "الخضرة",
+            "code": "NDVI",
+            "value": f"{_safe_float(ndvi.get('val', 0), 0):.2f}",
+            "note": "يقيس كثافة الغطاء النباتي وحيوية النمو بشكل عام.",
+        },
+        {
+            "label": "الرطوبة",
+            "code": "NDMI",
+            "value": f"{_safe_float(ndmi.get('val', 0), 0):.2f}",
+            "note": "يعكس مستوى الرطوبة في المجموع الخضري واحتمال الإجهاد المائي.",
+        },
+        {
+            "label": "حيوية الأوراق",
+            "code": "NDRE",
+            "value": f"{_safe_float(ndre.get('val', 0), 0):.2f}",
+            "note": "يفيد في قراءة نشاط الأوراق والحالة التغذوية بشكل مبكر.",
+        },
+    ]
 
+    for idx in extra_indices[:4]:
+        code = idx.get("code", "") or "تشغيلي"
+        value = idx.get("value", "—")
+        if isinstance(value, float):
+            value = f"{value:.2f}"
+        indicator_rows.append({
+            "label": idx.get("label", "—"),
+            "code": code,
+            "value": value,
+            "note": idx.get("note", "—"),
+        })
 
     logo_data_uri = None
     logo_path = os.path.join(
@@ -380,52 +429,53 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
         farm_area=farm_area,
         total_palms=total_palms,
         report_date=report_date,
+        contract_number=contract_number,
+        region=region,
 
         logo_data_uri=logo_data_uri,
-        logo_url=logo_url,
-
-        gauge_svg=gauge_svg,
-        gauge_color=gauge_color,
-        wellness_text=wellness_text,
-        wellness_desc=wellness_desc,
-
-        healthy_pct=healthy_pct,
-        monitor_pct=monitor_pct,
-        critical_pct=critical_pct,
-       
-
-        map_block=map_block,
-        map_note=map_note,
-
-        ndvi_val=ndvi.get("val", "—"),
-        ndmi_val=ndmi.get("val", "—"),
-        ndre_val=ndre.get("val", "—"),
-
-        nv=nv, nb=nb, nc=nc,
-        nmv=nmv, nmb=nmb, nmc=nmc,
-        nrv=nrv, nrb=nrb, nrc=nrc,
-
-        ndvi_delta_badge=delta_badge(ndvi.get("delta", 0)),
-        ndmi_delta_badge=delta_badge(ndmi.get("delta", 0)),
-        ndre_delta_badge=delta_badge(ndre.get("delta", 0)),
-
-        forecast_text=forecast_text,
-        sparkline=sparkline,
-        forecast_summary=forecast_summary,
-
-        action_title=action_title,
-        action_text=action_text,
 
         executive_status=executive_status,
         executive_summary=executive_summary,
         executive_next_step=executive_next_step,
 
-        key_findings=key_findings,
-        extra_indices=extra_indices,
+        gauge_svg=gauge_svg,
+        gauge_color=gauge_color,
+        wellness_text=wellness_text,
+        wellness_desc=wellness_desc,
+        healthy_pct=healthy_pct,
+        monitor_pct=monitor_pct,
+        critical_pct=critical_pct,
+
+        map_svg=map_svg,
+        map_note=map_note,
+
+        ndvi_val=f"{_safe_float(ndvi.get('val', 0), 0):.2f}",
+        ndmi_val=f"{_safe_float(ndmi.get('val', 0), 0):.2f}",
+        ndre_val=f"{_safe_float(ndre.get('val', 0), 0):.2f}",
+
+        ndvi_state=ndvi_state,
+        ndvi_bg=ndvi_bg,
+        ndvi_fg=ndvi_fg,
+        ndmi_state=ndmi_state,
+        ndmi_bg=ndmi_bg,
+        ndmi_fg=ndmi_fg,
+        ndre_state=ndre_state,
+        ndre_bg=ndre_bg,
+        ndre_fg=ndre_fg,
+
+        ndvi_delta_badge=_delta_badge_html(_safe_float(ndvi.get("delta", 0), 0)),
+        ndmi_delta_badge=_delta_badge_html(_safe_float(ndmi.get("delta", 0), 0)),
+        ndre_delta_badge=_delta_badge_html(_safe_float(ndre.get("delta", 0), 0)),
+
+        indicator_rows=indicator_rows,
+
+        forecast_text=forecast_text,
+        forecast_change_text=forecast_change_text,
+        sparkline=sparkline,
+        forecast_summary=forecast_summary,
+
         risk_drivers=risk_drivers,
         hotspots=hotspots,
-        contract_number=contract_number,
-        city=city,
     )
 
     output_path = f"/tmp/saaf_report_{farm_id}.pdf"
@@ -445,7 +495,7 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
 def generate_excel_report(export_data: dict, farm_id: str) -> str:
     import openpyxl
     from openpyxl.styles import (
-        Font, PatternFill, Alignment, Border, Side, GradientFill
+        Font, PatternFill, Alignment, Border, Side
     )
     from openpyxl.utils import get_column_letter
 
@@ -454,21 +504,20 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     ws.title = "تقرير المزرعة"
     ws.sheet_view.rightToLeft = True
 
-    header     = export_data.get("header", {})
-    dist       = export_data.get("distribution", {})
+    header = export_data.get("header", {})
+    dist = export_data.get("distribution", {})
     biometrics = export_data.get("biometrics", {})
-    forecast   = export_data.get("forecast", {})
-    hotspots   = export_data.get("critical_hotspots", [])
-    wellness   = float(export_data.get("wellness_score", dist.get("Healthy_Pct", 0)))
+    forecast = export_data.get("forecast", {})
+    hotspots = export_data.get("hotspots_table", [])
+    wellness = float(export_data.get("wellness_score", dist.get("Healthy_Pct", 0)))
 
-    # ── Styles ──
-    GREEN_DARK  = "064E3B"
-    GREEN_MID   = "10B981"
+    GREEN_DARK = "064E3B"
+    GREEN_MID = "10B981"
     GREEN_LIGHT = "D1FAE5"
-    ORANGE      = "F59E0B"
-    RED         = "EF4444"
-    GRAY_BG     = "F8FAFC"
-    BORDER_CLR  = "E2E8F0"
+    ORANGE = "F59E0B"
+    RED = "EF4444"
+    GRAY_BG = "F8FAFC"
+    BORDER_CLR = "E2E8F0"
 
     def side(color="E2E8F0"):
         return Side(style="thin", color=color)
@@ -487,38 +536,36 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
         return PatternFill("solid", fgColor=hex_color)
 
     def center(wrap=False):
-        return Alignment(horizontal="center", vertical="center",
-                         wrap_text=wrap, readingOrder=2)
+        return Alignment(horizontal="center", vertical="center", wrap_text=wrap, readingOrder=2)
 
     def right_align():
-        return Alignment(horizontal="right", vertical="center",
-                         readingOrder=2)
+        return Alignment(horizontal="right", vertical="center", readingOrder=2)
 
-    # ── Header Block ──
     ws.merge_cells("A1:F1")
     c = ws["A1"]
-    c.value = "🌴 سعف — تقرير تحليل صحة المزرعة"
-    c.font  = Font(name="Cairo", size=16, bold=True, color="FFFFFF")
-    c.fill  = fill(GREEN_DARK)
+    c.value = "سعف — تقرير تحليل صحة المزرعة"
+    c.font = Font(name="Cairo", size=16, bold=True, color="FFFFFF")
+    c.fill = fill(GREEN_DARK)
     c.alignment = center()
     ws.row_dimensions[1].height = 36
 
-    # Farm info row
-    info_labels = ["اسم المزرعة", "رقم العقد", "المدينة", "رقم المزرعة", "المساحة", "عدد النخيل",
-                   "تاريخ التقرير", "مؤشر العافية"]
-    info_vals   = [
-        header.get("name", "—"),
-        header.get("contract_number") or header.get("contract", "—"),
+    info_labels = ["اسم المزرعة", "رقم العقد", "المنطقة", "رقم المزرعة", "المساحة", "عدد النخيل",
+                   "تاريخ التقرير", "مؤشر الحالة"]
+    info_vals = [
+        header.get("name", export_data.get("farmName", "—")),
+        header.get("contract_number", "—"),
         header.get("city", "—"),
         farm_id,
-        f"{header.get('area', '—')} م²",
-        str(header.get("total_palms", "—")),
+        f"{header.get('area', export_data.get('farmSize', '—'))}",
+        str(header.get("total_palms", export_data.get("finalCount", "—"))),
         header.get("date", datetime.now().strftime("%Y-%m-%d")),
-        f"{wellness:.1f}%",
+        f"{wellness:.1f}%"
     ]
+
     for col, (lbl, val) in enumerate(zip(info_labels, info_vals), start=1):
         ws.row_dimensions[2].height = 20
         ws.row_dimensions[3].height = 26
+
         cl = ws.cell(row=2, column=col, value=lbl)
         cl.font = Font(name="Cairo", size=10, bold=True, color="064E3B")
         cl.fill = fill(GREEN_LIGHT)
@@ -530,25 +577,25 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
         cv.alignment = center()
         cv.border = full_border(BORDER_CLR)
 
-    ws.row_dimensions[4].height = 10  # فراغ
+    ws.row_dimensions[4].height = 10
 
-    # ── Section: التوزيع الصحي ──
     ws.merge_cells("A5:F5")
     c = ws["A5"]
-    c.value = "📊 توزيع الحالة الصحية"
-    c.font  = header_font(12)
-    c.fill  = fill(GREEN_MID)
+    c.value = "توزيع الحالة الصحية"
+    c.font = header_font(12)
+    c.fill = fill(GREEN_MID)
     c.alignment = center()
     ws.row_dimensions[5].height = 28
 
     dist_data = [
-        ("✅ سليم",          dist.get("Healthy_Pct",  0), GREEN_MID),
-        ("⚠️ يحتاج متابعة", dist.get("Monitor_Pct",  0), ORANGE),
-        ("🚨 حرج",           dist.get("Critical_Pct", 0), RED),
+        ("سليم", dist.get("Healthy_Pct", 0), GREEN_MID),
+        ("يحتاج متابعة", dist.get("Monitor_Pct", 0), ORANGE),
+        ("حرج", dist.get("Critical_Pct", 0), RED),
     ]
     for i, (lbl, pct, clr) in enumerate(dist_data):
         row = 6 + i
         ws.row_dimensions[row].height = 24
+
         ws.merge_cells(f"A{row}:C{row}")
         cl = ws.cell(row=row, column=1, value=lbl)
         cl.font = body_font(11, bold=True)
@@ -563,35 +610,35 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
 
     ws.row_dimensions[9].height = 10
 
-    # ── Section: المؤشرات الطيفية ──
     ws.merge_cells("A10:F10")
     c = ws["A10"]
-    c.value = "🔬 المؤشرات الطيفية"
-    c.font  = header_font(12)
-    c.fill  = fill(GREEN_MID)
+    c.value = "المؤشرات الرئيسية"
+    c.font = header_font(12)
+    c.fill = fill(GREEN_MID)
     c.alignment = center()
     ws.row_dimensions[10].height = 28
 
-    bio_headers = ["المؤشر", "الاسم العلمي", "القيمة الحالية", "التغير %", "", ""]
+    bio_headers = ["المؤشر", "الرمز", "القيمة الحالية", "التغير %", "", ""]
     for col, h in enumerate(bio_headers, 1):
-        c = ws.cell(row=11, column=col, value=h)
-        c.font = Font(name="Cairo", size=10, bold=True, color="374151")
-        c.fill = fill(GRAY_BG)
-        c.alignment = center()
-        c.border = full_border()
+        cell = ws.cell(row=11, column=col, value=h)
+        cell.font = Font(name="Cairo", size=10, bold=True, color="374151")
+        cell.fill = fill(GRAY_BG)
+        cell.alignment = center()
+        cell.border = full_border()
     ws.row_dimensions[11].height = 22
 
     bio_rows = [
-        ("مؤشر الخضرة",        "NDVI",
+        ("الخضرة", "NDVI",
          biometrics.get("ndvi", {}).get("val", "—"),
          biometrics.get("ndvi", {}).get("delta", 0)),
-        ("مؤشر الرطوبة",       "NDMI",
+        ("الرطوبة", "NDMI",
          biometrics.get("ndmi", {}).get("val", "—"),
          biometrics.get("ndmi", {}).get("delta", 0)),
-        ("مؤشر الأحمر الحافة", "NDRE",
+        ("حيوية الأوراق", "NDRE",
          biometrics.get("ndre", {}).get("val", "—"),
          biometrics.get("ndre", {}).get("delta", 0)),
     ]
+
     for i, (name_ar, name_sci, val, delta) in enumerate(bio_rows):
         row = 12 + i
         ws.row_dimensions[row].height = 24
@@ -599,83 +646,97 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
 
         ws.merge_cells(f"A{row}:B{row}")
         c = ws.cell(row=row, column=1, value=name_ar)
-        c.font = body_font(11); c.fill = row_fill
-        c.alignment = right_align(); c.border = full_border()
+        c.font = body_font(11)
+        c.fill = row_fill
+        c.alignment = right_align()
+        c.border = full_border()
 
         c = ws.cell(row=row, column=3, value=name_sci)
         c.font = Font(name="Consolas", size=10, color="6B7280")
-        c.fill = row_fill; c.alignment = center(); c.border = full_border()
+        c.fill = row_fill
+        c.alignment = center()
+        c.border = full_border()
 
         c = ws.cell(row=row, column=4, value=val)
-        c.font = body_font(12, bold=True); c.fill = row_fill
-        c.alignment = center(); c.border = full_border()
+        c.font = body_font(12, bold=True)
+        c.fill = row_fill
+        c.alignment = center()
+        c.border = full_border()
 
         delta_val = float(delta or 0)
-        delta_clr = "22C55E" if delta_val >= 0 else "EF4444"
-        delta_str = f"{'▲' if delta_val >= 0 else '▼'} {abs(delta_val):.1f}%"
+        if abs(delta_val) < 0.05:
+            delta_str = "بدون تغير ملحوظ"
+            delta_clr = "64748B"
+        else:
+            delta_clr = "22C55E" if delta_val >= 0 else "EF4444"
+            delta_str = f"{'▲' if delta_val >= 0 else '▼'} {abs(delta_val):.1f}%"
+
         ws.merge_cells(f"E{row}:F{row}")
         c = ws.cell(row=row, column=5, value=delta_str)
         c.font = Font(name="Cairo", size=11, bold=True, color=delta_clr)
-        c.fill = row_fill; c.alignment = center(); c.border = full_border()
+        c.fill = row_fill
+        c.alignment = center()
+        c.border = full_border()
 
     ws.row_dimensions[15].height = 10
 
-    # ── Section: التوقعات ──
     ws.merge_cells("A16:F16")
     c = ws["A16"]
-    c.value = "📈 توقع الأسبوع القادم"
-    c.font  = header_font(12)
-    c.fill  = fill(GREEN_MID)
+    c.value = "توقع الأسبوع القادم"
+    c.font = header_font(12)
+    c.fill = fill(GREEN_MID)
     c.alignment = center()
     ws.row_dimensions[16].height = 28
 
     ws.merge_cells("A17:F17")
     c = ws["A17"]
     c.value = forecast.get("text", "—")
-    c.font  = body_font(11); c.alignment = right_align()
+    c.font = body_font(11)
+    c.alignment = right_align()
     c.border = full_border()
-    ws.row_dimensions[17].height = 24
+    ws.row_dimensions[17].height = 28
 
-    trend = forecast.get("trend_data", [])
-    if trend:
-        ws.row_dimensions[18].height = 18
-        ws.merge_cells("A18:F18")
-        c = ws["A18"]
-        c.value = "مسار NDVI: " + " → ".join([f"{v:.2f}" if isinstance(v, float) else str(v) for v in trend[-5:]])
-        c.font = Font(name="Cairo", size=10, color="6B7280")
-        c.alignment = right_align()
+    ws.row_dimensions[18].height = 10
 
-    ws.row_dimensions[19].height = 10
-
-    # ── Section: النقاط الحرجة ──
     if hotspots:
-        ws.merge_cells("A20:F20")
-        c = ws["A20"]
-        c.value = "🚨 النقاط الحرجة"
-        c.font  = header_font(12)
-        c.fill  = fill("7F1D1D")
+        ws.merge_cells("A19:F19")
+        c = ws["A19"]
+        c.value = "المناطق التي تحتاج متابعة"
+        c.font = header_font(12)
+        c.fill = fill("7F1D1D")
         c.alignment = center()
-        ws.row_dimensions[20].height = 28
+        ws.row_dimensions[19].height = 28
 
-        hs_hdrs = ["#", "خط العرض", "خط الطول", "الحالة", "القاعدة", ""]
+        hs_hdrs = ["#", "خط العرض", "خط الطول", "الحالة", "الوصف", ""]
         for col, h in enumerate(hs_hdrs, 1):
-            c = ws.cell(row=21, column=col, value=h)
+            c = ws.cell(row=20, column=col, value=h)
             c.font = Font(name="Cairo", size=10, bold=True, color="374151")
-            c.fill = fill("FEE2E2"); c.alignment = center(); c.border = full_border()
-        ws.row_dimensions[21].height = 22
+            c.fill = fill("FEE2E2")
+            c.alignment = center()
+            c.border = full_border()
+        ws.row_dimensions[20].height = 22
 
         for j, pt in enumerate(hotspots[:8]):
-            row = 22 + j
+            row = 21 + j
             ws.row_dimensions[row].height = 22
             rf = fill("FFFFFF") if j % 2 == 0 else fill("FFF7F7")
-            vals = [j+1, pt.get("lat","—"), pt.get("lng","—"),
-                    pt.get("status","—"), pt.get("note","—"), ""]
+
+            vals = [
+                j + 1,
+                pt.get("lat", "—"),
+                pt.get("lon", "—"),
+                pt.get("status", "—"),
+                pt.get("note", "—"),
+                ""
+            ]
+
             for col, v in enumerate(vals, 1):
                 c = ws.cell(row=row, column=col, value=v)
-                c.font = body_font(10); c.fill = rf
-                c.alignment = center(); c.border = full_border()
+                c.font = body_font(10)
+                c.fill = rf
+                c.alignment = center()
+                c.border = full_border()
 
-    # ── Column widths ──
     col_widths = [22, 18, 18, 18, 18, 14]
     for i, w in enumerate(col_widths, 1):
         ws.column_dimensions[get_column_letter(i)].width = w
@@ -713,10 +774,10 @@ def export_pdf(farm_id):
     except Exception as e:
         logger.error(f"💥 PDF Route Crash: {traceback.format_exc()}")
         return jsonify({
-    "ok": False,
-    "error": str(e),
-    "trace": traceback.format_exc()
-}), 500
+            "ok": False,
+            "error": str(e),
+            "trace": traceback.format_exc()
+        }), 500
 
 
 @reports_bp.route('/reports/<farm_id>/excel', methods=['GET'])

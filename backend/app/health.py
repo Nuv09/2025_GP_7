@@ -1430,29 +1430,31 @@ def _safe_float(v, default=0.0):
 def _format_pct(v, digits=1):
     return round(_safe_float(v, 0.0), digits)
 
-
 def _build_executive_summary(current_health: Dict[str, Any], top_action: Dict[str, Any]) -> tuple[str, str, str]:
-    healthy_pct  = _safe_float(current_health.get("Healthy_Pct", 0))
-    monitor_pct  = _safe_float(current_health.get("Monitor_Pct", 0))
+    healthy_pct = _safe_float(current_health.get("Healthy_Pct", 0))
+    monitor_pct = _safe_float(current_health.get("Monitor_Pct", 0))
     critical_pct = _safe_float(current_health.get("Critical_Pct", 0))
 
-    if healthy_pct >= 75:
-        status = "الحالة العامة ممتازة"
-    elif healthy_pct >= 55:
+    if critical_pct >= 10:
+        status = "الحالة العامة تتطلب تدخلًا أسرع"
+    elif monitor_pct >= 35:
+        status = "الحالة العامة متوسطة وتحتاج متابعة واضحة"
+    elif healthy_pct >= 85:
+        status = "الحالة العامة جيدة جدًا"
+    elif healthy_pct >= 65:
         status = "الحالة العامة جيدة"
-    elif healthy_pct >= 35:
-        status = "الحالة العامة متوسطة وتحتاج متابعة"
     else:
-        status = "الحالة العامة تتطلب تدخلاً أسرع"
+        status = "الحالة العامة مقبولة وتحتاج متابعة"
 
     summary = (
-        f"يُظهر التحليل أن المزرعة {status.replace('الحالة العامة ', '')}. "
-        f"الملخص يستند إلى مؤشرات الغطاء النباتي والرطوبة وحيوية الأوراق، مع التركيز على المناطق المتأثرة."
+        f"يوضح التحليل الحالي أن نسبة النخيل السليم تبلغ {healthy_pct:.0f}%، "
+        f"بينما تحتاج {monitor_pct:.0f}% من المناطق إلى متابعة، "
+        f"وتبلغ الحالات الحرجة {critical_pct:.0f}%. "
+        f"يعتمد هذا الملخص على قراءة الخضرة والرطوبة وحيوية الأوراق وتوزيع النقاط المتأثرة داخل حدود المزرعة."
     )
 
-    next_step = top_action.get("title_ar", "الاستمرار في المتابعة الحالية")
+    next_step = top_action.get("title_ar", "متابعة الحالة الحالية")
     return status, summary, next_step
-
 
 def _build_key_findings(
     current_health: Dict[str, Any],
@@ -1488,54 +1490,35 @@ def _build_key_findings(
 
 
 def _build_extra_indices(history: list, current_health: Dict[str, Any], alert_signals: Dict[str, Any]) -> list[dict]:
-    curr = history[-1] if len(history) > 0 else {}
-    prev = history[-2] if len(history) > 1 else curr
-
-    def calc_delta(key):
-        c = _safe_float(curr.get(key), 0)
-        p = _safe_float(prev.get(key), 0)
-        if abs(p) < 1e-9:
-            return 0.0
-        return round(((c - p) / p) * 100, 1)
-
     flags = alert_signals.get("flag_counts_latest", {}) or {}
+
+    water_flags = int(flags.get("flag_NDWI_low", 0) or 0) + int(flags.get("flag_NDWI_below_025", 0) or 0)
+    nutrition_flags = int(flags.get("flag_NDRE_low", 0) or 0) + int(flags.get("flag_NDRE_below_035", 0) or 0)
 
     return [
         {
-            "label": "الخضرة العامة",
-            "value": round(_safe_float(curr.get("NDVI"), 0), 2),
-            "change": calc_delta("NDVI"),
-            "note": "كلما ارتفعت القيمة دلّ ذلك على غطاء نباتي أفضل."
+            "label": "إشارات نقص المياه",
+            "code": "تشغيلي",
+            "value": water_flags,
+            "note": "عدد المواضع التي أظهرت مؤشرات منخفضة للرطوبة أو ضعف وصول الماء."
         },
         {
-            "label": "رطوبة الغطاء النباتي",
-            "value": round(_safe_float(curr.get("NDMI"), 0), 2),
-            "change": calc_delta("NDMI"),
-            "note": "تعكس مستوى الارتواء والإجهاد المائي بشكل مبسط."
-        },
-        {
-            "label": "حيوية الأوراق",
-            "value": round(_safe_float(curr.get("NDRE"), 0), 2),
-            "change": calc_delta("NDRE"),
-            "note": "تفيد في قراءة النشاط الحيوي وحالة الأوراق."
-        },
-        {
-            "label": "عدد إشارات نقص المياه",
-            "value": int(flags.get("flag_NDWI_low", 0) or 0) + int(flags.get("flag_NDWI_below_025", 0) or 0),
-            "change": 0,
-            "note": "عدد المواضع التي أظهرت مؤشرات منخفضة للمياه."
-        },
-        {
-            "label": "عدد إشارات ضعف التغذية",
-            "value": int(flags.get("flag_NDRE_low", 0) or 0) + int(flags.get("flag_NDRE_below_035", 0) or 0),
-            "change": 0,
+            "label": "إشارات ضعف التغذية",
+            "code": "تشغيلي",
+            "value": nutrition_flags,
             "note": "عدد المواضع التي أظهرت ضعفًا في مؤشرات حيوية الأوراق."
         },
         {
-            "label": "مستوى الخطر العام",
+            "label": "نسبة المتابعة",
+            "code": "Monitor",
+            "value": round(_safe_float(current_health.get("Monitor_Pct", 0), 0), 1),
+            "note": "تمثل نسبة المناطق التي تحتاج مراقبة أو زيارة ميدانية."
+        },
+        {
+            "label": "نسبة المناطق الحرجة",
+            "code": "Critical",
             "value": round(_safe_float(current_health.get("Critical_Pct", 0), 0), 1),
-            "change": 0,
-            "note": "يمثل نسبة المناطق التي تحتاج استجابة أسرع."
+            "note": "تمثل نسبة المناطق التي تحتاج استجابة أسرع من غيرها."
         },
     ]
 
@@ -1544,38 +1527,48 @@ def _build_risk_drivers(alert_signals: Dict[str, Any]) -> list[dict]:
     flags = alert_signals.get("flag_counts_latest", {}) or {}
 
     water_count = int(flags.get("flag_NDWI_low", 0) or 0) + int(flags.get("flag_NDWI_below_025", 0) or 0)
-    ndre_count  = int(flags.get("flag_NDRE_low", 0) or 0) + int(flags.get("flag_NDRE_below_035", 0) or 0)
-    ndvi_count  = int(flags.get("flag_NDVI_below_030", 0) or 0) + int(flags.get("flag_drop_NDVI005", 0) or 0)
+    ndre_count = int(flags.get("flag_NDRE_low", 0) or 0) + int(flags.get("flag_NDRE_below_035", 0) or 0)
+    ndvi_count = int(flags.get("flag_NDVI_below_030", 0) or 0) + int(flags.get("flag_drop_NDVI005", 0) or 0)
 
     raw = [
-        ("انخفاض مؤشرات المياه", water_count),
-        ("ضعف حيوية الأوراق", ndre_count),
-        ("هبوط الخضرة", ndvi_count),
+        ("انخفاض مؤشرات المياه", water_count, "ترتبط هذه الإشارات غالبًا بضعف الرطوبة أو عدم تجانس توزيع الري في بعض الأجزاء."),
+        ("ضعف حيوية الأوراق", ndre_count, "تشير إلى احتمال وجود إجهاد تغذوي أو تراجع في نشاط الأوراق مقارنة ببقية المزرعة."),
+        ("هبوط الخضرة", ndvi_count, "يعكس تراجعًا في كثافة الغطاء النباتي أو ضعف النمو في مناطق محددة."),
     ]
 
-    # sort by count descending so the most significant drivers appear first
     raw.sort(key=lambda x: x[1], reverse=True)
 
     drivers = []
-    for title, cnt in raw:
-        if cnt >= 5:
+    for title, cnt, note in raw:
+        if cnt >= 50:
             pr = "مرتفعة"
-        elif cnt >= 1:
+        elif cnt >= 15:
             pr = "متوسطة"
         else:
             pr = "منخفضة"
+
         drivers.append({
             "title": title,
             "count": cnt,
             "priority": pr,
-            "note": "إشارة فعالة" if cnt > 0 else "لا توجد إشارة بارزة"
+            "note": note
         })
-    return drivers
 
+    return drivers
 
 def _build_hotspots_table(alert_signals: Dict[str, Any]) -> list[dict]:
     hotspots = alert_signals.get("hotspots", {})
     all_points = []
+
+    rule_map = {
+        "Monitor_baseline_drop": "هبوط بسيط في الخضرة مقارنة بالنمط المعتاد",
+        "Critical_baseline_drop": "هبوط واضح في الخضرة ويحتاج زيارة أسرع",
+        "Monitor_RPW_tail": "إشارة مرتبطة بانخفاض الرطوبة أو ضعف توزيع الماء",
+        "Critical_RPW_tail": "إشارة قوية على إجهاد مائي وتحتاج مراجعة مباشرة",
+        "Monitor_IF_outlier": "نقطة تختلف عن النمط العام للمزرعة وتحتاج فحصًا ميدانيًا",
+        "Critical_IF_outlier": "نقطة شاذة بوضوح عن النمط العام وتحتاج تدخلًا أسرع",
+        "Healthy": "لا توجد إشارة مقلقة في هذه النقطة",
+    }
 
     for section_name in ["critical", "monitor"]:
         for pt in hotspots.get(section_name, [])[:6]:
@@ -1587,18 +1580,8 @@ def _build_hotspots_table(alert_signals: Dict[str, Any]) -> list[dict]:
             else:
                 status = "سليمة"
 
-            # translate internal rule codes into user‑friendly description
             rule = str(pt.get("rule", ""))
-            rule_map = {
-                "Monitor_baseline_drop": "هبوط بسيط في الخضرة",
-                "Critical_baseline_drop": "هبوط واضح في الخضرة",
-                "Monitor_RPW_tail": "مؤشرات مياه منخفضة",
-                "Critical_RPW_tail": "مؤشرات مياه حرجة",
-                "Monitor_IF_outlier": "انحراف خفيف عن النمط",
-                "Critical_IF_outlier": "انحراف كبير عن النمط",
-                "Healthy": "سليم",
-            }
-            note_text = rule_map.get(rule, "—")
+            note_text = rule_map.get(rule, "تحتاج هذه النقطة إلى مراجعة ميدانية للتأكد من السبب.")
 
             all_points.append({
                 "lat": round(_safe_float(pt.get("lat"), 0), 6),
@@ -1612,8 +1595,8 @@ def _build_hotspots_table(alert_signals: Dict[str, Any]) -> list[dict]:
 
 def prepare_export_data(farm_doc, health_result):
     history = health_result.get("indices_history_last_month", [])
-    curr    = history[-1] if len(history) > 0 else {}
-    prev    = history[-2] if len(history) > 1 else curr
+    curr = history[-1] if len(history) > 0 else {}
+    prev = history[-2] if len(history) > 1 else curr
 
     def calculate_delta(key):
         c_val = curr.get(key)
@@ -1622,15 +1605,16 @@ def prepare_export_data(farm_doc, health_result):
             return round(((c_val - p_val) / p_val) * 100, 1)
         return 0.0
 
-    current_health   = health_result.get("current_health", {})
-    forecast_next    = health_result.get("forecast_next_week", {})
-    alert_signals    = health_result.get("alert_signals", {})
-    health_map       = health_result.get("health_map", []) or []
+    current_health = health_result.get("current_health", {})
+    forecast_next = health_result.get("forecast_next_week", {})
+    alert_signals = health_result.get("alert_signals", {})
+    health_map = health_result.get("health_map", []) or []
+    farm_polygon = health_result.get("farm_polygon", farm_doc.get("polygon", [])) or []
 
-    critical_points  = alert_signals.get("hotspots", {}).get("critical", [])[:8]
+    critical_points = alert_signals.get("hotspots", {}).get("critical", [])[:8]
 
     forecast_delta = _safe_float(forecast_next.get("ndvi_delta_next_mean"), 0)
-    direction      = "تحسناً" if forecast_delta >= 0 else "تراجعاً"
+    direction = "تحسنًا" if forecast_delta >= 0 else "تراجعًا"
 
     top_action = _build_top_action(health_result)
     executive_status, executive_summary, executive_next_step = _build_executive_summary(
@@ -1655,16 +1639,21 @@ def prepare_export_data(farm_doc, health_result):
 
     export_payload = {
         "header": {
-            "name":        farm_doc.get("name") or farm_doc.get("farmName") or "مزرعة سعف",
-            "area":        farm_doc.get("area") or farm_doc.get("farmSize") or "غير محدد",
-            "date":        alert_signals.get("latest_date") or datetime.now().strftime("%Y-%m-%d"),
+            "name": farm_doc.get("farmName") or farm_doc.get("name") or "مزرعة سعف",
+            "area": farm_doc.get("farmSize") or farm_doc.get("area") or "غير محدد",
+            "date": alert_signals.get("latest_date") or datetime.now().strftime("%Y-%m-%d"),
             "total_palms": farm_doc.get("finalCount", 0),
+            "contract_number": farm_doc.get("contractNumber", "—"),
+            "city": farm_doc.get("region") or farm_doc.get("city") or "—",
         },
 
         "logo_url": farm_doc.get("logoUrl") or farm_doc.get("logo_url"),
 
+        "farmName": farm_doc.get("farmName") or farm_doc.get("name") or "مزرعة سعف",
+        "farmSize": farm_doc.get("farmSize") or farm_doc.get("area") or "غير محدد",
+
         "wellness_score": current_health.get("Healthy_Pct", 0),
-        "distribution":   current_health,
+        "distribution": current_health,
 
         "biometrics": {
             "ndvi": {"val": round(float(curr.get("NDVI") or 0), 2), "delta": calculate_delta("NDVI")},
@@ -1673,16 +1662,17 @@ def prepare_export_data(farm_doc, health_result):
         },
 
         "forecast": {
-            "text": f"يتوقع النظام {direction} في خضرة المزرعة بنسبة {abs(forecast_delta * 100):.1f}% خلال الأسبوع القادم.",
+            "text": f"يتوقع النظام {direction} في الخضرة العامة للمزرعة بنحو {abs(forecast_delta * 100):.1f}% خلال الأسبوع القادم.",
             "trend_data": [h.get("NDVI") or 0 for h in history],
         },
 
         "forecast_next_week": forecast_next,
 
         "critical_hotspots": critical_points,
-        "health_map_points": health_map[:60],
-        "top_action": top_action,
+        "health_map_points": health_map[:120],
+        "farm_polygon": farm_polygon,
 
+        "top_action": top_action,
         "executive_status": executive_status,
         "executive_summary": executive_summary,
         "executive_next_step": executive_next_step,
