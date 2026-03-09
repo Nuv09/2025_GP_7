@@ -1754,7 +1754,7 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
         "forecast_next_week": forecast_next,
 
         "critical_hotspots": critical_points,
-        "health_map_points": health_map[:140],
+        "health_map_points": health_map,
         "farm_polygon": farm_polygon,
 
         "top_action": top_action,

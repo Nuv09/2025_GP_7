@@ -308,26 +308,30 @@
 
     .map-svg svg {
       width: 100%;
-      height: 280px;
+      height: 300px;
       display: block;
     }
 
     .legend {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-top: 8px;
-      margin-bottom: 6px;
-    }
+  display: grid;
+  grid-template-columns: repeat(4, max-content);
+  justify-content: center;
+  align-items: center;
+  column-gap: 14px;
+  row-gap: 0;
+  margin-top: 8px;
+  margin-bottom: 6px;
+}
 
-    .legend-item {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 8.9px;
-      color: #334155;
-    }
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 8.7px;
+  color: #334155;
+  white-space: nowrap;
+  line-height: 1;
+}
 
     .legend-dot {
       width: 10px;
@@ -554,13 +558,13 @@
     }
 
     .chart-panel svg {
-      display: block;
-      margin: 0 auto;
-      width: 100%;
-      max-width: 270px;
-      height: auto;
-      direction: ltr;
-    }
+  display: block;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  direction: ltr;
+}
 
     .badge {
       display: inline-block;
@@ -583,26 +587,33 @@
     }
 
     .ftr {
-      background: #053b2c;
-      padding: 8px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-shrink: 0;
-    }
+  background: #053b2c;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
 
-    .ftr-right {
-      display: flex;
-      align-items: center;
-      min-height: 20px;
-    }
+.ftr-right {
+  display: flex;
+  align-items: center;
+  min-height: 30px;
+}
 
-    .ftr-info {
-      font-size: 8px;
-      color: #d1d5db;
-      text-align: left;
-      line-height: 1.45;
-    }
+.ftr-right img {
+  height: 30px !important;
+  width: auto !important;
+  max-width: 120px;
+  display: block;
+}
+
+.ftr-info {
+  font-size: 8px;
+  color: #d1d5db;
+  text-align: left;
+  line-height: 1.45;
+}
 
     .page-num {
       color: #ebd29b;
@@ -627,14 +638,13 @@
           <div class="title-block">
             <div class="report-title">تقرير صحة المزرعة</div>
             <div class="farm-title">مزرعة {{ farm_name }}</div>
-            <div class="farm-sub">ملخص تنفيذي للحالة الحالية مع الخريطة المكانية وأولوية التدخل المقترحة</div>
           </div>
         </div>
 
         <div class="meta-card">
           <div class="meta-title">بيانات التقرير</div>
           <div class="meta-grid">
-            <div class="meta-item"><strong>رقم العقد:</strong> {{ contract_number }}</div>
+            <div class="meta-item"><strong>رقم الصك:</strong> {{ contract_number }}</div>
             <div class="meta-item"><strong>المنطقة:</strong> {{ region }}</div>
             <div class="meta-item"><strong>المساحة:</strong> {{ farm_area }} م²</div>
             <div class="meta-item"><strong>عدد النخيل:</strong> {{ total_palms }}</div>
@@ -694,36 +704,23 @@
         </div>
 
         <div class="side-stack">
-          <div class="mini-card">
-            <div class="mini-title">أولوية التدخل الحالية</div>
-            <div class="mini-text" style="font-weight:800; color:#065f46;">{{ top_action_title }}</div>
-            <div class="mini-text" style="margin-top:4px;">{{ top_action_text }}</div>
-          </div>
+  {% for insight in insight_cards %}
+    <div class="mini-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
+        <div class="mini-title" style="margin-bottom:0;">{{ insight.title }}</div>
+        <span class="badge {{ insight.badge_class }}">{{ insight.badge }}</span>
+      </div>
 
-          <div class="grid-2">
-            <div class="mini-card">
-              <div class="mini-title">نقاط حرجة</div>
-              <div class="big-stat">{{ critical_hotspots_count }}</div>
-              <div class="sub-stat">أعلى النقاط التي تحتاج تدخلًا أسرع</div>
-            </div>
+      <div class="mini-text" style="font-weight:800; color:#0f172a; margin-bottom:5px;">
+        {{ insight.headline }}
+      </div>
 
-            <div class="mini-card">
-              <div class="mini-title">نقاط متابعة</div>
-              <div class="big-stat">{{ monitor_hotspots_count }}</div>
-              <div class="sub-stat">أبرز النقاط التي تستحق فحصًا ميدانيًا</div>
-            </div>
-          </div>
-
-          <div class="mini-card">
-            <div class="mini-title">أبرز سبب ظاهر في التحليل</div>
-            <div class="mini-text" style="font-weight:800; color:#0f172a;">{{ top_driver }}</div>
-          </div>
-
-          <div class="mini-card">
-            <div class="mini-title">ما الذي تقرئينه في الخريطة؟</div>
-            <div class="mini-text">المناطق الملوّنة داخل الحدود تمثل الحالة الحالية لكل نقطة. الحلقة الزرقاء تظهر عندما تختلف الحالة المتوقعة عن الحالة الحالية في الأسبوع القادم.</div>
-          </div>
-        </div>
+      <div class="mini-text">
+        {{ insight.body }}
+      </div>
+    </div>
+  {% endfor %}
+</div>
       </div>
     </div>
 
@@ -751,14 +748,13 @@
           <div class="title-block">
             <div class="report-title">التحليل التفصيلي للمزرعة</div>
             <div class="farm-title">مزرعة {{ farm_name }}</div>
-            <div class="farm-sub">المؤشرات الرئيسية والتوقعات وأسباب الخطر وأهم المناطق التي تحتاج متابعة</div>
           </div>
         </div>
 
         <div class="meta-card">
           <div class="meta-title">بيانات التقرير</div>
           <div class="meta-grid">
-            <div class="meta-item"><strong>رقم العقد:</strong> {{ contract_number }}</div>
+            <div class="meta-item"><strong>رقم الصك:</strong> {{ contract_number }}</div>
             <div class="meta-item"><strong>المنطقة:</strong> {{ region }}</div>
             <div class="meta-item"><strong>المساحة:</strong> {{ farm_area }} م²</div>
             <div class="meta-item"><strong>عدد النخيل:</strong> {{ total_palms }}</div>
