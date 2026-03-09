@@ -934,7 +934,7 @@ Widget _buildLuxBackground() {
 
             _textField(
   controller: _contractNumberController,
-  label: 'رقم العقد',
+  label: 'رقم الصك',
   icon: Icons.confirmation_number_rounded,
   keyboardType: TextInputType.number,
 ),
@@ -1005,7 +1005,7 @@ const SizedBox(height: 20),
   if (controller == _contractNumberController) {
     final v = value?.trim() ?? '';
     if (!RegExp(r'^\d{10,12}$').hasMatch(v)) {
-      return 'رقم العقد يجب ان يتكون من 10 إلى 12 خانة';
+      return 'رقم الصك يجب ان يتكون من 10 إلى 12 خانة';
     }
   }
         return null;

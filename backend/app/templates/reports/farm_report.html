@@ -52,16 +52,16 @@
       position: relative;
       overflow: hidden;
       flex-shrink: 0;
-      min-height: 48mm;
+      min-height: 49mm;
     }
 
     .hdr::before {
       content: "";
       position: absolute;
-      width: 170px;
-      height: 170px;
-      left: -50px;
-      bottom: -65px;
+      width: 180px;
+      height: 180px;
+      left: -55px;
+      bottom: -70px;
       background: radial-gradient(circle, rgba(235,185,116,0.18), transparent 70%);
       border-radius: 50%;
     }
@@ -69,10 +69,10 @@
     .hdr::after {
       content: "";
       position: absolute;
-      width: 180px;
-      height: 180px;
-      right: -55px;
-      top: -70px;
+      width: 190px;
+      height: 190px;
+      right: -60px;
+      top: -75px;
       background: radial-gradient(circle, rgba(255,255,255,0.09), transparent 70%);
       border-radius: 50%;
     }
@@ -81,7 +81,7 @@
       position: relative;
       z-index: 1;
       display: grid;
-      grid-template-columns: 1.25fr 0.95fr;
+      grid-template-columns: 1.2fr 1fr;
       gap: 14px;
       align-items: start;
     }
@@ -89,13 +89,13 @@
     .brand-col {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
       min-width: 0;
     }
 
     .logo-box {
-      width: 92px;
-      height: 92px;
+      width: 122px;
+      height: 122px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -103,32 +103,32 @@
     }
 
     .logo-box img {
-      width: 92px;
-      height: 92px;
+      width: 122px;
+      height: 122px;
       object-fit: contain;
       display: block;
     }
 
     .logo-fallback {
-      width: 92px;
-      height: 92px;
-      border-radius: 18px;
+      width: 122px;
+      height: 122px;
+      border-radius: 22px;
       background: rgba(255,255,255,0.10);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 34px;
+      font-size: 42px;
       font-weight: 900;
       color: #ebd29b;
     }
 
     .title-block {
       min-width: 0;
-      padding-top: 2px;
+      padding-top: 4px;
     }
 
     .report-title {
-      font-size: 24px;
+      font-size: 25px;
       font-weight: 900;
       line-height: 1.15;
       white-space: nowrap;
@@ -136,15 +136,15 @@
     }
 
     .farm-title {
-      margin-top: 7px;
-      font-size: 17px;
+      margin-top: 8px;
+      font-size: 18px;
       font-weight: 800;
       color: #f8fafc;
       line-height: 1.2;
     }
 
     .farm-sub {
-      margin-top: 3px;
+      margin-top: 4px;
       font-size: 10px;
       color: #d1fae5;
     }
@@ -153,15 +153,15 @@
       background: rgba(255,255,255,0.10);
       border: 1px solid rgba(255,255,255,0.16);
       border-radius: 14px;
-      padding: 9px 11px;
-      min-height: 92px;
+      padding: 10px 12px;
+      min-height: 100px;
     }
 
     .meta-title {
       font-size: 11px;
       font-weight: 800;
       color: #ebd29b;
-      margin-bottom: 7px;
+      margin-bottom: 8px;
     }
 
     .meta-grid {
@@ -207,7 +207,7 @@
 
     .grid-2 {
       display: grid;
-      grid-template-columns: 1.12fr 0.88fr;
+      grid-template-columns: 1.08fr 0.92fr;
       gap: 9px;
     }
 
@@ -215,6 +215,11 @@
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
       gap: 8px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 9px;
     }
 
     .card {
@@ -242,7 +247,7 @@
     }
 
     .summary-text {
-      font-size: 10.5px;
+      font-size: 10.2px;
       color: #334155;
       line-height: 1.8;
     }
@@ -251,7 +256,7 @@
       margin-top: 8px;
       padding-top: 8px;
       border-top: 1px dashed #d9e7df;
-      font-size: 10.2px;
+      font-size: 10px;
       color: #065f46;
       line-height: 1.6;
       font-weight: 700;
@@ -261,7 +266,7 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      min-height: 115px;
+      min-height: 112px;
     }
 
     .health-body {
@@ -277,29 +282,36 @@
     }
 
     .health-desc {
-      font-size: 10px;
+      font-size: 9.9px;
       color: #475569;
-      line-height: 1.65;
+      line-height: 1.62;
     }
 
     .chips {
       display: flex;
       gap: 6px;
       flex-wrap: wrap;
-      margin-top: 10px;
+      margin-top: 9px;
     }
 
     .chip {
       border-radius: 999px;
       padding: 4px 10px;
-      font-size: 9.5px;
+      font-size: 9.2px;
       font-weight: 800;
       white-space: nowrap;
     }
 
-    .chip-green  { background: #dcfce7; color: #166534; }
-    .chip-amber  { background: #fef3c7; color: #92400e; }
-    .chip-red    { background: #fee2e2; color: #b91c1c; }
+    .chip-green { background: #dcfce7; color: #166534; }
+    .chip-amber { background: #fef3c7; color: #92400e; }
+    .chip-red   { background: #fee2e2; color: #b91c1c; }
+
+    .map-grid {
+      display: grid;
+      grid-template-columns: 1.35fr 0.65fr;
+      gap: 9px;
+      align-items: stretch;
+    }
 
     .map-card {
       padding: 10px;
@@ -314,7 +326,7 @@
 
     .map-svg svg {
       width: 100%;
-      height: 235px;
+      height: 255px;
       display: block;
     }
 
@@ -323,7 +335,7 @@
       justify-content: center;
       gap: 14px;
       flex-wrap: wrap;
-      margin-top: 9px;
+      margin-top: 8px;
       margin-bottom: 8px;
     }
 
@@ -331,7 +343,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      font-size: 9.5px;
+      font-size: 9.2px;
       color: #334155;
     }
 
@@ -352,19 +364,60 @@
     }
 
     .map-note {
-      margin-top: 8px;
-      padding: 8px 10px;
+      margin-top: 7px;
+      padding: 7px 10px;
       background: #f8fafc;
       border-radius: 10px;
-      font-size: 9.6px;
+      font-size: 9.2px;
       color: #475569;
-      line-height: 1.6;
+      line-height: 1.58;
       border: 1px solid #e9eef3;
     }
 
-    .metric-card {
-      min-height: 108px;
+    .side-stack {
+      display: grid;
+      gap: 8px;
+    }
+
+    .mini-card {
+      background: #ffffff;
+      border: 1px solid #e2ebe6;
+      border-radius: 14px;
       padding: 9px 10px;
+    }
+
+    .mini-title {
+      font-size: 10px;
+      font-weight: 800;
+      color: #065f46;
+      margin-bottom: 5px;
+      line-height: 1.35;
+    }
+
+    .mini-text {
+      font-size: 9.2px;
+      color: #475569;
+      line-height: 1.58;
+    }
+
+    .big-stat {
+      font-size: 22px;
+      font-weight: 900;
+      line-height: 1;
+      color: #0f172a;
+      margin-top: 4px;
+    }
+
+    .sub-stat {
+      font-size: 9px;
+      color: #64748b;
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    .metric-card {
+      min-height: 102px;
+      padding: 8px 10px;
     }
 
     .metric-head {
@@ -424,22 +477,22 @@
     th {
       background: #f4f7f6;
       color: #334155;
-      font-size: 9.5px;
+      font-size: 9.2px;
       font-weight: 800;
-      padding: 6px 5px;
+      padding: 5px 4px;
       border-bottom: 1px solid #e5ece8;
       text-align: center;
-      line-height: 1.35;
+      line-height: 1.3;
     }
 
     td {
-      padding: 6px 5px;
-      font-size: 9px;
+      padding: 5px 4px;
+      font-size: 8.6px;
       color: #334155;
       border-bottom: 1px solid #eef3f1;
       text-align: center;
       vertical-align: middle;
-      line-height: 1.45;
+      line-height: 1.4;
       word-break: break-word;
     }
 
@@ -450,6 +503,7 @@
     .forecast-card {
       background: linear-gradient(135deg, #eef5ff, #f8fbff);
       border-color: #cfe0ff;
+      padding: 10px;
     }
 
     .forecast-title {
@@ -461,27 +515,27 @@
     }
 
     .forecast-text {
-      font-size: 10px;
+      font-size: 9.6px;
       color: #334155;
-      line-height: 1.6;
+      line-height: 1.58;
     }
 
     .forecast-change {
-      margin-top: 6px;
-      font-size: 9.5px;
+      margin-top: 5px;
+      font-size: 9.2px;
       color: #475569;
       line-height: 1.4;
     }
 
     .spark-wrap {
-      margin-top: 8px;
+      margin-top: 7px;
       text-align: center;
       direction: ltr;
     }
 
     .spark-cap {
       margin-top: 2px;
-      font-size: 8px;
+      font-size: 7.8px;
       color: #64748b;
     }
 
@@ -489,19 +543,19 @@
       margin-top: 8px;
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
-      gap: 6px;
+      gap: 5px;
     }
 
     .forecast-mini .mini {
       background: rgba(255,255,255,0.88);
       border: 1px solid #dbeafe;
       border-radius: 12px;
-      padding: 6px 6px 7px;
+      padding: 6px 5px;
       text-align: center;
     }
 
     .mini .mini-label {
-      font-size: 8.5px;
+      font-size: 8.2px;
       color: #64748b;
       line-height: 1.2;
       margin-bottom: 4px;
@@ -518,15 +572,21 @@
       display: inline-block;
       padding: 3px 8px;
       border-radius: 999px;
-      font-size: 8.8px;
+      font-size: 8.6px;
       font-weight: 800;
       line-height: 1.2;
     }
 
-    .badge-green { background: #dcfce7; color: #166534; }
+    .badge-green  { background: #dcfce7; color: #166534; }
     .badge-orange { background: #fef3c7; color: #92400e; }
-    .badge-red { background: #fee2e2; color: #b91c1c; }
-    .badge-blue { background: #dbeafe; color: #1d4ed8; }
+    .badge-red    { background: #fee2e2; color: #b91c1c; }
+    .badge-blue   { background: #dbeafe; color: #1d4ed8; }
+
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
 
     .ftr {
       background: #053b2c;
@@ -574,7 +634,7 @@
           <div class="title-block">
             <div class="report-title">تقرير صحة المزرعة</div>
             <div class="farm-title">مزرعة {{ farm_name }}</div>
-            <div class="farm-sub">ملخص الحالة الحالية والتمثيل المكاني للنخيل</div>
+            <div class="farm-sub">ملخص الحالة الحالية والتحليل المكاني للنقاط المتأثرة</div>
           </div>
         </div>
 
@@ -586,7 +646,7 @@
             <div class="meta-item"><strong>المساحة:</strong> {{ farm_area }} م²</div>
             <div class="meta-item"><strong>عدد النخيل:</strong> {{ total_palms }}</div>
             <div class="meta-item"><strong>تاريخ التقرير:</strong> {{ report_date }}</div>
-            <div class="meta-item"><strong>المزرعة:</strong> {{ farm_name }}</div>
+            <div class="meta-item"><strong>اسم المالك:</strong> {{ owner_name }}</div>
           </div>
         </div>
       </div>
@@ -594,24 +654,29 @@
     </div>
 
     <div class="content">
-      <div class="section-title">ملخص الحالة</div>
-      <div class="grid-2">
-        <div class="card summary-card">
-          <div class="status-pill">{{ executive_status }}</div>
-          <div class="summary-text">{{ executive_summary }}</div>
-          <div class="summary-next">الإجراء الأول المقترح: {{ executive_next_step }}</div>
+      <div class="stack">
+        <div>
+          <div class="section-title">ملخص الحالة</div>
+          <div class="card summary-card">
+            <div class="status-pill">{{ executive_status }}</div>
+            <div class="summary-text">{{ executive_summary }}</div>
+            <div class="summary-next">الإجراء الأول المقترح: {{ executive_next_step }}</div>
+          </div>
         </div>
 
-        <div class="card health-card">
-          <div style="flex-shrink:0;">{{ gauge_svg|safe }}</div>
-          <div class="health-body">
-            <div class="health-title" style="color:{{ gauge_color }};">{{ wellness_text }}</div>
-            <div class="health-desc">{{ wellness_desc }}</div>
+        <div>
+          <div class="section-title">الحالة العامة</div>
+          <div class="card health-card">
+            <div style="flex-shrink:0;">{{ gauge_svg|safe }}</div>
+            <div class="health-body">
+              <div class="health-title" style="color:{{ gauge_color }};">{{ wellness_text }}</div>
+              <div class="health-desc">{{ wellness_desc }}</div>
 
-            <div class="chips">
-              <span class="chip chip-green">{{ healthy_pct|round(0)|int }}% سليم</span>
-              <span class="chip chip-amber">{{ monitor_pct|round(0)|int }}% متابعة</span>
-              <span class="chip chip-red">{{ critical_pct|round(0)|int }}% حرج</span>
+              <div class="chips">
+                <span class="chip chip-green">{{ healthy_pct|round(0)|int }}% سليم</span>
+                <span class="chip chip-amber">{{ monitor_pct|round(0)|int }}% متابعة</span>
+                <span class="chip chip-red">{{ critical_pct|round(0)|int }}% حرج</span>
+              </div>
             </div>
           </div>
         </div>
@@ -620,33 +685,62 @@
       <div class="space-lg"></div>
 
       <div class="section-title">الخريطة المكانية لحالة النخيل</div>
-      <div class="card map-card">
-        <div class="map-frame">
-          <div class="map-svg">
-            {{ map_svg|safe }}
+      <div class="map-grid">
+        <div class="card map-card">
+          <div class="map-frame">
+            <div class="map-svg">
+              {{ map_svg|safe }}
+            </div>
           </div>
+
+          <div class="legend">
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#22c55e;"></span>
+              <span>سليم</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#f59e0b;"></span>
+              <span>متابعة</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#ef4444;"></span>
+              <span>حرج</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-ring"></span>
+              <span>تغير متوقع</span>
+            </div>
+          </div>
+
+          <div class="map-note">{{ map_note }}</div>
         </div>
 
-        <div class="legend">
-          <div class="legend-item">
-            <span class="legend-dot" style="background:#22c55e;"></span>
-            <span>سليم</span>
+        <div class="side-stack">
+          <div class="mini-card">
+            <div class="mini-title">مقارنة سريعة بين الوضع الحالي والمتوقع</div>
+            <div style="text-align:center; direction:ltr;">{{ compare_svg|safe }}</div>
           </div>
-          <div class="legend-item">
-            <span class="legend-dot" style="background:#f59e0b;"></span>
-            <span>متابعة</span>
+
+          <div class="mini-card">
+            <div class="mini-title">أولوية التدخل الحالية</div>
+            <div class="mini-text" style="font-weight:800; color:#065f46;">{{ top_action_title }}</div>
+            <div class="mini-text" style="margin-top:4px;">{{ top_action_text }}</div>
           </div>
-          <div class="legend-item">
-            <span class="legend-dot" style="background:#ef4444;"></span>
-            <span>حرج</span>
-          </div>
-          <div class="legend-item">
-            <span class="legend-ring"></span>
-            <span>تغير متوقع</span>
+
+          <div class="grid-2" style="grid-template-columns:1fr 1fr;">
+            <div class="mini-card">
+              <div class="mini-title">النقاط الحرجة</div>
+              <div class="big-stat">{{ critical_hotspots_count }}</div>
+              <div class="sub-stat">أعلى النقاط التي تحتاج زيارة أسرع</div>
+            </div>
+
+            <div class="mini-card">
+              <div class="mini-title">أبرز سبب مؤثر</div>
+              <div class="mini-text" style="font-weight:800; color:#0f172a;">{{ top_driver }}</div>
+              <div class="sub-stat">الأولوية: {{ top_driver_priority }}</div>
+            </div>
           </div>
         </div>
-
-        <div class="map-note">{{ map_note }}</div>
       </div>
     </div>
 
@@ -675,7 +769,7 @@
           <div class="title-block">
             <div class="report-title">التحليل التفصيلي للمزرعة</div>
             <div class="farm-title">مزرعة {{ farm_name }}</div>
-            <div class="farm-sub">المؤشرات الرئيسية والتوقعات والأسباب المفسرة</div>
+            <div class="farm-sub">المؤشرات الرئيسية والتوقعات وأبرز المناطق المتأثرة</div>
           </div>
         </div>
 
@@ -687,7 +781,7 @@
             <div class="meta-item"><strong>المساحة:</strong> {{ farm_area }} م²</div>
             <div class="meta-item"><strong>عدد النخيل:</strong> {{ total_palms }}</div>
             <div class="meta-item"><strong>تاريخ التقرير:</strong> {{ report_date }}</div>
-            <div class="meta-item"><strong>المزرعة:</strong> {{ farm_name }}</div>
+            <div class="meta-item"><strong>اسم المالك:</strong> {{ owner_name }}</div>
           </div>
         </div>
       </div>
@@ -743,14 +837,14 @@
             <table>
               <thead>
                 <tr>
-                  <th style="width:24%;">المؤشر</th>
+                  <th style="width:22%;">المؤشر</th>
                   <th style="width:14%;">الرمز</th>
                   <th style="width:16%;">القيمة</th>
-                  <th style="width:46%;">التفسير</th>
+                  <th style="width:48%;">التفسير</th>
                 </tr>
               </thead>
               <tbody>
-                {% for row in indicator_rows %}
+                {% for row in indices_table %}
                 <tr>
                   <td>{{ row.label }}</td>
                   <td>{{ row.code }}</td>
@@ -794,75 +888,79 @@
 
       <div class="space-lg"></div>
 
-      <div class="section-title">أسباب الخطر الرئيسية</div>
-      <div class="card">
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:26%;">السبب</th>
-                <th style="width:16%;">عدد الإشارات</th>
-                <th style="width:16%;">الأولوية</th>
-                <th style="width:42%;">التفسير</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for item in risk_drivers %}
-              <tr>
-                <td>{{ item.title }}</td>
-                <td>{{ item.count }}</td>
-                <td>
-                  {% if item.priority == 'مرتفعة' %}
-                    <span class="badge badge-red">{{ item.priority }}</span>
-                  {% elif item.priority == 'متوسطة' %}
-                    <span class="badge badge-orange">{{ item.priority }}</span>
-                  {% else %}
-                    <span class="badge badge-blue">{{ item.priority }}</span>
-                  {% endif %}
-                </td>
-                <td>{{ item.note }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+      <div class="bottom-grid">
+        <div>
+          <div class="section-title">أسباب الخطر الرئيسية</div>
+          <div class="card">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:27%;">السبب</th>
+                    <th style="width:15%;">عدد الإشارات</th>
+                    <th style="width:16%;">الأولوية</th>
+                    <th style="width:42%;">التفسير</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for item in risk_drivers %}
+                  <tr>
+                    <td>{{ item.title }}</td>
+                    <td>{{ item.count }}</td>
+                    <td>
+                      {% if item.priority == 'مرتفعة' %}
+                        <span class="badge badge-red">{{ item.priority }}</span>
+                      {% elif item.priority == 'متوسطة' %}
+                        <span class="badge badge-orange">{{ item.priority }}</span>
+                      {% else %}
+                        <span class="badge badge-blue">{{ item.priority }}</span>
+                      {% endif %}
+                    </td>
+                    <td>{{ item.note }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div class="space-lg"></div>
-
-      <div class="section-title">أهم المناطق التي تحتاج متابعة</div>
-      <div class="card">
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:8%;">#</th>
-                <th style="width:20%;">خط العرض</th>
-                <th style="width:20%;">خط الطول</th>
-                <th style="width:16%;">الحالة</th>
-                <th style="width:36%;">الوصف</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for h in hotspots %}
-              <tr>
-                <td>{{ loop.index }}</td>
-                <td>{{ h.lat }}</td>
-                <td>{{ h.lon }}</td>
-                <td>
-                  {% if h.status == 'حرجة' %}
-                    <span class="badge badge-red">{{ h.status }}</span>
-                  {% elif h.status == 'متابعة' %}
-                    <span class="badge badge-orange">{{ h.status }}</span>
-                  {% else %}
-                    <span class="badge badge-green">{{ h.status }}</span>
-                  {% endif %}
-                </td>
-                <td>{{ h.note }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+        <div>
+          <div class="section-title">أهم المناطق التي تحتاج متابعة</div>
+          <div class="card">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:10%;">#</th>
+                    <th style="width:22%;">خط العرض</th>
+                    <th style="width:22%;">خط الطول</th>
+                    <th style="width:16%;">الحالة</th>
+                    <th style="width:30%;">الوصف</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for h in hotspots %}
+                  <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ h.lat }}</td>
+                    <td>{{ h.lon }}</td>
+                    <td>
+                      {% if h.status == 'حرجة' %}
+                        <span class="badge badge-red">{{ h.status }}</span>
+                      {% elif h.status == 'متابعة' %}
+                        <span class="badge badge-orange">{{ h.status }}</span>
+                      {% else %}
+                        <span class="badge badge-green">{{ h.status }}</span>
+                      {% endif %}
+                    </td>
+                    <td>{{ h.note }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </div>

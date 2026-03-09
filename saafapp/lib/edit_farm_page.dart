@@ -962,7 +962,7 @@ focusedBorder: OutlineInputBorder(
         // رقم العقد
         Expanded(
           child: Text(
-            'رقم العقد: $contract',
+            'رقم الصك: $contract',
             style: GoogleFonts.almarai(
               color: Colors.white,
               fontWeight: FontWeight.w700,
@@ -973,7 +973,7 @@ focusedBorder: OutlineInputBorder(
         // زر النسخ
         IconButton(
           icon: const Icon(Icons.copy, color: secondaryColor),
-          tooltip: 'نسخ رقم العقد',
+          tooltip: 'نسخ رقم الصك',
           onPressed: () async {
             await Clipboard.setData(ClipboardData(text: contract));
 
@@ -982,7 +982,7 @@ focusedBorder: OutlineInputBorder(
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  'تم نسخ رقم العقد',
+                  'تم نسخ رقم الصك',
                   style: GoogleFonts.almarai(color: Colors.white),
                 ),
                 backgroundColor: primaryColor,
