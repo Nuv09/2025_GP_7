@@ -626,7 +626,7 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
             },
         ]
 
-        primary_driver = risk_drivers[0] if risk_drivers else {}
+    primary_driver = risk_drivers[0] if risk_drivers else {}
     first_hotspot = hotspots[0] if hotspots else {}
     second_driver = risk_drivers[1] if len(risk_drivers) > 1 else {}
 
