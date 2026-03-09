@@ -3,6 +3,7 @@ import os
 import logging
 import traceback
 from datetime import datetime
+import requests
 
 from flask import Blueprint, jsonify, render_template
 from google.cloud import firestore
@@ -217,10 +218,11 @@ def _distribution_compare_svg(
         # label تحت المجموعة
         group_center = x + bar_w + (inner_gap / 2)
         parts.append(
-            f'<text x="{group_center:.1f}" y="{base_y + 22}" text-anchor="middle" '
-            f'font-family="Cairo, sans-serif" font-size="10" font-weight="800" fill="#334155">'
-            f'{labels[i]}</text>'
-        )
+    f'<text x="{group_center:.1f}" y="{base_y + 22}" text-anchor="middle" '
+    f'direction="rtl" unicode-bidi="plaintext" '
+    f'font-family="Cairo, sans-serif" font-size="10" font-weight="800" fill="#334155">'
+    f'{labels[i]}</text>'
+)
 
         x += (bar_w * 2 + inner_gap + group_gap)
 
@@ -233,20 +235,23 @@ def _distribution_compare_svg(
         f'<rect x="{legend_x1}" y="{legend_y-8}" width="12" height="12" rx="4" fill="#0f766e"/>'
     )
     parts.append(
-        f'<text x="{legend_x1 + 18}" y="{legend_y + 2}" text-anchor="start" '
-        f'font-family="Cairo, sans-serif" font-size="9" font-weight="700" fill="#475569">الحالي</text>'
-    )
+    f'<text x="{legend_x1 + 36}" y="{legend_y + 2}" text-anchor="middle" '
+    f'direction="rtl" unicode-bidi="plaintext" '
+    f'font-family="Cairo, sans-serif" font-size="9" font-weight="700" fill="#475569">الحالي</text>'
+)
 
     parts.append(
         f'<rect x="{legend_x2}" y="{legend_y-8}" width="12" height="12" rx="4" fill="#e2e8f0" stroke="#64748b" stroke-width="0.8"/>'
     )
     parts.append(
-        f'<text x="{legend_x2 + 18}" y="{legend_y + 2}" text-anchor="start" '
-        f'font-family="Cairo, sans-serif" font-size="9" font-weight="700" fill="#475569">المتوقع</text>'
-    )
+    f'<text x="{legend_x2 + 40}" y="{legend_y + 2}" text-anchor="middle" '
+    f'direction="rtl" unicode-bidi="plaintext" '
+    f'font-family="Cairo, sans-serif" font-size="9" font-weight="700" fill="#475569">المتوقع</text>'
+)
 
     return f"""
-<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" xmlns="http://www.w3.org/2000/svg">
+<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}"
+     xmlns="http://www.w3.org/2000/svg" direction="rtl">
   {''.join(parts)}
 </svg>
 """.strip()
@@ -361,6 +366,21 @@ def _maptiler_static_background_url(bounds: dict, width: int, height: int) -> st
         f"?padding=24&key={api_key}"
     )
 
+def _download_image_as_data_uri(url: str) -> str | None:
+    try:
+        if not url:
+            return None
+
+        resp = requests.get(url, timeout=20)
+        resp.raise_for_status()
+
+        content_type = resp.headers.get("Content-Type", "image/png")
+        img_b64 = base64.b64encode(resp.content).decode("utf-8")
+        return f"data:{content_type};base64,{img_b64}"
+    except Exception as e:
+        logger.warning(f"Failed to download static map image: {e}")
+        return None
+
 def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_polygon: list | None = None) -> str:
     norm_poly = _normalize_polygon(farm_polygon)
 
@@ -392,15 +412,14 @@ def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_pol
     }
 
     bg_url = _maptiler_static_background_url(bounds, width, height)
+    bg_data_uri = _download_image_as_data_uri(bg_url) if bg_url else None
 
-    bg_svg = ""
-    if bg_url:
+    if bg_data_uri:
         bg_svg = (
-            f'<image href="{bg_url}" x="0" y="0" width="{width}" height="{height}" '
+            f'<image href="{bg_data_uri}" x="0" y="0" width="{width}" height="{height}" '
             f'preserveAspectRatio="none" opacity="1"/>'
         )
     else:
-        # fallback لو ما فيه MAPTILER_KEY
         bg_svg = f'<rect width="{width}" height="{height}" rx="14" fill="#f8fafc"/>'
 
     poly_svg = ""
@@ -437,7 +456,6 @@ def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_pol
             f'<circle cx="{x}" cy="{y}" r="{r}" fill="{fill}" opacity="0.95" />'
         )
 
-    # طبقة خفيفة فوق الخلفية لتحسين وضوح النقاط
     overlay = f'<rect width="{width}" height="{height}" rx="14" fill="rgba(255,255,255,0.08)"/>'
 
     return f"""
