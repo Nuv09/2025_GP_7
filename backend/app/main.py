@@ -288,7 +288,7 @@ def analyze():
             # ✅ (جديد) تجهيز بيانات التصدير المختصرة
             
             try:
-                export_payload = health_mod.prepare_export_data(farm_doc, health_result)
+                export_payload = health_mod.prepare_export_data(farm_doc, health_result, detected_count=count_summary["count"])
             except Exception as ee:
                 app.logger.error(f"⚠️ Failed to prepare export data: {ee}")
 
@@ -395,7 +395,11 @@ def scheduled_update():
 
             # ✅ 2) Health
             health_result = health_mod.analyze_farm_health(farm_id, farm)
-            export_payload = health_mod.prepare_export_data(farm, health_result)
+            export_payload = health_mod.prepare_export_data(
+    farm,
+    health_result,
+    detected_count=int(picked["count"])
+)
             h_map = list(health_result.pop("health_map", []))
 
             # ✅ 3) Alerts + Recommendations (هذا اللي كان ناقص!)

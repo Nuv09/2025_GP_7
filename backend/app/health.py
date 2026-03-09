@@ -987,7 +987,7 @@ def indices_history_last_weeks(
 
 def build_indices_table(df_all: pd.DataFrame) -> List[Dict[str, Any]]:
     """
-    يبني جدولًا كاملًا للمؤشرات الطيفية الأساسية من آخر أسبوع متاح.
+    جدول كامل للمؤشرات الطيفية الأساسية من آخر أسبوع متاح.
     """
     if df_all is None or df_all.empty or "date" not in df_all.columns:
         return []
@@ -1227,19 +1227,19 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
     history_last_month = indices_history_last_weeks(df_all, weeks=5, agg="mean")
     indices_table = build_indices_table(df_all)
 
-    # 6. جلب التوقعات والقاموس (Lookup) ودمجها في الخريطة
+        # 6. جلب التوقعات والقاموس (Lookup) ودمجها في الخريطة
     forecast_res = forecast_next_week_summary(df_all)
-    lookup = forecast_res.get("lookup", {}) # القاموس الذي يحتوي على الإحداثيات والحالة المتوقعة
+    lookup = forecast_res.get("lookup", {})
 
     health_map_data = get_health_map_points(df_all)
 
-    # دمج الحالة المتوقعة (ps) داخل نقاط الخريطة الحالية لتوفير حجم البيانات
+    # دمج الحالة المتوقعة (ps) داخل نقاط الخريطة الحالية
     for pt in health_map_data:
         key = f"{pt['lat']}_{pt['lng']}"
-        pt['ps'] = lookup.get(key, 0) # الحالة المتوقعة الافتراضية 0 (سليم)
+        pt["ps"] = lookup.get(key, 0)
 
     # 7. الإرجاع النهائي الموحد لـ Firestore
-        return {
+    return {
         "current_health": processed_health,
         "forecast_next_week": forecast_res.get("summary", {}),
         "health_map": health_map_data,
@@ -1619,6 +1619,7 @@ def _build_risk_drivers(alert_signals: Dict[str, Any]) -> list[dict]:
         })
 
     return drivers
+
 def _build_hotspots_table(alert_signals: Dict[str, Any]) -> list[dict]:
     hotspots = alert_signals.get("hotspots", {})
     all_points = []
@@ -1655,8 +1656,21 @@ def _build_hotspots_table(alert_signals: Dict[str, Any]) -> list[dict]:
 
     return all_points[:3]
 
-
-def prepare_export_data(farm_doc, health_result):
+def _safe_int(v, default=0):
+    try:
+        if v is None:
+            return default
+        if isinstance(v, (int, np.integer)):
+            return int(v)
+        if isinstance(v, (float, np.floating)):
+            if np.isfinite(v):
+                return int(v)
+            return default
+        return int(float(v))
+    except Exception:
+        return default
+    
+def prepare_export_data(farm_doc, health_result, detected_count=None):
     history = health_result.get("indices_history_last_month", [])
     curr = history[-1] if len(history) > 0 else {}
     prev = history[-2] if len(history) > 1 else curr
@@ -1689,12 +1703,15 @@ def prepare_export_data(farm_doc, health_result):
     risk_drivers = _build_risk_drivers(alert_signals)
     hotspots_table = _build_hotspots_table(alert_signals)
 
+    # لا نعتمد فقط على finalCount هنا لأنه قد لا يكون محدثًا لحظة بناء export_data
     total_palms = (
-        farm_doc.get("finalCount")
-        or farm_doc.get("totalPalms")
+        detected_count
+        or farm_doc.get("finalCount")
         or farm_doc.get("palmCount")
+        or farm_doc.get("totalPalms")
         or 0
     )
+    total_palms = _safe_int(total_palms, 0)
 
     export_payload = {
         "header": {
@@ -1712,6 +1729,7 @@ def prepare_export_data(farm_doc, health_result):
         "farmName": farm_doc.get("farmName") or farm_doc.get("name") or "مزرعة سعف",
         "farmSize": farm_doc.get("farmSize") or farm_doc.get("area") or "غير محدد",
         "finalCount": total_palms,
+        "total_palms": total_palms,
 
         "wellness_score": current_health.get("Healthy_Pct", 0),
         "distribution": current_health,
@@ -1726,7 +1744,11 @@ def prepare_export_data(farm_doc, health_result):
 
         "forecast": {
             "text": f"يتوقع النظام {direction} في الخضرة العامة للمزرعة بنحو {abs(forecast_delta * 100):.1f}% خلال الأسبوع القادم.",
-            "trend_data": [h.get("NDVI") or 0 for h in history],
+            "trend_data": [
+                round(float(h.get("NDVI")), 4)
+                for h in history
+                if h.get("NDVI") is not None
+            ],
         },
 
         "forecast_next_week": forecast_next,

@@ -29,16 +29,16 @@
       direction: rtl;
       margin: 0;
       padding: 0;
+      -webkit-font-smoothing: antialiased;
     }
 
     .page {
       width: 210mm;
-      height: 297mm;
+      min-height: 297mm;
       display: flex;
       flex-direction: column;
       background: #ffffff;
       page-break-after: always;
-      overflow: hidden;
     }
 
     .page:last-child {
@@ -48,11 +48,11 @@
     .hdr {
       background: linear-gradient(135deg, #053b2c 0%, #065f46 55%, #0b7b5f 100%);
       color: #ffffff;
-      padding: 7mm 10mm 6mm;
+      padding: 7mm 10mm 5.8mm;
       position: relative;
+      min-height: 45mm;
       overflow: hidden;
       flex-shrink: 0;
-      min-height: 49mm;
     }
 
     .hdr::before {
@@ -60,8 +60,8 @@
       position: absolute;
       width: 180px;
       height: 180px;
-      left: -55px;
-      bottom: -70px;
+      left: -60px;
+      bottom: -80px;
       background: radial-gradient(circle, rgba(235,185,116,0.18), transparent 70%);
       border-radius: 50%;
     }
@@ -69,11 +69,11 @@
     .hdr::after {
       content: "";
       position: absolute;
-      width: 190px;
-      height: 190px;
-      right: -60px;
+      width: 180px;
+      height: 180px;
+      right: -65px;
       top: -75px;
-      background: radial-gradient(circle, rgba(255,255,255,0.09), transparent 70%);
+      background: radial-gradient(circle, rgba(255,255,255,0.08), transparent 70%);
       border-radius: 50%;
     }
 
@@ -81,8 +81,8 @@
       position: relative;
       z-index: 1;
       display: grid;
-      grid-template-columns: 1.2fr 1fr;
-      gap: 14px;
+      grid-template-columns: 1.18fr 0.92fr;
+      gap: 12px;
       align-items: start;
     }
 
@@ -94,24 +94,26 @@
     }
 
     .logo-box {
-      width: 122px;
-      height: 122px;
+      width: 158px;
+      height: 158px;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      margin-top: -10px;
+      margin-bottom: -16px;
     }
 
     .logo-box img {
-      width: 122px;
-      height: 122px;
+      width: 158px;
+      height: 158px;
       object-fit: contain;
       display: block;
     }
 
     .logo-fallback {
-      width: 122px;
-      height: 122px;
+      width: 116px;
+      height: 116px;
       border-radius: 22px;
       background: rgba(255,255,255,0.10);
       display: flex;
@@ -124,20 +126,19 @@
 
     .title-block {
       min-width: 0;
-      padding-top: 4px;
+      padding-top: 6px;
     }
 
     .report-title {
-      font-size: 25px;
+      font-size: 17px;
       font-weight: 900;
       line-height: 1.15;
-      white-space: nowrap;
       color: #ffffff;
     }
 
     .farm-title {
-      margin-top: 8px;
-      font-size: 18px;
+      margin-top: 7px;
+      font-size: 15px;
       font-weight: 800;
       color: #f8fafc;
       line-height: 1.2;
@@ -145,30 +146,31 @@
 
     .farm-sub {
       margin-top: 4px;
-      font-size: 10px;
+      font-size: 9.2px;
       color: #d1fae5;
+      line-height: 1.45;
     }
 
     .meta-card {
       background: rgba(255,255,255,0.10);
       border: 1px solid rgba(255,255,255,0.16);
-      border-radius: 14px;
-      padding: 10px 12px;
-      min-height: 100px;
+      border-radius: 16px;
+      padding: 9px 12px;
+      min-height: 92px;
     }
 
     .meta-title {
       font-size: 11px;
       font-weight: 800;
       color: #ebd29b;
-      margin-bottom: 8px;
+      margin-bottom: 7px;
     }
 
     .meta-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 5px 12px;
-      font-size: 9.6px;
+      font-size: 9.3px;
       color: #ecfeff;
       line-height: 1.55;
     }
@@ -181,14 +183,13 @@
     .stripe {
       height: 2.5px;
       background: linear-gradient(90deg, #ebd29b, #34d399, #ebd29b);
-      margin: 6mm -10mm -6mm;
+      margin: 5.5mm -10mm -5.8mm;
     }
 
     .content {
       flex: 1;
       background: #f8fafc;
-      padding: 7mm 10mm 6mm;
-      overflow: hidden;
+      padding: 6mm 10mm 5.5mm;
     }
 
     .section-title {
@@ -201,37 +202,22 @@
       margin-bottom: 7px;
     }
 
-    .space-sm { height: 6px; }
-    .space-md { height: 8px; }
     .space-lg { height: 10px; }
 
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1.08fr 0.92fr;
-      gap: 9px;
-    }
-
-    .grid-3 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px;
-    }
-
-    .stack {
-      display: grid;
-      gap: 9px;
-    }
+    .stack { display: grid; gap: 8px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 
     .card {
       background: #ffffff;
       border: 1px solid #e2ebe6;
       border-radius: 16px;
-      padding: 10px 11px;
-      overflow: hidden;
+      padding: 9px 10px;
     }
 
     .summary-card {
-      background: linear-gradient(135deg, #ffffff, #f4fbf8);
+      background: linear-gradient(135deg, #ffffff, #f3fbf7);
+      padding: 10px 12px;
     }
 
     .status-pill {
@@ -241,13 +227,13 @@
       border-radius: 999px;
       background: #dcfce7;
       color: #166534;
-      font-size: 10px;
+      font-size: 9.8px;
       font-weight: 800;
       margin-bottom: 7px;
     }
 
     .summary-text {
-      font-size: 10.2px;
+      font-size: 10px;
       color: #334155;
       line-height: 1.8;
     }
@@ -256,35 +242,33 @@
       margin-top: 8px;
       padding-top: 8px;
       border-top: 1px dashed #d9e7df;
-      font-size: 10px;
+      font-size: 9.8px;
       color: #065f46;
       line-height: 1.6;
       font-weight: 700;
     }
 
     .health-card {
-      display: flex;
-      align-items: center;
+      display: grid;
+      grid-template-columns: 124px 1fr;
       gap: 12px;
+      align-items: center;
       min-height: 112px;
     }
 
-    .health-body {
-      flex: 1;
-      min-width: 0;
-    }
+    .health-body { min-width: 0; }
 
     .health-title {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 900;
       line-height: 1.2;
-      margin-bottom: 4px;
+      margin-bottom: 5px;
     }
 
     .health-desc {
-      font-size: 9.9px;
+      font-size: 9.8px;
       color: #475569;
-      line-height: 1.62;
+      line-height: 1.65;
     }
 
     .chips {
@@ -297,7 +281,7 @@
     .chip {
       border-radius: 999px;
       padding: 4px 10px;
-      font-size: 9.2px;
+      font-size: 9px;
       font-weight: 800;
       white-space: nowrap;
     }
@@ -306,16 +290,14 @@
     .chip-amber { background: #fef3c7; color: #92400e; }
     .chip-red   { background: #fee2e2; color: #b91c1c; }
 
-    .map-grid {
+    .page1-bottom {
       display: grid;
-      grid-template-columns: 1.35fr 0.65fr;
-      gap: 9px;
+      grid-template-columns: 1.36fr 0.64fr;
+      gap: 8px;
       align-items: stretch;
     }
 
-    .map-card {
-      padding: 10px;
-    }
+    .map-card { padding: 8px; }
 
     .map-frame {
       background: #ffffff;
@@ -326,37 +308,37 @@
 
     .map-svg svg {
       width: 100%;
-      height: 255px;
+      height: 280px;
       display: block;
     }
 
     .legend {
       display: flex;
       justify-content: center;
-      gap: 14px;
+      gap: 12px;
       flex-wrap: wrap;
       margin-top: 8px;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     .legend-item {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      font-size: 9.2px;
+      gap: 5px;
+      font-size: 8.9px;
       color: #334155;
     }
 
     .legend-dot {
-      width: 11px;
-      height: 11px;
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
       flex-shrink: 0;
     }
 
     .legend-ring {
-      width: 13px;
-      height: 13px;
+      width: 12px;
+      height: 12px;
       border: 2px solid #2563eb;
       border-radius: 50%;
       background: transparent;
@@ -364,40 +346,37 @@
     }
 
     .map-note {
-      margin-top: 7px;
-      padding: 7px 10px;
+      margin-top: 6px;
+      padding: 7px 9px;
       background: #f8fafc;
       border-radius: 10px;
-      font-size: 9.2px;
+      font-size: 8.8px;
       color: #475569;
-      line-height: 1.58;
+      line-height: 1.55;
       border: 1px solid #e9eef3;
     }
 
-    .side-stack {
-      display: grid;
-      gap: 8px;
-    }
+    .side-stack { display: grid; gap: 8px; }
 
     .mini-card {
       background: #ffffff;
       border: 1px solid #e2ebe6;
       border-radius: 14px;
-      padding: 9px 10px;
+      padding: 9px;
     }
 
     .mini-title {
-      font-size: 10px;
+      font-size: 9.7px;
       font-weight: 800;
       color: #065f46;
       margin-bottom: 5px;
-      line-height: 1.35;
+      line-height: 1.3;
     }
 
     .mini-text {
-      font-size: 9.2px;
+      font-size: 8.9px;
       color: #475569;
-      line-height: 1.58;
+      line-height: 1.6;
     }
 
     .big-stat {
@@ -409,22 +388,15 @@
     }
 
     .sub-stat {
-      font-size: 9px;
+      font-size: 8.4px;
       color: #64748b;
       margin-top: 4px;
-      line-height: 1.4;
+      line-height: 1.35;
     }
 
     .metric-card {
       min-height: 102px;
-      padding: 8px 10px;
-    }
-
-    .metric-head {
-      display: flex;
-      align-items: start;
-      justify-content: space-between;
-      gap: 8px;
+      padding: 9px 10px;
     }
 
     .metric-label {
@@ -440,7 +412,7 @@
 
     .metric-value {
       margin-top: 10px;
-      font-size: 22px;
+      font-size: 21px;
       font-weight: 900;
       line-height: 1;
     }
@@ -450,15 +422,15 @@
       margin-top: 6px;
       padding: 3px 8px;
       border-radius: 999px;
-      font-size: 9px;
+      font-size: 8.8px;
       font-weight: 800;
     }
 
     .metric-delta {
       margin-top: 7px;
-      font-size: 9px;
+      font-size: 8.8px;
       color: #64748b;
-      line-height: 1.4;
+      line-height: 1.35;
     }
 
     .table-wrap {
@@ -477,17 +449,17 @@
     th {
       background: #f4f7f6;
       color: #334155;
-      font-size: 9.2px;
+      font-size: 9px;
       font-weight: 800;
-      padding: 5px 4px;
+      padding: 6px 5px;
       border-bottom: 1px solid #e5ece8;
       text-align: center;
-      line-height: 1.3;
+      line-height: 1.25;
     }
 
     td {
-      padding: 5px 4px;
-      font-size: 8.6px;
+      padding: 6px 5px;
+      font-size: 8.4px;
       color: #334155;
       border-bottom: 1px solid #eef3f1;
       text-align: center;
@@ -496,14 +468,16 @@
       word-break: break-word;
     }
 
-    tr:last-child td {
-      border-bottom: none;
-    }
+    tr:last-child td { border-bottom: none; }
 
     .forecast-card {
       background: linear-gradient(135deg, #eef5ff, #f8fbff);
       border-color: #cfe0ff;
       padding: 10px;
+      min-height: 100%;
+      display: grid;
+      gap: 8px;
+      align-content: start;
     }
 
     .forecast-title {
@@ -511,68 +485,88 @@
       font-weight: 900;
       color: #1d4ed8;
       line-height: 1.2;
-      margin-bottom: 5px;
+      margin-bottom: 2px;
     }
 
     .forecast-text {
-      font-size: 9.6px;
+      font-size: 9.3px;
       color: #334155;
-      line-height: 1.58;
+      line-height: 1.6;
     }
 
     .forecast-change {
-      margin-top: 5px;
-      font-size: 9.2px;
+      font-size: 8.9px;
       color: #475569;
-      line-height: 1.4;
+      line-height: 1.3;
     }
 
     .spark-wrap {
-      margin-top: 7px;
       text-align: center;
+      padding: 4px 4px 0;
+    }
+
+    .spark-wrap svg {
+      display: block;
+      margin: 0 auto;
+      width: 100%;
+      max-width: 300px;
+      height: auto;
       direction: ltr;
     }
 
-    .spark-cap {
-      margin-top: 2px;
-      font-size: 7.8px;
+    .spark-cap,
+    .chart-cap {
+      margin-top: 4px;
+      font-size: 7.7px;
       color: #64748b;
+      direction: rtl;
+      text-align: center;
+      line-height: 1.35;
     }
 
     .forecast-mini {
-      margin-top: 8px;
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
       gap: 5px;
     }
 
-    .forecast-mini .mini {
-      background: rgba(255,255,255,0.88);
+    .forecast-mini .mini,
+    .chart-panel {
+      background: rgba(255,255,255,0.92);
       border: 1px solid #dbeafe;
       border-radius: 12px;
-      padding: 6px 5px;
+      padding: 6px;
       text-align: center;
     }
 
     .mini .mini-label {
-      font-size: 8.2px;
+      font-size: 7.8px;
       color: #64748b;
       line-height: 1.2;
       margin-bottom: 4px;
     }
 
     .mini .mini-value {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 900;
       color: #0f172a;
       line-height: 1;
+    }
+
+    .chart-panel svg {
+      display: block;
+      margin: 0 auto;
+      width: 100%;
+      max-width: 270px;
+      height: auto;
+      direction: ltr;
     }
 
     .badge {
       display: inline-block;
       padding: 3px 8px;
       border-radius: 999px;
-      font-size: 8.6px;
+      font-size: 8.5px;
       font-weight: 800;
       line-height: 1.2;
     }
@@ -585,7 +579,7 @@
     .bottom-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 9px;
+      gap: 8px;
     }
 
     .ftr {
@@ -597,10 +591,10 @@
       flex-shrink: 0;
     }
 
-    .ftr-brand {
-      font-size: 13px;
-      font-weight: 900;
-      color: #6ee7b7;
+    .ftr-right {
+      display: flex;
+      align-items: center;
+      min-height: 20px;
     }
 
     .ftr-info {
@@ -618,7 +612,6 @@
 </head>
 <body>
 
-  <!-- PAGE 1 -->
   <div class="page">
     <div class="hdr">
       <div class="hdr-inner">
@@ -634,7 +627,7 @@
           <div class="title-block">
             <div class="report-title">تقرير صحة المزرعة</div>
             <div class="farm-title">مزرعة {{ farm_name }}</div>
-            <div class="farm-sub">ملخص الحالة الحالية والتحليل المكاني للنقاط المتأثرة</div>
+            <div class="farm-sub">ملخص تنفيذي للحالة الحالية مع الخريطة المكانية وأولوية التدخل المقترحة</div>
           </div>
         </div>
 
@@ -656,7 +649,7 @@
     <div class="content">
       <div class="stack">
         <div>
-          <div class="section-title">ملخص الحالة</div>
+          <div class="section-title">الملخص التنفيذي</div>
           <div class="card summary-card">
             <div class="status-pill">{{ executive_status }}</div>
             <div class="summary-text">{{ executive_summary }}</div>
@@ -665,13 +658,12 @@
         </div>
 
         <div>
-          <div class="section-title">الحالة العامة</div>
+          <div class="section-title">الحالة العامة للمزرعة</div>
           <div class="card health-card">
             <div style="flex-shrink:0;">{{ gauge_svg|safe }}</div>
             <div class="health-body">
               <div class="health-title" style="color:{{ gauge_color }};">{{ wellness_text }}</div>
               <div class="health-desc">{{ wellness_desc }}</div>
-
               <div class="chips">
                 <span class="chip chip-green">{{ healthy_pct|round(0)|int }}% سليم</span>
                 <span class="chip chip-amber">{{ monitor_pct|round(0)|int }}% متابعة</span>
@@ -685,31 +677,17 @@
       <div class="space-lg"></div>
 
       <div class="section-title">الخريطة المكانية لحالة النخيل</div>
-      <div class="map-grid">
+      <div class="page1-bottom">
         <div class="card map-card">
           <div class="map-frame">
-            <div class="map-svg">
-              {{ map_svg|safe }}
-            </div>
+            <div class="map-svg">{{ map_svg|safe }}</div>
           </div>
 
           <div class="legend">
-            <div class="legend-item">
-              <span class="legend-dot" style="background:#22c55e;"></span>
-              <span>سليم</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-dot" style="background:#f59e0b;"></span>
-              <span>متابعة</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-dot" style="background:#ef4444;"></span>
-              <span>حرج</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-ring"></span>
-              <span>تغير متوقع</span>
-            </div>
+            <div class="legend-item"><span class="legend-dot" style="background:#22c55e;"></span><span>سليم</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#f59e0b;"></span><span>متابعة</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#ef4444;"></span><span>حرج</span></div>
+            <div class="legend-item"><span class="legend-ring"></span><span>تغير متوقع</span></div>
           </div>
 
           <div class="map-note">{{ map_note }}</div>
@@ -717,35 +695,40 @@
 
         <div class="side-stack">
           <div class="mini-card">
-            <div class="mini-title">مقارنة سريعة بين الوضع الحالي والمتوقع</div>
-            <div style="text-align:center; direction:ltr;">{{ compare_svg|safe }}</div>
-          </div>
-
-          <div class="mini-card">
             <div class="mini-title">أولوية التدخل الحالية</div>
             <div class="mini-text" style="font-weight:800; color:#065f46;">{{ top_action_title }}</div>
             <div class="mini-text" style="margin-top:4px;">{{ top_action_text }}</div>
           </div>
 
-          <div class="grid-2" style="grid-template-columns:1fr 1fr;">
+          <div class="grid-2">
             <div class="mini-card">
-              <div class="mini-title">النقاط الحرجة</div>
+              <div class="mini-title">نقاط حرجة</div>
               <div class="big-stat">{{ critical_hotspots_count }}</div>
-              <div class="sub-stat">أعلى النقاط التي تحتاج زيارة أسرع</div>
+              <div class="sub-stat">أعلى النقاط التي تحتاج تدخلًا أسرع</div>
             </div>
 
             <div class="mini-card">
-              <div class="mini-title">أبرز سبب مؤثر</div>
-              <div class="mini-text" style="font-weight:800; color:#0f172a;">{{ top_driver }}</div>
-              <div class="sub-stat">الأولوية: {{ top_driver_priority }}</div>
+              <div class="mini-title">نقاط متابعة</div>
+              <div class="big-stat">{{ monitor_hotspots_count }}</div>
+              <div class="sub-stat">أبرز النقاط التي تستحق فحصًا ميدانيًا</div>
             </div>
+          </div>
+
+          <div class="mini-card">
+            <div class="mini-title">أبرز سبب ظاهر في التحليل</div>
+            <div class="mini-text" style="font-weight:800; color:#0f172a;">{{ top_driver }}</div>
+          </div>
+
+          <div class="mini-card">
+            <div class="mini-title">ما الذي تقرئينه في الخريطة؟</div>
+            <div class="mini-text">المناطق الملوّنة داخل الحدود تمثل الحالة الحالية لكل نقطة. الحلقة الزرقاء تظهر عندما تختلف الحالة المتوقعة عن الحالة الحالية في الأسبوع القادم.</div>
           </div>
         </div>
       </div>
     </div>
 
     <div class="ftr">
-      <div class="ftr-brand">سعف</div>
+      <div class="ftr-right">{{ footer_logo_html|safe }}</div>
       <div class="ftr-info">
         {{ report_date }} · {{ farm_name }}<br />
         الصفحة الأولى — <span class="page-num">1 / 2</span>
@@ -753,7 +736,6 @@
     </div>
   </div>
 
-  <!-- PAGE 2 -->
   <div class="page">
     <div class="hdr">
       <div class="hdr-inner">
@@ -769,7 +751,7 @@
           <div class="title-block">
             <div class="report-title">التحليل التفصيلي للمزرعة</div>
             <div class="farm-title">مزرعة {{ farm_name }}</div>
-            <div class="farm-sub">المؤشرات الرئيسية والتوقعات وأبرز المناطق المتأثرة</div>
+            <div class="farm-sub">المؤشرات الرئيسية والتوقعات وأسباب الخطر وأهم المناطق التي تحتاج متابعة</div>
           </div>
         </div>
 
@@ -792,36 +774,24 @@
       <div class="section-title">مؤشرات صحة المزرعة</div>
       <div class="grid-3">
         <div class="card metric-card">
-          <div class="metric-head">
-            <div>
-              <div class="metric-label">الخضرة</div>
-              <div class="metric-code">NDVI</div>
-            </div>
-          </div>
+          <div class="metric-label">الخضرة</div>
+          <div class="metric-code">NDVI</div>
           <div class="metric-value" style="color:#16a34a;">{{ ndvi_val }}</div>
           <div class="metric-badge" style="background:{{ ndvi_bg }}; color:{{ ndvi_fg }};">{{ ndvi_state }}</div>
           <div class="metric-delta">{{ ndvi_delta_badge|safe }} عن الأسبوع الماضي</div>
         </div>
 
         <div class="card metric-card">
-          <div class="metric-head">
-            <div>
-              <div class="metric-label">الرطوبة</div>
-              <div class="metric-code">NDMI</div>
-            </div>
-          </div>
+          <div class="metric-label">الرطوبة</div>
+          <div class="metric-code">NDMI</div>
           <div class="metric-value" style="color:#2563eb;">{{ ndmi_val }}</div>
           <div class="metric-badge" style="background:{{ ndmi_bg }}; color:{{ ndmi_fg }};">{{ ndmi_state }}</div>
           <div class="metric-delta">{{ ndmi_delta_badge|safe }} عن الأسبوع الماضي</div>
         </div>
 
         <div class="card metric-card">
-          <div class="metric-head">
-            <div>
-              <div class="metric-label">حيوية الأوراق</div>
-              <div class="metric-code">NDRE</div>
-            </div>
-          </div>
+          <div class="metric-label">حيوية الأوراق</div>
+          <div class="metric-code">NDRE</div>
           <div class="metric-value" style="color:#0f766e;">{{ ndre_val }}</div>
           <div class="metric-badge" style="background:{{ ndre_bg }}; color:{{ ndre_fg }};">{{ ndre_state }}</div>
           <div class="metric-delta">{{ ndre_delta_badge|safe }} عن الأسبوع الماضي</div>
@@ -832,15 +802,15 @@
 
       <div class="grid-2">
         <div class="card">
-          <div class="section-title" style="margin-bottom:8px;">جدول المؤشرات</div>
+          <div class="section-title" style="margin-bottom:7px;">جدول المؤشرات</div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
                   <th style="width:22%;">المؤشر</th>
                   <th style="width:14%;">الرمز</th>
-                  <th style="width:16%;">القيمة</th>
-                  <th style="width:48%;">التفسير</th>
+                  <th style="width:14%;">القيمة</th>
+                  <th style="width:50%;">التفسير</th>
                 </tr>
               </thead>
               <tbody>
@@ -858,14 +828,16 @@
         </div>
 
         <div class="card forecast-card">
-          <div class="forecast-title">توقع الأسبوع القادم</div>
-          <div class="forecast-text">{{ forecast_text }}</div>
-          <div class="forecast-change">اتجاه الخضرة المتوقع: {{ forecast_change_text|safe }}</div>
+          <div>
+            <div class="forecast-title">توقع الأسبوع القادم</div>
+            <div class="forecast-text">{{ forecast_text }}</div>
+            <div class="forecast-change">اتجاه الخضرة المتوقع: {{ forecast_change_text|safe }}</div>
+          </div>
 
           {% if sparkline %}
           <div class="spark-wrap">
             {{ sparkline|safe }}
-            <div class="spark-cap">مسار NDVI خلال آخر 5 أسابيع</div>
+            <div class="spark-cap">مسار NDVI خلال آخر الأسابيع المتاحة</div>
           </div>
           {% endif %}
 
@@ -882,6 +854,11 @@
               <div class="mini-label">الحرج المتوقع</div>
               <div class="mini-value">{{ forecast_summary.critical }}</div>
             </div>
+          </div>
+
+          <div class="chart-panel">
+            {{ compare_svg|safe }}
+            <div class="chart-cap">مقارنة التوزيع الحالي مع التوزيع المتوقع للحالات</div>
           </div>
         </div>
       </div>
@@ -966,7 +943,7 @@
     </div>
 
     <div class="ftr">
-      <div class="ftr-brand">سعف</div>
+      <div class="ftr-right">{{ footer_logo_html|safe }}</div>
       <div class="ftr-info">
         {{ report_date }} · {{ farm_name }}<br />
         الصفحة الثانية — <span class="page-num">2 / 2</span>

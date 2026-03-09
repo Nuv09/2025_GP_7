@@ -64,16 +64,16 @@ def _color_for_pct(pct: float) -> str:
     return "#dc2626"
 
 
-def _gauge_svg(pct: float, color: str, size: int = 122) -> str:
+def _gauge_svg(pct: float, color: str, size: int = 116) -> str:
     pct = max(0.0, min(100.0, float(pct)))
-    r = 46
+    r = 44
     cx = cy = size / 2
     circumference = 3.14159 * r
     stroke_dash = (pct / 100) * circumference
     stroke_gap = circumference - stroke_dash
 
     return f"""
-<svg width="{size}" height="{size // 2 + 24}" viewBox="0 0 {size} {size // 2 + 24}">
+<svg width="{size}" height="{size // 2 + 22}" viewBox="0 0 {size} {size // 2 + 22}">
   <path d="M {cx - r} {cy} A {r} {r} 0 0 1 {cx + r} {cy}"
         fill="none" stroke="#e5e7eb" stroke-width="10" stroke-linecap="round"/>
   <path d="M {cx - r} {cy} A {r} {r} 0 0 1 {cx + r} {cy}"
@@ -87,7 +87,7 @@ def _gauge_svg(pct: float, color: str, size: int = 122) -> str:
 """.strip()
 
 
-def _trend_sparkline(values: list, color: str = "#2563eb", width: int = 230, height: int = 72) -> str:
+def _trend_sparkline(values: list, color: str = "#2563eb", width: int = 235, height: int = 68) -> str:
     if not values:
         return ""
 
@@ -110,15 +110,15 @@ def _trend_sparkline(values: list, color: str = "#2563eb", width: int = 230, hei
 
     for i, v in enumerate(vals):
         x = i * step
-        y = height - ((v - mn) / rng) * (height - 20) - 10
+        y = height - ((v - mn) / rng) * (height - 18) - 9
         pts.append(f"{x:.1f},{y:.1f}")
-        circles.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3.1" fill="{color}" />')
+        circles.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3" fill="{color}" />')
 
     polyline = " ".join(pts)
 
     return f"""
 <svg width="{width}" height="{height}" viewBox="0 0 {width} {height}">
-  <line x1="0" y1="{height - 10}" x2="{width}" y2="{height - 10}" stroke="#dbeafe" stroke-width="1"/>
+  <line x1="0" y1="{height - 9}" x2="{width}" y2="{height - 9}" stroke="#dbeafe" stroke-width="1"/>
   <polyline points="{polyline}" fill="none" stroke="{color}" stroke-width="3"
             stroke-linejoin="round" stroke-linecap="round"/>
   {''.join(circles)}
@@ -126,65 +126,84 @@ def _trend_sparkline(values: list, color: str = "#2563eb", width: int = 230, hei
 """.strip()
 
 
-def _comparison_distribution_svg(current_dist: dict, next_dist: dict, width: int = 250, height: int = 140) -> str:
+def _distribution_compare_svg(current_dist: dict, next_dist: dict, width: int = 245, height: int = 112) -> str:
     """
-    رسم مقارنة بسيطة بين الحالة الحالية والمتوقعة:
-    سليم / متابعة / حرج
+    قراف مقارنة بسيط بدون نص عربي داخل SVG لتجنب مشاكل الاتجاه.
+    3 مجموعات: healthy / monitor / critical
+    عمود غامق = current
+    عمود فاتح = next
     """
-    current = {
-        "سليم": _safe_float(current_dist.get("Healthy_Pct", 0)),
-        "متابعة": _safe_float(current_dist.get("Monitor_Pct", 0)),
-        "حرج": _safe_float(current_dist.get("Critical_Pct", 0)),
-    }
-    nxt = {
-        "سليم": _safe_float(next_dist.get("Healthy_Pct_next", 0)),
-        "متابعة": _safe_float(next_dist.get("Monitor_Pct_next", 0)),
-        "حرج": _safe_float(next_dist.get("Critical_Pct_next", 0)),
-    }
-
-    colors = {"سليم": "#22c55e", "متابعة": "#f59e0b", "حرج": "#ef4444"}
-    labels = ["سليم", "متابعة", "حرج"]
-
-    max_bar = 72
-    group_w = 74
-    x0 = 18
-    base_y = 104
-    bar_w = 12
-    gap = 8
-
-    parts = [
-        f'<text x="{width/2:.1f}" y="15" text-anchor="middle" font-family="Cairo,sans-serif" '
-        f'font-size="10" font-weight="700" fill="#334155">الحالية مقابل المتوقعة</text>'
+    current_vals = [
+        _safe_float(current_dist.get("Healthy_Pct", 0)),
+        _safe_float(current_dist.get("Monitor_Pct", 0)),
+        _safe_float(current_dist.get("Critical_Pct", 0)),
+    ]
+    next_vals = [
+        _safe_float(next_dist.get("Healthy_Pct_next", 0)),
+        _safe_float(next_dist.get("Monitor_Pct_next", 0)),
+        _safe_float(next_dist.get("Critical_Pct_next", 0)),
     ]
 
-    for i, lab in enumerate(labels):
-        gx = x0 + i * group_w
-        cur_h = max_bar * max(0, min(100, current[lab])) / 100.0
-        nxt_h = max_bar * max(0, min(100, nxt[lab])) / 100.0
-        color = colors[lab]
+    colors = ["#22c55e", "#f59e0b", "#ef4444"]
 
-        # current
-        parts.append(
-            f'<rect x="{gx}" y="{base_y-cur_h:.1f}" width="{bar_w}" height="{cur_h:.1f}" '
-            f'rx="4" fill="{color}" opacity="0.92"/>'
-        )
-        # next
-        parts.append(
-            f'<rect x="{gx+bar_w+gap}" y="{base_y-nxt_h:.1f}" width="{bar_w}" height="{nxt_h:.1f}" '
-            f'rx="4" fill="{color}" opacity="0.35" stroke="{color}" stroke-width="1"/>'
-        )
+    base_y = 92
+    bar_max_h = 58
+    bar_w = 12
+    gap = 7
+    group_gap = 28
+    x = 28
+
+    parts = [
+        f'<line x1="8" y1="{base_y}" x2="{width-8}" y2="{base_y}" stroke="#e5e7eb" stroke-width="1"/>'
+    ]
+
+    for i in range(3):
+        cur_h = max(0, min(100, current_vals[i])) / 100.0 * bar_max_h
+        nxt_h = max(0, min(100, next_vals[i])) / 100.0 * bar_max_h
+        color = colors[i]
 
         parts.append(
-            f'<text x="{gx+bar_w/2:.1f}" y="{base_y+13}" text-anchor="middle" '
-            f'font-family="Cairo,sans-serif" font-size="7.5" fill="#64748b">حالي</text>'
+            f'<rect x="{x}" y="{base_y-cur_h:.1f}" width="{bar_w}" height="{cur_h:.1f}" '
+            f'rx="4" fill="{color}" opacity="0.95"/>'
         )
         parts.append(
-            f'<text x="{gx+bar_w+gap+bar_w/2:.1f}" y="{base_y+13}" text-anchor="middle" '
-            f'font-family="Cairo,sans-serif" font-size="7.5" fill="#64748b">متوقع</text>'
+            f'<rect x="{x+bar_w+gap}" y="{base_y-nxt_h:.1f}" width="{bar_w}" height="{nxt_h:.1f}" '
+            f'rx="4" fill="{color}" opacity="0.28" stroke="{color}" stroke-width="1"/>'
+        )
+
+        x += (bar_w * 2 + gap + group_gap)
+
+    return f"""
+<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}">
+  {''.join(parts)}
+</svg>
+""".strip()
+
+
+def _mini_bar_svg(values: list[float], colors: list[str], width: int = 215, height: int = 84) -> str:
+    """
+    قراف أفقي صغير لعرض 3 قيم بسرعة بدون نصوص عربية داخل SVG.
+    """
+    if not values:
+        return ""
+
+    vals = [max(0.0, _safe_float(v, 0.0)) for v in values]
+    mx = max(max(vals), 1.0)
+
+    bar_h = 14
+    gap = 10
+    left = 8
+    top = 8
+
+    parts = []
+    for i, v in enumerate(vals):
+        y = top + i * (bar_h + gap)
+        w = (v / mx) * (width - 40)
+        parts.append(
+            f'<rect x="{left}" y="{y}" width="{width-30}" height="{bar_h}" rx="7" fill="#edf2f7"/>'
         )
         parts.append(
-            f'<text x="{gx+bar_w+gap/2+bar_w/2:.1f}" y="{base_y+28}" text-anchor="middle" '
-            f'font-family="Cairo,sans-serif" font-size="8.5" font-weight="700" fill="#334155">{lab}</text>'
+            f'<rect x="{left}" y="{y}" width="{w:.1f}" height="{bar_h}" rx="7" fill="{colors[i]}"/>'
         )
 
     return f"""
@@ -218,7 +237,7 @@ def _normalize_polygon(poly: list | None) -> list[tuple[float, float]]:
     return out
 
 
-def _heatmap_svg(map_points: list, width: int = 480, height: int = 255, farm_polygon: list | None = None) -> str:
+def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_polygon: list | None = None) -> str:
     norm_poly = _normalize_polygon(farm_polygon)
 
     if not map_points and not norm_poly:
@@ -246,7 +265,7 @@ def _heatmap_svg(map_points: list, width: int = 480, height: int = 255, farm_pol
 
     lat_rng = max(max_lat - min_lat, 1e-6)
     lng_rng = max(max_lng - min_lng, 1e-6)
-    pad = 16
+    pad = 12
 
     def to_xy(lat, lng):
         x = pad + ((lng - min_lng) / lng_rng) * (width - pad * 2)
@@ -264,7 +283,7 @@ def _heatmap_svg(map_points: list, width: int = 480, height: int = 255, farm_pol
         pts = " ".join(f"{x},{y}" for x, y in [to_xy(lat, lng) for lat, lng in norm_poly])
         poly_svg = (
             f'<polygon points="{pts}" fill="#f0fdf4" stroke="#10b981" '
-            f'stroke-width="2.2" opacity="0.96"/>'
+            f'stroke-width="2.2" opacity="0.98"/>'
         )
 
     circles = []
@@ -278,14 +297,14 @@ def _heatmap_svg(map_points: list, width: int = 480, height: int = 255, farm_pol
             continue
 
         x, y = to_xy(lat, lng)
-        r = 5.1 if s == 2 else 4.6 if s == 1 else 4.1
+        r = 4.8 if s == 2 else 4.3 if s == 1 else 3.9
         fill = color_map.get(s, "#22c55e")
 
         ring = ""
         if ps != s:
             ring = (
-                f'<circle cx="{x}" cy="{y}" r="{r + 2.9}" fill="none" '
-                f'stroke="#2563eb" stroke-width="1.6" opacity="0.92"/>'
+                f'<circle cx="{x}" cy="{y}" r="{r + 2.8}" fill="none" '
+                f'stroke="#2563eb" stroke-width="1.5" opacity="0.92"/>'
             )
 
         circles.append(
@@ -344,14 +363,22 @@ def _metric_verdict(code: str, value: float):
     return "—", "#f1f5f9", "#475569"
 
 
+def _footer_logo_html(logo_data_uri: str | None) -> str:
+    if logo_data_uri:
+        return f'<img src="{logo_data_uri}" alt="Saaf" style="height:16px; width:auto; display:block;" />'
+    return '<div style="font-size:12px;font-weight:900;color:#6ee7b7;">سعف</div>'
+
+
 # ─────────────────────────────────────────────
 # PDF Generation — weasyprint
 # ─────────────────────────────────────────────
-def generate_pdf_report(export_data: dict, farm_id: str) -> str:
+def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None = None) -> str:
     try:
         from weasyprint import HTML, CSS
     except ImportError:
         raise RuntimeError("weasyprint غير مثبتة. أضف 'weasyprint' لـ requirements.txt")
+
+    farm_doc = farm_doc or {}
 
     header = export_data.get("header", {})
     dist = export_data.get("distribution", {})
@@ -360,11 +387,28 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
     forecast_next = export_data.get("forecast_next_week", {})
     top_action = export_data.get("top_action") or {}
     map_points = export_data.get("health_map_points", [])
-    farm_poly = export_data.get("farm_polygon", [])
-    risk_drivers = export_data.get("risk_drivers", [])[:3]
-    hotspots = export_data.get("hotspots_table", [])[:3]
-    indices_table = export_data.get("indices_table", [])
-    owner_name = export_data.get("owner_name") or header.get("owner_name") or "—"
+    farm_poly = export_data.get("farm_polygon", []) or farm_doc.get("polygon", [])
+    risk_drivers = (export_data.get("risk_drivers", []) or [])[:3]
+    hotspots = (export_data.get("hotspots_table", []) or [])[:3]
+    indices_table = export_data.get("indices_table", []) or []
+    owner_name = (
+        export_data.get("owner_name")
+        or header.get("owner_name")
+        or farm_doc.get("ownerName")
+        or "—"
+    )
+
+    # fallback قوي لعدد النخيل من الوثيقة نفسها وقت التصدير
+    total_palms = (
+        header.get("total_palms")
+        or export_data.get("total_palms")
+        or export_data.get("finalCount")
+        or farm_doc.get("finalCount")
+        or farm_doc.get("palmCount")
+        or farm_doc.get("totalPalms")
+        or 0
+    )
+    total_palms = _safe_int(total_palms, 0)
 
     wellness = float(export_data.get("wellness_score", dist.get("Healthy_Pct", 0)))
 
@@ -373,10 +417,14 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
     critical_pct = _safe_float(dist.get("Critical_Pct", 0))
 
     gauge_color = _color_for_pct(wellness)
-    gauge_svg = _gauge_svg(wellness, gauge_color, size=122)
+    gauge_svg = _gauge_svg(wellness, gauge_color, size=124)
     sparkline = _trend_sparkline(forecast.get("trend_data", []), color="#2563eb")
     map_svg = _heatmap_svg(map_points, farm_polygon=farm_poly)
-    compare_svg = _comparison_distribution_svg(dist, forecast_next)
+    compare_svg = _distribution_compare_svg(dist, forecast_next)
+    drivers_bar_svg = _mini_bar_svg(
+        [r.get("count", 0) for r in risk_drivers[:3]],
+        ["#0ea5e9", "#f59e0b", "#ef4444"]
+    )
 
     ndvi = biometrics.get("ndvi", {})
     ndmi = biometrics.get("ndmi", {})
@@ -396,24 +444,15 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
         wellness_text = "الحالة العامة تحتاج متابعة"
 
     wellness_desc = (
-        "يعرض هذا التقرير الوضع الحالي للمزرعة استنادًا إلى المؤشرات الطيفية والتوزيع المكاني "
-        "للنقاط المتأثرة داخل حدود المزرعة."
+        "يعرض هذا التقرير الوضع الحالي للمزرعة استنادًا إلى المؤشرات الطيفية "
+        "وتوزيع النقاط المتأثرة داخل حدود المزرعة."
     )
 
     report_date = header.get("date") or datetime.now().strftime("%Y-%m-%d")
-    farm_name = header.get("name") or export_data.get("farmName") or "—"
-    farm_area = header.get("area") or export_data.get("farmSize") or "—"
-
-    total_palms = (
-        header.get("total_palms")
-        or export_data.get("total_palms")
-        or export_data.get("finalCount")
-        or 0
-    )
-    total_palms = _safe_int(total_palms, 0)
-
-    contract_number = header.get("contract_number") or "—"
-    region = header.get("city") or "—"
+    farm_name = header.get("name") or export_data.get("farmName") or farm_doc.get("farmName") or "—"
+    farm_area = header.get("area") or export_data.get("farmSize") or farm_doc.get("farmSize") or "—"
+    contract_number = header.get("contract_number") or farm_doc.get("contractNumber") or "—"
+    region = header.get("city") or farm_doc.get("region") or "—"
 
     executive_status = export_data.get("executive_status", "ملخص الحالة")
     executive_summary = export_data.get("executive_summary", "—")
@@ -427,7 +466,6 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
     }
     forecast_change_text = _delta_badge_html(_safe_float(forecast_next.get("ndvi_delta_next_mean"), 0) * 100.0)
 
-    # fallback if health.py not updated yet
     if not indices_table:
         indices_table = [
             {
@@ -450,16 +488,15 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
             },
         ]
 
-    # sidebar content for page 1
     critical_hotspots_count = len([h for h in hotspots if h.get("status") == "حرجة"])
+    monitor_hotspots_count = len([h for h in hotspots if h.get("status") == "متابعة"])
     top_driver = risk_drivers[0]["title"] if risk_drivers else "—"
-    top_driver_priority = risk_drivers[0]["priority"] if risk_drivers else "—"
     top_action_title = top_action.get("title_ar", "—")
     top_action_text = top_action.get("text_ar", "—")
 
     map_note = (
-        "اللون يوضح الحالة الحالية لكل نقطة داخل حدود المزرعة، والحلقة الزرقاء تشير إلى نقاط "
-        "قد تتغير حالتها في الأسبوع القادم."
+        "اللون يوضح الحالة الحالية لكل نقطة داخل حدود المزرعة، "
+        "والحلقة الزرقاء تشير إلى نقاط قد تتغير حالتها لاحقًا."
     )
 
     logo_data_uri = None
@@ -468,6 +505,8 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
         with open(logo_path, "rb") as img_file:
             logo_b64 = base64.b64encode(img_file.read()).decode("utf-8")
             logo_data_uri = f"data:image/png;base64,{logo_b64}"
+
+    footer_logo_html = _footer_logo_html(logo_data_uri)
 
     html_content = render_template(
         "reports/farm_report.html",
@@ -481,6 +520,7 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
         owner_name=owner_name,
 
         logo_data_uri=logo_data_uri,
+        footer_logo_html=footer_logo_html,
 
         executive_status=executive_status,
         executive_summary=executive_summary,
@@ -495,13 +535,15 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
         critical_pct=critical_pct,
 
         map_svg=map_svg,
-        compare_svg=compare_svg,
         map_note=map_note,
         critical_hotspots_count=critical_hotspots_count,
+        monitor_hotspots_count=monitor_hotspots_count,
         top_driver=top_driver,
-        top_driver_priority=top_driver_priority,
         top_action_title=top_action_title,
         top_action_text=top_action_text,
+
+        compare_svg=compare_svg,
+        drivers_bar_svg=drivers_bar_svg,
 
         ndvi_val=f"{_safe_float(ndvi.get('val', 0), 0):.2f}",
         ndmi_val=f"{_safe_float(ndmi.get('val', 0), 0):.2f}",
@@ -526,6 +568,7 @@ def generate_pdf_report(export_data: dict, farm_id: str) -> str:
         forecast_change_text=forecast_change_text,
         sparkline=sparkline,
         forecast_summary=forecast_summary,
+
         risk_drivers=risk_drivers,
         hotspots=hotspots,
     )
@@ -556,9 +599,9 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
 
     header = export_data.get("header", {})
     dist = export_data.get("distribution", {})
-    biometrics = export_data.get("biometrics", {})
     forecast = export_data.get("forecast", {})
     hotspots = export_data.get("hotspots_table", [])[:3]
+    owner_name = export_data.get("owner_name", "—")
     wellness = float(export_data.get("wellness_score", dist.get("Healthy_Pct", 0)))
 
     GREEN_DARK = "064E3B"
@@ -566,7 +609,6 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     GREEN_LIGHT = "D1FAE5"
     ORANGE = "F59E0B"
     RED = "EF4444"
-    GRAY_BG = "F8FAFC"
     BORDER_CLR = "E2E8F0"
 
     def side(color="E2E8F0"):
@@ -594,15 +636,14 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     c.font = Font(name="Cairo", size=16, bold=True, color="FFFFFF")
     c.fill = fill(GREEN_DARK)
     c.alignment = center()
-    ws.row_dimensions[1].height = 36
 
-    info_labels = ["اسم المزرعة", "رقم الصك", "المنطقة", "اسم المالك", "المساحة", "عدد النخيل",
+    info_labels = ["اسم المزرعة", "رقم العقد", "المنطقة", "اسم المالك", "المساحة", "عدد النخيل",
                    "تاريخ التقرير", "مؤشر الحالة"]
     info_vals = [
         header.get("name", export_data.get("farmName", "—")),
         header.get("contract_number", "—"),
         header.get("city", "—"),
-        export_data.get("owner_name", "—"),
+        owner_name,
         f"{header.get('area', export_data.get('farmSize', '—'))}",
         str(header.get("total_palms") or export_data.get("finalCount") or 0),
         header.get("date", datetime.now().strftime("%Y-%m-%d")),
@@ -623,7 +664,7 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
 
     ws.merge_cells("A5:F5")
     c = ws["A5"]
-    c.value = "التوزيع الصحي"
+    c.value = "توزيع الحالة الصحية"
     c.font = header_font(12)
     c.fill = fill(GREEN_MID)
     c.alignment = center()
@@ -703,11 +744,12 @@ def export_pdf(farm_id):
         if not doc:
             return jsonify({"ok": False, "error": "المزرعة غير موجودة"}), 404
 
-        export_data = doc.to_dict().get('export_data')
+        farm_data = doc.to_dict() or {}
+        export_data = farm_data.get('export_data')
         if not export_data:
             return jsonify({"ok": False, "error": "بيانات التحليل ناقصة. شغّل التحليل أولاً."}), 400
 
-        pdf_path = generate_pdf_report(export_data, farm_id)
+        pdf_path = generate_pdf_report(export_data, farm_id, farm_doc=farm_data)
         with open(pdf_path, "rb") as f:
             encoded = base64.b64encode(f.read()).decode('utf-8')
 
@@ -733,9 +775,14 @@ def export_excel(farm_id):
         if not doc:
             return jsonify({"ok": False, "error": "المزرعة غير موجودة"}), 404
 
-        export_data = doc.to_dict().get('export_data', {})
+        farm_data = doc.to_dict() or {}
+        export_data = farm_data.get('export_data', {})
         if not export_data:
             return jsonify({"ok": False, "error": "بيانات التحليل ناقصة. شغّل التحليل أولاً."}), 400
+
+        # fallback count if export_data stale
+        if not export_data.get("finalCount"):
+            export_data["finalCount"] = farm_data.get("finalCount", 0)
 
         excel_path = generate_excel_report(export_data, farm_id)
         with open(excel_path, "rb") as f:
