@@ -639,7 +639,7 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
     forecast = export_data.get("forecast", {})
     forecast_next = export_data.get("forecast_next_week", {})
     top_action = export_data.get("top_action") or {}
-    map_points = export_data.get("health_map_points", [])
+    map_points = export_data.get("health_map_points") or farm_doc.get("healthMap", []) or []
     farm_poly = export_data.get("farm_polygon", []) or farm_doc.get("polygon", [])
     risk_drivers = (export_data.get("risk_drivers", []) or [])[:3]
     hotspots = (export_data.get("hotspots_table", []) or [])[:3]
@@ -1032,8 +1032,190 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     output_path = f"/tmp/saaf_report_{farm_id}.xlsx"
     wb.save(output_path)
     return output_path
+def _first_non_empty(*values):
+    for v in values:
+        if v is None:
+            continue
+        if isinstance(v, str) and not v.strip():
+            continue
+        if isinstance(v, (list, dict, tuple, set)) and len(v) == 0:
+            continue
+        if v == "":
+            continue
+        return v
+    return None
 
+def _prefer_live_number(old_value, live_value, default=0):
+    """
+    إذا القيمة القديمة None/فارغة نأخذ الحية.
+    وإذا القديمة = 0 لكن الحية غير صفر، نأخذ الحية.
+    وإلا نُبقي القديمة.
+    """
+    try:
+        if old_value is None:
+            return live_value if live_value is not None else default
 
+        if isinstance(old_value, str) and not old_value.strip():
+            return live_value if live_value is not None else default
+
+        old_num = float(old_value)
+        live_num = float(live_value) if live_value is not None else None
+
+        if old_num == 0 and live_num not in (None, 0):
+            return live_value
+
+        return old_value
+    except Exception:
+        return live_value if live_value is not None else default
+    
+
+def _merge_export_with_live_farm_data(export_data: dict, farm_data: dict) -> dict:
+    """
+    يوحّد مصدر بيانات التقرير مع البيانات الحية الموجودة في وثيقة المزرعة.
+    الهدف: إذا export_data ناقص أو قديم، نأخذ fallback من farm_data.
+    """
+    export_data = dict(export_data or {})
+    farm_data = farm_data or {}
+
+    health_root = farm_data.get("health") if isinstance(farm_data.get("health"), dict) else {}
+    current_health = health_root.get("current_health") if isinstance(health_root.get("current_health"), dict) else {}
+    forecast_next = health_root.get("forecast_next_week") if isinstance(health_root.get("forecast_next_week"), dict) else {}
+
+    # ── Header fallback ─────────────────────────
+    header = dict(export_data.get("header", {}) or {})
+    header["name"] = _first_non_empty(header.get("name"), farm_data.get("farmName"), "—")
+    header["area"] = _first_non_empty(header.get("area"), farm_data.get("farmSize"), "—")
+    header["city"] = _first_non_empty(header.get("city"), farm_data.get("region"), farm_data.get("city"), "—")
+    header["contract_number"] = _first_non_empty(header.get("contract_number"), farm_data.get("contractNumber"), "—")
+    header["owner_name"] = _first_non_empty(header.get("owner_name"), farm_data.get("ownerName"), "—")
+    header["total_palms"] = _first_non_empty(
+        header.get("total_palms"),
+        export_data.get("finalCount"),
+        farm_data.get("finalCount"),
+        farm_data.get("palmCount"),
+        farm_data.get("totalPalms"),
+        0,
+    )
+    export_data["header"] = header
+
+    # ── حقول مباشرة ─────────────────────────────
+    export_data["farmName"] = _first_non_empty(export_data.get("farmName"), farm_data.get("farmName"))
+    export_data["farmSize"] = _first_non_empty(export_data.get("farmSize"), farm_data.get("farmSize"))
+    export_data["finalCount"] = _first_non_empty(
+        export_data.get("finalCount"),
+        farm_data.get("finalCount"),
+        farm_data.get("palmCount"),
+        farm_data.get("totalPalms"),
+        0,
+    )
+    export_data["owner_name"] = _first_non_empty(export_data.get("owner_name"), farm_data.get("ownerName"), "—")
+
+    # ── polygon fallback ────────────────────────
+    export_data["farm_polygon"] = _first_non_empty(
+        export_data.get("farm_polygon"),
+        farm_data.get("polygon"),
+        [],
+    )
+
+    # ── الخريطة ─────────────────────────────────
+    export_data["health_map_points"] = _first_non_empty(
+        export_data.get("health_map_points"),
+        farm_data.get("healthMap"),
+        [],
+    )
+
+    # ── التوزيع الحالي ─────────────────────────
+    dist = dict(export_data.get("distribution", {}) or {})
+    export_data["distribution"] = {
+        "Healthy_Pct": _prefer_live_number(dist.get("Healthy_Pct"), current_health.get("Healthy_Pct"), 0),
+        "Monitor_Pct": _prefer_live_number(dist.get("Monitor_Pct"), current_health.get("Monitor_Pct"), 0),
+        "Critical_Pct": _prefer_live_number(dist.get("Critical_Pct"), current_health.get("Critical_Pct"), 0),
+    }
+
+    # ── توقع الأسبوع القادم ────────────────────
+    next_week = dict(export_data.get("forecast_next_week", {}) or {})
+    export_data["forecast_next_week"] = {
+        "Healthy_Pct_next": _prefer_live_number(next_week.get("Healthy_Pct_next"), forecast_next.get("Healthy_Pct_next"), 0),
+        "Monitor_Pct_next": _prefer_live_number(next_week.get("Monitor_Pct_next"), forecast_next.get("Monitor_Pct_next"), 0),
+        "Critical_Pct_next": _prefer_live_number(next_week.get("Critical_Pct_next"), forecast_next.get("Critical_Pct_next"), 0),
+        "ndvi_delta_next_mean": _prefer_live_number(next_week.get("ndvi_delta_next_mean"), forecast_next.get("ndvi_delta_next_mean"), 0),
+        "ndmi_delta_next_mean": _prefer_live_number(next_week.get("ndmi_delta_next_mean"), forecast_next.get("ndmi_delta_next_mean"), 0),
+    }
+
+    # ── المؤشرات الحيوية ────────────────────────
+    biometrics = dict(export_data.get("biometrics", {}) or {})
+    export_data["biometrics"] = {
+        "ndvi": {
+            "val": _prefer_live_number(
+                (biometrics.get("ndvi") or {}).get("val") if isinstance(biometrics.get("ndvi"), dict) else None,
+                _first_non_empty(current_health.get("NDVI"), current_health.get("ndvi_mean")),
+                0,
+            ),
+            "delta": _prefer_live_number(
+                (biometrics.get("ndvi") or {}).get("delta") if isinstance(biometrics.get("ndvi"), dict) else None,
+                current_health.get("NDVI_delta"),
+                0,
+            ),
+        },
+        "ndmi": {
+            "val": _prefer_live_number(
+                (biometrics.get("ndmi") or {}).get("val") if isinstance(biometrics.get("ndmi"), dict) else None,
+                _first_non_empty(current_health.get("NDMI"), current_health.get("ndmi_mean")),
+                0,
+            ),
+            "delta": _prefer_live_number(
+                (biometrics.get("ndmi") or {}).get("delta") if isinstance(biometrics.get("ndmi"), dict) else None,
+                current_health.get("NDMI_delta"),
+                0,
+            ),
+        },
+        "ndre": {
+            "val": _prefer_live_number(
+                (biometrics.get("ndre") or {}).get("val") if isinstance(biometrics.get("ndre"), dict) else None,
+                _first_non_empty(current_health.get("NDRE"), current_health.get("ndre_mean")),
+                0,
+            ),
+            "delta": _prefer_live_number(
+                (biometrics.get("ndre") or {}).get("delta") if isinstance(biometrics.get("ndre"), dict) else None,
+                current_health.get("NDRE_delta"),
+                0,
+            ),
+        },
+    }
+
+    # ── climate / alert_context ─────────────────
+    climate = dict(export_data.get("climate", {}) or {})
+    export_data["climate"] = {
+        **climate,
+        "rain_mm": _prefer_live_number(climate.get("rain_mm"), current_health.get("rain_mm"), 0),
+        "t_mean": _prefer_live_number(climate.get("t_mean"), current_health.get("t_mean"), 0),
+        "total_pixels": _prefer_live_number(climate.get("total_pixels"), current_health.get("total_pixels"), 0),
+        "rpw_score": _prefer_live_number(climate.get("rpw_score"), current_health.get("rpw_score"), 0),
+    }
+
+    alert_context = dict(export_data.get("alert_context", {}) or {})
+    export_data["alert_context"] = {
+        **alert_context,
+        "total_pixels": _prefer_live_number(alert_context.get("total_pixels"), current_health.get("total_pixels"), 0),
+        "pixels_with_any_flag": _prefer_live_number(
+            alert_context.get("pixels_with_any_flag"),
+            current_health.get("pixels_with_any_flag"),
+            0,
+        ),
+        "flag_counts": _first_non_empty(alert_context.get("flag_counts"), {}),
+    }
+
+    # ── trend fallback ──────────────────────────
+    if not export_data.get("multi_trend"):
+        hist = health_root.get("indices_history_last_month", []) or []
+        export_data["multi_trend"] = {
+            "dates": [x.get("date") for x in hist if isinstance(x, dict)],
+            "ndvi": [x.get("NDVI") for x in hist if isinstance(x, dict)],
+            "ndmi": [x.get("NDMI") for x in hist if isinstance(x, dict)],
+            "ndre": [x.get("NDRE") for x in hist if isinstance(x, dict)],
+        }
+
+    return export_data
 # ─────────────────────────────────────────────
 # Routes
 # ─────────────────────────────────────────────
@@ -1046,10 +1228,22 @@ def export_pdf(farm_id):
             return jsonify({"ok": False, "error": "المزرعة غير موجودة"}), 404
 
         farm_data = doc.to_dict() or {}
-        export_data = farm_data.get('export_data')
-        if not export_data:
+        export_data = farm_data.get('export_data') or {}
+
+        if not export_data and not farm_data.get("health"):
             return jsonify({"ok": False, "error": "بيانات التحليل ناقصة. شغّل التحليل أولاً."}), 400
 
+        export_data = _merge_export_with_live_farm_data(export_data, farm_data)
+
+        logger.info(
+            "PDF export debug | farm_id=%s | healthMap=%s | export health_map_points=%s | total_pixels=%s | rain_mm=%s | t_mean=%s",
+            farm_id,
+            len(farm_data.get("healthMap", []) or []),
+            len(export_data.get("health_map_points", []) or []),
+            ((export_data.get("alert_context", {}) or {}).get("total_pixels")),
+            ((export_data.get("climate", {}) or {}).get("rain_mm")),
+            ((export_data.get("climate", {}) or {}).get("t_mean")),
+        )
         pdf_path = generate_pdf_report(export_data, farm_id, farm_doc=farm_data)
         with open(pdf_path, "rb") as f:
             encoded = base64.b64encode(f.read()).decode('utf-8')
@@ -1077,13 +1271,12 @@ def export_excel(farm_id):
             return jsonify({"ok": False, "error": "المزرعة غير موجودة"}), 404
 
         farm_data = doc.to_dict() or {}
-        export_data = farm_data.get('export_data', {})
-        if not export_data:
+        export_data = farm_data.get('export_data') or {}
+
+        if not export_data and not farm_data.get("health"):
             return jsonify({"ok": False, "error": "بيانات التحليل ناقصة. شغّل التحليل أولاً."}), 400
 
-        # fallback count if export_data stale
-        if not export_data.get("finalCount"):
-            export_data["finalCount"] = farm_data.get("finalCount", 0)
+        export_data = _merge_export_with_live_farm_data(export_data, farm_data)
 
         excel_path = generate_excel_report(export_data, farm_id)
         with open(excel_path, "rb") as f:

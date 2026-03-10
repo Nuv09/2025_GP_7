@@ -56,8 +56,8 @@
     .hdr {
       background: linear-gradient(135deg, #053b2c 0%, #065f46 55%, #0b7b5f 100%);
       color: #ffffff;
-      padding: 6.5mm 10mm 5.2mm;
-      min-height: 42mm;
+      padding: 5.2mm 10mm 4.2mm;
+      min-height: 36mm;
       overflow: hidden;
       flex-shrink: 0;
     }
@@ -151,6 +151,7 @@
 
      .content {
       flex: 1;
+      min-height: 0;
       background: #f8fafc;
       padding: 4.8mm 10mm 3.8mm;
       overflow: hidden;
@@ -552,7 +553,7 @@
           <div class="map-bottom-chart">
             <div class="map-bottom-head">
               <div>
-                <div class="map-bottom-title">توزيع الحالات حسب قطاعات المزرعة</div>
+                <div class="map-bottom-title">توزيع الحالات حسب الاتجاهات داخل المزرعة</div>
                 <div class="map-bottom-sub">قراءة مكانية سريعة توضح أين تتركز الحالات السليمة وحالات المتابعة والحالات الحرجة داخل الخريطة.</div>
               </div>
               <div class="mini-total">{{ total_map_points }} نقطة</div>
@@ -581,7 +582,7 @@
                 <div class="side-stack">
           <div class="mini-card tight">
             <div class="mini-title">تفصيل إشارات الإجهاد</div>
-            <div class="mini-text">هذا القسم يعرض تكرار الإشارات المرصودة، </div>
+            <div class="mini-text">هذا القسم يعرض تكرار الإشارات المرصودة داخل آخر قراءة مكانية، وقد تتكرر الإشارة نفسها في أكثر من موضع.</div>
             {% for row in flag_rows %}
             <div class="flag-row">
               <div class="flag-label">{{ row.label }}</div>
@@ -593,7 +594,7 @@
 
           <div class="mini-card tight">
             <div class="mini-title">ملخص العدّ المكاني</div>
-            <div class="mini-text">عدد البكسلات التي ظهرت عليها إشارة واحدة على الأقل:</div>
+            <div class="mini-text">عدد البكسلات التي ظهرت عليها إشارة إجهاد واحدة على الأقل:</div>
             <div style="font-size:18px; font-weight:900; color:#0f766e; line-height:1; margin:6px 0 4px;">{{ stress_pixels }}</div>
             <div class="mini-text">{{ stress_pixels_note }}</div>
           </div>
@@ -703,12 +704,7 @@
             <div class="forecast-change">اتجاه الخضرة المتوقع: {{ forecast_change_text|safe }}</div>
           </div>
 
-          {% if sparkline %}
-          <div class="spark-wrap">
-            {{ sparkline|safe }}
-            <div class="spark-cap">مسار NDVI خلال آخر الأسابيع المتاحة</div>
-          </div>
-          {% endif %}
+         
 
           <div class="chart-panel">
             <div class="compare-legend">
