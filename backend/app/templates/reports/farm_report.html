@@ -149,10 +149,10 @@
       margin: 5mm -10mm -5.2mm;
     }
 
-    .content {
+     .content {
       flex: 1;
       background: #f8fafc;
-      padding: 5.5mm 10mm 4.6mm;
+      padding: 4.8mm 10mm 3.8mm;
       overflow: hidden;
     }
     .section-title {
@@ -253,25 +253,27 @@
     .diag-main { font-size: 11px; color:#78350f; font-weight:900; line-height:1.2; }
     .diag-sub { font-size: 7.4px; color:#a16207; margin-top:1px; line-height: 1.35; }
 
-    .trend-card { padding: 8px 10px; margin-bottom: 7px; }
-    .trend-note { font-size: 7.8px; color: #475569; margin-bottom: 4px; line-height: 1.35; }
-    .trend-axis { display:flex; justify-content:space-between; font-size:7.5px; color:#64748b; margin-top:3px; padding-inline: 32px 10px; }
-    .trend-svg { direction:ltr; }
+    .trend-card { padding: 7px 9px; margin-bottom: 6px; }
+    .trend-note { font-size: 7.4px; color: #475569; margin-bottom: 3px; line-height: 1.3; }
+    .trend-axis { display:flex; justify-content:space-between; font-size:7.2px; color:#64748b; margin-top:2px; padding-inline: 34px 12px; }
+    .trend-svg { direction:ltr; width:100%; overflow:hidden; }
+    .trend-svg svg { display:block; width:100%; height:auto; }
 
     .page1-bottom {
       display: grid;
-      grid-template-columns: 1.39fr 0.61fr;
+      grid-template-columns: 1.43fr 0.57fr;
       gap: 7px;
-      align-items: stretch;
+      align-items: start;
     }
     .map-card { padding: 7px; }
+
     .map-frame {
       background: #eef3ef;
       border-radius: 14px;
       overflow: hidden;
       border: 1px solid #dbe7df;
       position: relative;
-      height: 198px;
+      height: 176px;
     }
     .map-fallback {
       width:100%; height:100%;
@@ -359,7 +361,7 @@
       width:8px; height:8px; border-radius:999px; display:inline-block;
     }
 
-    .side-stack { display:grid; gap: 7px; }
+    .side-stack { display:grid; gap: 7px; align-content:start; }
     .mini-card.tight { padding: 8px 9px 7px; }
     .mini-title { font-size: 9.2px; font-weight: 800; color:#065f46; margin-bottom: 4px; line-height: 1.25; }
     .mini-text { font-size: 7.8px; color:#64748b; line-height: 1.45; margin-bottom:2px; }
@@ -499,20 +501,20 @@
               <div class="hint" style="color:#3b82f6;">ملم تراكمي</div>
             </div>
             <div class="env-stat" style="background:#fefce8; border-color:#fde68a;">
-              <div class="label">متوسط<br>الحرارة</div>
+              <div class="label">متوسط الحرارة<br>آخر 4 أسابيع</div>
               <div class="value" style="color:#d97706;">{{ t_mean }}</div>
               <div class="hint" style="color:#f59e0b;">°م</div>
             </div>
             <div class="env-stat" style="background:#f8fafc; border-color:#e2e8f0;">
-              <div class="label">حجم<br>التحليل</div>
+              <div class="label">البكسلات<br>المحللة</div>
               <div class="value" style="color:#0f172a;">{{ total_pixels }}</div>
-              <div class="hint" style="color:#64748b;">بكسل محلّل</div>
+              <div class="hint" style="color:#64748b;">آخر قراءة مكانية</div>
             </div>
           </div>
-          <div class="diag">
+         <div class="diag">
             <div class="diag-ico">!</div>
             <div>
-              <div class="diag-title">تشخيص النظام</div>
+              <div class="diag-title">ملخص القراءة الحالية</div>
               <div class="diag-main">{{ rpw_diagnosis }}</div>
               <div class="diag-sub">{{ rpw_diagnosis_sub }}</div>
             </div>
@@ -525,7 +527,7 @@
       <div class="card trend-card">
         <div class="trend-note">قراءة مقارنة لمؤشرات NDVI وNDMI وNDRE عبر أحدث النقاط الزمنية المتاحة على مستوى المزرعة.</div>
         <div class="trend-svg">{{ multi_sparkline_svg|safe }}</div>
-        <div class="trend-axis"><span>الأقدم</span><span>الأحدث</span></div>
+        <div class="trend-axis"><span>{{ trend_start_label }}</span><span>{{ trend_end_label }}</span></div>
       </div>
       {% endif %}
 
@@ -576,10 +578,10 @@
           </div>
         </div>
 
-        <div class="side-stack">
+                <div class="side-stack">
           <div class="mini-card tight">
             <div class="mini-title">تفصيل إشارات الإجهاد</div>
-            <div class="mini-text">يعرض عدد البكسلات التي ظهرت فيها كل إشارة بصورة مستقلة بدون تكرار الملاحظات النصية.</div>
+            <div class="mini-text">هذا القسم يعرض تكرار الإشارات المرصودة، </div>
             {% for row in flag_rows %}
             <div class="flag-row">
               <div class="flag-label">{{ row.label }}</div>
@@ -587,6 +589,13 @@
               <div class="flag-value" style="color:{{ row.color }};">{{ row.value }}</div>
             </div>
             {% endfor %}
+          </div>
+
+          <div class="mini-card tight">
+            <div class="mini-title">ملخص العدّ المكاني</div>
+            <div class="mini-text">عدد البكسلات التي ظهرت عليها إشارة واحدة على الأقل:</div>
+            <div style="font-size:18px; font-weight:900; color:#0f766e; line-height:1; margin:6px 0 4px;">{{ stress_pixels }}</div>
+            <div class="mini-text">{{ stress_pixels_note }}</div>
           </div>
         </div>
       </div>

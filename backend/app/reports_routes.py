@@ -70,6 +70,23 @@ def _load_local_image_as_data_uri(*relative_parts) -> str | None:
         logger.warning(f"Failed to load local image {'/'.join(relative_parts)}: {e}")
         return None
 
+def _inline_svg_data_uri(svg_text: str) -> str:
+    svg_b64 = base64.b64encode(svg_text.encode("utf-8")).decode("utf-8")
+    return f"data:image/svg+xml;base64,{svg_b64}"
+
+
+def _default_watermark_data_uri() -> str:
+    svg = """
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220">
+      <g fill="none" fill-rule="evenodd">
+        <circle cx="110" cy="110" r="92" fill="#0f766e" opacity="0.10"/>
+        <path d="M110 36 L152 78 L110 120 L68 78 Z" fill="#065f46" opacity="0.22"/>
+        <path d="M110 58 C118 78, 118 102, 110 124 C102 102, 102 78, 110 58 Z" fill="#10b981" opacity="0.34"/>
+      </g>
+    </svg>
+    """
+    return _inline_svg_data_uri(svg)
+
 
 def _color_for_pct(pct: float) -> str:
     if pct >= 75:
@@ -239,67 +256,67 @@ def _mini_bar_svg(values: list[float], colors: list[str], width: int = 215, heig
 
 def _multi_index_sparkline(
     multi_trend: dict,
-    width: int = 390,
-    height: int = 112,
+    width: int = 430,
+    height: int = 126,
 ) -> str:
-    """رسم أوضح للمؤشرات الطيفية مع محور رأسي وتدرجات رقمية."""
+    """رسم أوضح للمؤشرات الطيفية مع مساحة أكبر حتى لا يُقص داخل الكرت."""
     ndvi = [_safe_float(v) for v in (multi_trend.get("ndvi") or []) if v is not None]
     ndmi = [_safe_float(v) for v in (multi_trend.get("ndmi") or []) if v is not None]
     ndre = [_safe_float(v) for v in (multi_trend.get("ndre") or []) if v is not None]
 
-    series = [(ndvi, "#16a34a", "NDVI"), (ndmi, "#2563eb", "NDMI"), (ndre, "#0f766e", "NDRE")]
-    valid = [(vals, c, lbl) for vals, c, lbl in series if len(vals) >= 2]
+    series = [
+        (ndvi, "#16a34a", "NDVI"),
+        (ndmi, "#2563eb", "NDMI"),
+        (ndre, "#0f766e", "NDRE"),
+    ]
+    valid = [(vals, color, label) for vals, color, label in series if len(vals) >= 2]
     if not valid:
         return ""
 
     all_vals = [v for vals, _, _ in valid for v in vals]
-    mn = min(all_vals)
-    mx = max(all_vals)
-    if mx == mn:
+    mn, mx = min(all_vals), max(all_vals)
+    if mn == mx:
         mn -= 0.1
         mx += 0.1
     rng = mx - mn
 
-    pad_l, pad_r, pad_t, pad_b = 30, 10, 12, 24
+    pad_l, pad_r, pad_t, pad_b = 34, 12, 10, 28
     chart_w = width - pad_l - pad_r
     chart_h = height - pad_t - pad_b
+
     parts = []
 
-    for frac in [0, 0.25, 0.5, 0.75, 1]:
-        value = mn + rng * frac
-        gy = pad_t + chart_h * (1 - frac)
-        parts.append(f'<line x1="{pad_l}" y1="{gy:.1f}" x2="{width-pad_r}" y2="{gy:.1f}" stroke="#eef2f7" stroke-width="1"/>')
-        parts.append(f'<text x="{pad_l-6}" y="{gy+3:.1f}" text-anchor="end" font-family="Arial, sans-serif" font-size="8" fill="#94a3b8">{value:.2f}</text>')
+    for frac in [0.0, 0.25, 0.5, 0.75, 1.0]:
+        y = pad_t + chart_h - (frac * chart_h)
+        val = mn + frac * rng
+        parts.append(f'<line x1="{pad_l}" y1="{y:.1f}" x2="{pad_l+chart_w}" y2="{y:.1f}" stroke="#e5e7eb" stroke-width="1"/>')
+        parts.append(f'<text x="{pad_l-6}" y="{y+3:.1f}" text-anchor="end" font-family="Arial, sans-serif" font-size="8" fill="#94a3b8">{val:.2f}</text>')
 
-    parts.append(f'<line x1="{pad_l}" y1="{pad_t}" x2="{pad_l}" y2="{pad_t+chart_h}" stroke="#cbd5e1" stroke-width="1.1"/>')
-    parts.append(f'<line x1="{pad_l}" y1="{pad_t+chart_h}" x2="{width-pad_r}" y2="{pad_t+chart_h}" stroke="#cbd5e1" stroke-width="1.1"/>')
-
-    max_points = max(len(vals) for vals, _, _ in valid)
-    if max_points >= 2:
-        step = chart_w / (max_points - 1)
-        for i in range(max_points):
-            x = pad_l + i * step
-            parts.append(f'<line x1="{x:.1f}" y1="{pad_t+chart_h}" x2="{x:.1f}" y2="{pad_t+chart_h+4}" stroke="#cbd5e1" stroke-width="1"/>')
+    longest = max(len(vals) for vals, _, _ in valid)
+    step = chart_w / max(longest - 1, 1)
+    for i in range(longest):
+        x = pad_l + i * step
+        parts.append(f'<line x1="{x:.1f}" y1="{pad_t}" x2="{x:.1f}" y2="{pad_t+chart_h}" stroke="#f1f5f9" stroke-width="1"/>')
 
     for vals, color, label in valid:
         n = len(vals)
-        step = chart_w / max(n - 1, 1)
+        local_step = chart_w / max(n - 1, 1)
         pts = []
         for i, v in enumerate(vals):
-            x = pad_l + i * step
+            x = pad_l + i * local_step
             y = pad_t + chart_h - ((v - mn) / rng) * chart_h
             pts.append((x, y))
 
         polyline = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
-        parts.append(f'<polyline points="{polyline}" fill="none" stroke="{color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>')
+        parts.append(f'<polyline points="{polyline}" fill="none" stroke="{color}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>')
         for x, y in pts:
-            parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="2.5" fill="{color}"/>')
+            parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="2.7" fill="{color}"/>')
 
     lx = pad_l
     for _, color, lbl in valid:
-        parts.append(f'<rect x="{lx}" y="{height-12}" width="10" height="7" rx="3" fill="{color}"/>')
-        parts.append(f'<text x="{lx+14}" y="{height-5}" font-family="Arial, sans-serif" font-size="8" fill="#475569">{lbl}</text>')
-        lx += 58
+        parts.append(f'<rect x="{lx}" y="{height-14}" width="11" height="7" rx="3" fill="{color}"/>')
+        parts.append(f'<text x="{lx+15}" y="{height-8}" font-family="Arial, sans-serif" font-size="8" fill="#475569">{lbl}</text>')
+        lx += 62
 
     return f"""
 <svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" xmlns="http://www.w3.org/2000/svg">
@@ -307,8 +324,9 @@ def _multi_index_sparkline(
 </svg>
 """.strip()
 
+
 def _flag_breakdown_rows(flag_counts: dict) -> list[dict]:
-    """بيانات HTML بدل SVG لتجنب انعكاس العربية داخل الرسوم."""
+    """تفصيل الإشارات؛ هذا عدّ إشارات وليس عدّ بكسلات فريدة."""
     water = int(flag_counts.get("water_low", 0)) + int(flag_counts.get("water_below_025", 0))
     veg = int(flag_counts.get("ndvi_below_030", 0)) + int(flag_counts.get("ndvi_drop", 0))
     leaf = int(flag_counts.get("ndre_low", 0)) + int(flag_counts.get("ndre_below_035", 0))
@@ -320,9 +338,11 @@ def _flag_breakdown_rows(flag_counts: dict) -> list[dict]:
         {"label": "ضعف التغذية", "value": leaf, "color": "#0d9488"},
         {"label": "ضغط مائي مركب", "value": stress, "color": "#f59e0b"},
     ]
+
     max_value = max([r["value"] for r in rows] + [1])
     for row in rows:
-        row["pct"] = round((row["value"] / max_value) * 100, 1) if max_value else 0
+        row["pct"] = round((row["value"] / max_value) * 100, 1)
+
     return rows
 
 def _sector_distribution_rows(map_points: list) -> list[dict]:
@@ -674,26 +694,32 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
     rain_mm       = _safe_float(climate.get("rain_mm", 0))
     t_mean        = _safe_float(climate.get("t_mean", 0))
     rpw_score     = _safe_float(climate.get("rpw_score", 0))
-    total_pixels  = int(climate.get("total_pixels", 0) or alert_context.get("total_pixels", 0) or 0)
 
     # ── نسبة RPW كنص وصفي ──
-    if rpw_score >= 0.7 and rain_mm < 5:
-       rpw_label, rpw_color = "خطر مرتفع", "#dc2626"
-       rpw_diagnosis = "جفاف + إجهاد مرتفع"
-       rpw_diagnosis_sub = "انخفاض المطر مع الحرارة يزيد الإجهاد المائي"
-    elif rpw_score >= 0.7:
-        rpw_label, rpw_color = "خطر مرتفع", "#dc2626"
-        rpw_diagnosis = "إجهاد مرتفع"
-        rpw_diagnosis_sub = "مؤشرات الماء والخضرة تشير لضغط واضح"
-    elif rpw_score >= 0.4:
-        rpw_label, rpw_color = "خطر متوسط", "#d97706"
-        rpw_diagnosis = "إجهاد متوسط"
-        rpw_diagnosis_sub = "بعض المناطق تحتاج انتباهاً إضافياً"
-    else:
-        rpw_label, rpw_color = "مستوى طبيعي", "#16a34a"
-        rpw_diagnosis = "الوضع طبيعي"
-        rpw_diagnosis_sub = "المؤشرات ضمن النطاقات المتوقعة"
+    total_pixels = int(alert_context.get("total_pixels", 0) or climate.get("total_pixels", 0) or 0)
+    pixels_with_any_flag = int(alert_context.get("pixels_with_any_flag", 0) or 0)
+    signal_note = alert_context.get("signal_note") or "قد تُسجَّل أكثر من إشارة للبكسل الواحد."
 
+    if critical_pct >= 10:
+        rpw_diagnosis = "تحتاج الحالة متابعة عاجلة"
+        rpw_diagnosis_sub = "توجد نسبة حرجة ملحوظة في التوزيع العام للمزرعة."
+    elif monitor_pct >= 35 or pixels_with_any_flag > 0:
+        rpw_diagnosis = "تحتاج الحالة متابعة"
+        rpw_diagnosis_sub = "هناك مناطق متأثرة أو إشارات تستلزم مراقبة أقرب."
+    else:
+        rpw_diagnosis = "الحالة مستقرة حاليًا"
+        rpw_diagnosis_sub = "لا توجد إشارات تشغيلية مرتفعة في القراءة الحالية."
+
+    if rpw_score >= 0.66:
+        rpw_label = "مرتفع"
+        rpw_color = "#dc2626"
+    elif rpw_score >= 0.40:
+        rpw_label = "متوسط"
+        rpw_color = "#f59e0b"
+    else:
+        rpw_label = "منخفض"
+        rpw_color = "#16a34a"
+    
     ndvi = biometrics.get("ndvi", {})
     ndmi = biometrics.get("ndmi", {})
     ndre = biometrics.get("ndre", {})
@@ -760,6 +786,12 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
     logo_data_uri = _load_local_image_as_data_uri("static", "images", "saaf_logo.png")
     palm_icon_data_uri = _load_local_image_as_data_uri("static", "images", "PalmIcon.png")
 
+    if not logo_data_uri:
+        logger.warning("saaf_logo.png was not loaded, using inline fallback watermark.")
+    if not palm_icon_data_uri:
+        logger.warning("PalmIcon.png was not loaded, using fallback watermark.")
+
+    watermark_data_uri = palm_icon_data_uri or logo_data_uri or _default_watermark_data_uri()
     footer_logo_html = _footer_logo_html(logo_data_uri)
 
     html_content = render_template(
@@ -774,7 +806,7 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
         owner_name=owner_name,
 
         logo_data_uri=logo_data_uri,
-        palm_icon_data_uri=palm_icon_data_uri,
+        palm_icon_data_uri=watermark_data_uri,
         footer_logo_html=footer_logo_html,
 
         executive_status=executive_status,
@@ -800,6 +832,10 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
         drivers_bar_svg=drivers_bar_svg,
         multi_sparkline_svg=multi_sparkline_svg,
         flag_rows=flag_rows,
+        stress_pixels=f"{pixels_with_any_flag:,}".replace(",", "،"),
+        stress_pixels_note=signal_note,
+        trend_start_label=(multi_trend.get("dates") or ["الأقدم"])[0] if (multi_trend.get("dates") or []) else "الأقدم",
+        trend_end_label=(multi_trend.get("dates") or ["الأحدث"])[-1] if (multi_trend.get("dates") or []) else "الأحدث",
 
         rain_mm=f"{rain_mm:.1f}",
         t_mean=f"{t_mean:.1f}",

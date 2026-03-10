@@ -1101,6 +1101,15 @@ def forecast_next_week_summary(df_all: pd.DataFrame) -> Dict[str, Any]:
 
     X = latest_last[FORECAST_FEATURES].replace([np.inf, -np.inf], np.nan)
 
+    fill_values = {}
+    for col in X.columns:
+        col_series = pd.to_numeric(X[col], errors="coerce")
+        if col_series.notna().any():
+            fill_values[col] = float(col_series.median())
+        else:
+            fill_values[col] = 0.0
+
+    X = X.fillna(fill_values)
 
     preds = model.predict(X)
     if preds is None or len(preds) != len(latest_last) or preds.shape[1] != 3:
@@ -1217,27 +1226,46 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
     df_all = add_rpw_flags_and_score(df_all)
     alert_signals = build_alert_signals(df_all)
 
-    # 5. حساب الإحصائيات الحالية (Stats)
+    #    # 5. حساب الإحصائيات الحالية (Stats)
     stats = site_summary(df_all)
     processed_health = {
-        "Healthy_Pct": float(stats.get("Healthy_Pct", 0.0)),
-        "Monitor_Pct": float(stats.get("Monitor_Pct", 0.0)),
-        "Critical_Pct": float(stats.get("Critical_Pct", 0.0)),
+        "Total_Pixels_Count": int(stats.get("Total_Pixels_Count", 0) or 0),
+        "Healthy_Pct": float(stats.get("Healthy_Pct", 0.0) or 0.0),
+        "Monitor_Pct": float(stats.get("Monitor_Pct", 0.0) or 0.0),
+        "Critical_Pct": float(stats.get("Critical_Pct", 0.0) or 0.0),
+        "RPW_score_med": float(stats.get("RPW_score_med", 0.0) or 0.0),
+        "rain_mm": float(stats.get("rain_mm", 0.0) or 0.0),
+        "t_mean": float(stats.get("t_mean", 0.0) or 0.0),
     }
     history_last_month = indices_history_last_weeks(df_all, weeks=5, agg="mean")
     indices_table = build_indices_table(df_all)
 
-        # 6. جلب التوقعات والقاموس (Lookup) ودمجها في الخريطة
+    # 6. جلب التوقعات والقاموس (Lookup) ودمجها في الخريطة
     forecast_res = forecast_next_week_summary(df_all)
     lookup = forecast_res.get("lookup", {})
 
     health_map_data = get_health_map_points(df_all)
 
+    # fallback: حتى لو فشل map_points الأساسية، نرسم نقاط من hotspots
+    if not health_map_data:
+        fallback_points = []
+        for section_name, status_code in [("critical", 2), ("monitor", 1)]:
+            for pt in (alert_signals.get("hotspots", {}).get(section_name, []) or [])[:80]:
+                lat_val = pt.get("lat")
+                lng_val = pt.get("lng")
+                if lat_val is None or lng_val is None:
+                    continue
+                fallback_points.append({
+                    "lat": round(float(lat_val), 6),
+                    "lng": round(float(lng_val), 6),
+                    "s": status_code,
+                })
+        health_map_data = fallback_points
+
     # دمج الحالة المتوقعة (ps) داخل نقاط الخريطة الحالية
     for pt in health_map_data:
         key = f"{pt['lat']}_{pt['lng']}"
         pt["ps"] = lookup.get(key, 0)
-
     # 7. الإرجاع النهائي الموحد لـ Firestore
     return {
         "current_health": processed_health,
@@ -1299,11 +1327,18 @@ def build_alert_signals(df_all: pd.DataFrame) -> Dict[str, Any]:
         "flag_NDWI_low",
     ]
     flag_counts = {}
+    existing_flag_cols = []
     for c in flag_cols:
         if c in d.columns:
+            existing_flag_cols.append(c)
             flag_counts[c] = int(pd.to_numeric(d[c], errors="coerce").fillna(0).astype(bool).sum())
         else:
             flag_counts[c] = 0
+
+    pixels_with_any_flag = 0
+    if existing_flag_cols:
+        flag_matrix = d[existing_flag_cols].apply(pd.to_numeric, errors="coerce").fillna(0).astype(bool)
+        pixels_with_any_flag = int(flag_matrix.any(axis=1).sum())
 
     # --- Hotspots (top points by RPW_score then IF_score) ---
     if "RPW_score" not in d.columns:
@@ -1341,6 +1376,7 @@ def build_alert_signals(df_all: pd.DataFrame) -> Dict[str, Any]:
     return {
         "latest_date": str(latest.date()) if pd.notna(latest) else None,
         "total_pixels_latest": total,
+        "pixels_with_any_flag_latest": pixels_with_any_flag,
         "risk_counts_latest": risk_counts,
         "rule_counts_latest": rule_counts,
         "flag_counts_latest": flag_counts,
@@ -1407,13 +1443,7 @@ def _build_top_action(health_result: Dict[str, Any]) -> Dict[str, Any]:
         hotspots = alerts.get("hotspots", {}).get("critical", [])
         location = "بعض مناطق المزرعة"
         if hotspots:
-            avg_lat   = sum(p.get("lat", 0) for p in hotspots) / len(hotspots)
-            avg_lng   = sum(p.get("lng", 0) for p in hotspots) / len(hotspots)
-            all_lats  = [p.get("lat", 0) for p in hotspots]
-            all_lngs  = [p.get("lng", 0) for p in hotspots]
-            vert      = "الشمالي" if avg_lat > sum(all_lats) / len(all_lats) else "الجنوبي"
-            horiz     = "الشرقي" if avg_lng > sum(all_lngs) / len(all_lngs) else "الغربي"
-            location  = f"الجزء {vert} {horiz}"
+            location = "بعض المناطق الحرجة داخل المزرعة"
         return {
             "title_ar": "تدخل فوري — نخيل في حالة حرجة",
             "text_ar": (
@@ -1715,35 +1745,43 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
     total_palms = _safe_int(total_palms, 0)
 
     # ── بيانات المناخ من site_summary (موجودة في current_health) ──
+        # ── بيانات المناخ والسياق العام ──
+    total_pixels_current = int(current_health.get("Total_Pixels_Count", 0) or 0)
+    total_pixels_alerts = int(alert_signals.get("total_pixels_latest", 0) or 0)
+
     climate = {
-        "rain_mm":      round(_safe_float(current_health.get("rain_mm", 0), 0), 1),
-        "t_mean":       round(_safe_float(current_health.get("t_mean", 0), 0), 1),
-        "rpw_score":    round(_safe_float(current_health.get("RPW_score_med", 0), 0), 3),
-        "total_pixels": int(current_health.get("Total_Pixels_Count", 0) or 0),
+        "rain_mm": round(_safe_float(current_health.get("rain_mm", 0), 0), 1),
+        "t_mean": round(_safe_float(current_health.get("t_mean", 0), 0), 1),
+        "rpw_score": round(_safe_float(current_health.get("RPW_score_med", 0), 0), 3),
+        "total_pixels": int(total_pixels_current or total_pixels_alerts or 0),
     }
 
     # ── سياق التنبيهات: تفصيل قواعد التصنيف والعلامات الفردية ──
     rule_counts = alert_signals.get("rule_counts_latest", {}) or {}
     flag_counts = alert_signals.get("flag_counts_latest", {}) or {}
+    pixels_with_any_flag = int(alert_signals.get("pixels_with_any_flag_latest", 0) or 0)
+
     alert_context = {
-        "total_pixels": int(alert_signals.get("total_pixels_latest", 0) or 0),
+        "total_pixels": int(total_pixels_alerts or total_pixels_current or 0),
+        "pixels_with_any_flag": pixels_with_any_flag,
+        "signal_note": "قد تُسجَّل أكثر من إشارة للبكسل الواحد، لذلك قد يتجاوز مجموع الإشارات عدد البكسلات المتأثرة.",
         "rule_counts": {
             "baseline_drop_critical": int(rule_counts.get("Critical_baseline_drop", 0) or 0),
-            "baseline_drop_monitor":  int(rule_counts.get("Monitor_baseline_drop",  0) or 0),
-            "rpw_critical":           int(rule_counts.get("Critical_RPW_tail",      0) or 0),
-            "rpw_monitor":            int(rule_counts.get("Monitor_RPW_tail",        0) or 0),
-            "if_critical":            int(rule_counts.get("Critical_IF_outlier",    0) or 0),
-            "if_monitor":             int(rule_counts.get("Monitor_IF_outlier",     0) or 0),
+            "baseline_drop_monitor": int(rule_counts.get("Monitor_baseline_drop", 0) or 0),
+            "rpw_critical": int(rule_counts.get("Critical_RPW_tail", 0) or 0),
+            "rpw_monitor": int(rule_counts.get("Monitor_RPW_tail", 0) or 0),
+            "if_critical": int(rule_counts.get("Critical_IF_outlier", 0) or 0),
+            "if_monitor": int(rule_counts.get("Monitor_IF_outlier", 0) or 0),
         },
         "flag_counts": {
-            "water_low":        int(flag_counts.get("flag_NDWI_low", 0) or 0),
-            "water_below_025":  int(flag_counts.get("flag_NDWI_below_025", 0) or 0),
-            "water_drop":       int(flag_counts.get("flag_drop_NDWI10pct", 0) or 0),
-            "siwsi_drop":       int(flag_counts.get("flag_drop_SIWSI10pct", 0) or 0),
-            "ndre_low":         int(flag_counts.get("flag_NDRE_low", 0) or 0),
-            "ndre_below_035":   int(flag_counts.get("flag_NDRE_below_035", 0) or 0),
-            "ndvi_below_030":   int(flag_counts.get("flag_NDVI_below_030", 0) or 0),
-            "ndvi_drop":        int(flag_counts.get("flag_drop_NDVI005", 0) or 0),
+            "water_low": int(flag_counts.get("flag_NDWI_low", 0) or 0),
+            "water_below_025": int(flag_counts.get("flag_NDWI_below_025", 0) or 0),
+            "water_drop": int(flag_counts.get("flag_drop_NDWI10pct", 0) or 0),
+            "siwsi_drop": int(flag_counts.get("flag_drop_SIWSI10pct", 0) or 0),
+            "ndre_low": int(flag_counts.get("flag_NDRE_low", 0) or 0),
+            "ndre_below_035": int(flag_counts.get("flag_NDRE_below_035", 0) or 0),
+            "ndvi_below_030": int(flag_counts.get("flag_NDVI_below_030", 0) or 0),
+            "ndvi_drop": int(flag_counts.get("flag_drop_NDVI005", 0) or 0),
         },
     }
 
