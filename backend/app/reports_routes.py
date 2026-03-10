@@ -219,7 +219,6 @@ def _distribution_compare_svg(
         group_center = x + bar_w + (inner_gap / 2)
         parts.append(
     f'<text x="{group_center:.1f}" y="{base_y + 22}" text-anchor="middle" '
-    f'direction="rtl" unicode-bidi="plaintext" '
     f'font-family="Cairo, sans-serif" font-size="10" font-weight="800" fill="#334155">'
     f'{labels[i]}</text>'
 )
@@ -228,30 +227,16 @@ def _distribution_compare_svg(
 
     # legend أعلى الرسم
     legend_y = 12
-    legend_x1 = 70
-    legend_x2 = 170
-
-    parts.append(
-        f'<rect x="{legend_x1}" y="{legend_y-8}" width="12" height="12" rx="4" fill="#0f766e"/>'
-    )
-    parts.append(
-    f'<text x="{legend_x1 + 36}" y="{legend_y + 2}" text-anchor="middle" '
-    f'direction="rtl" unicode-bidi="plaintext" '
-    f'font-family="Cairo, sans-serif" font-size="9" font-weight="700" fill="#475569">الحالي</text>'
-)
-
-    parts.append(
-        f'<rect x="{legend_x2}" y="{legend_y-8}" width="12" height="12" rx="4" fill="#e2e8f0" stroke="#64748b" stroke-width="0.8"/>'
-    )
-    parts.append(
-    f'<text x="{legend_x2 + 40}" y="{legend_y + 2}" text-anchor="middle" '
-    f'direction="rtl" unicode-bidi="plaintext" '
-    f'font-family="Cairo, sans-serif" font-size="9" font-weight="700" fill="#475569">المتوقع</text>'
-)
+    legend_x1 = 14
+    parts.append(f'<rect x="{legend_x1}" y="{legend_y-8}" width="12" height="12" rx="4" fill="#0f766e"/>')
+    parts.append(f'<text x="{legend_x1+16}" y="{legend_y+2}" text-anchor="start" font-family="Cairo, sans-serif" font-size="9" font-weight="700" fill="#475569">الحالي</text>')
+    legend_x2 = 80
+    parts.append(f'<rect x="{legend_x2}" y="{legend_y-8}" width="12" height="12" rx="4" fill="#e2e8f0" stroke="#64748b" stroke-width="0.8"/>')
+    parts.append(f'<text x="{legend_x2+16}" y="{legend_y+2}" text-anchor="start" font-family="Cairo, sans-serif" font-size="9" font-weight="700" fill="#475569">المتوقع</text>')
 
     return f"""
 <svg width="{width}" height="{height}" viewBox="0 0 {width} {height}"
-     xmlns="http://www.w3.org/2000/svg" direction="rtl">
+     xmlns="http://www.w3.org/2000/svg">
   {''.join(parts)}
 </svg>
 """.strip()
@@ -285,6 +270,126 @@ def _mini_bar_svg(values: list[float], colors: list[str], width: int = 215, heig
 
     return f"""
 <svg width="{width}" height="{height}" viewBox="0 0 {width} {height}">
+  {''.join(parts)}
+</svg>
+""".strip()
+
+
+def _multi_index_sparkline(
+    multi_trend: dict,
+    width: int = 390,
+    height: int = 90,
+) -> str:
+    """
+    رسم مسار زمني لثلاثة مؤشرات (NDVI / NDMI / NDRE) على نفس المحور.
+    هذا المحتوى لا يظهر في الصفحة الثانية — الصفحة الثانية تعرض NDVI فقط.
+    """
+    ndvi = [_safe_float(v) for v in (multi_trend.get("ndvi") or []) if v is not None]
+    ndmi = [_safe_float(v) for v in (multi_trend.get("ndmi") or []) if v is not None]
+    ndre = [_safe_float(v) for v in (multi_trend.get("ndre") or []) if v is not None]
+
+    # نحتاج على الأقل مؤشرين بنقطتين
+    series = [(ndvi, "#16a34a", "NDVI"), (ndmi, "#2563eb", "NDMI"), (ndre, "#0f766e", "NDRE")]
+    valid = [(vals, c, lbl) for vals, c, lbl in series if len(vals) >= 2]
+    if not valid:
+        return ""
+
+    all_vals = [v for vals, _, _ in valid for v in vals]
+    mn = min(all_vals)
+    mx = max(all_vals)
+    rng = mx - mn if mx != mn else 0.1
+
+    pad_l, pad_r, pad_t, pad_b = 6, 8, 14, 18
+    chart_w = width - pad_l - pad_r
+    chart_h = height - pad_t - pad_b
+
+    parts = []
+
+    # خط الأساس
+    base_y = pad_t + chart_h
+    parts.append(f'<line x1="{pad_l}" y1="{base_y}" x2="{width-pad_r}" y2="{base_y}" stroke="#e2e8f0" stroke-width="1"/>')
+
+    # خطوط دليل أفقية خفيفة
+    for frac in [0.25, 0.5, 0.75]:
+        gy = pad_t + chart_h * (1 - frac)
+        parts.append(f'<line x1="{pad_l}" y1="{gy:.1f}" x2="{width-pad_r}" y2="{gy:.1f}" stroke="#f1f5f9" stroke-width="0.8"/>')
+
+    for vals, color, label in valid:
+        n = len(vals)
+        step = chart_w / max(n - 1, 1)
+        pts = []
+        for i, v in enumerate(vals):
+            x = pad_l + i * step
+            y = pad_t + chart_h - ((v - mn) / rng) * chart_h
+            pts.append((x, y))
+
+        # خط
+        polyline = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+        parts.append(f'<polyline points="{polyline}" fill="none" stroke="{color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>')
+
+        # نقطة آخر قيمة فقط
+        lx, ly = pts[-1]
+        parts.append(f'<circle cx="{lx:.1f}" cy="{ly:.1f}" r="3.2" fill="{color}"/>')
+
+    # legend أسفل الرسم
+    legend_items = [(c, lbl) for vals, c, lbl in valid]
+    lx = pad_l
+    for color, lbl in legend_items:
+        parts.append(f'<rect x="{lx}" y="{height-11}" width="10" height="7" rx="3" fill="{color}"/>')
+        parts.append(f'<text x="{lx+13}" y="{height-4}" font-family="Cairo,sans-serif" font-size="8" fill="#475569">{lbl}</text>')
+        lx += 56
+
+    return f"""
+<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" xmlns="http://www.w3.org/2000/svg">
+  {''.join(parts)}
+</svg>
+""".strip()
+
+
+def _flag_breakdown_svg(flag_counts: dict, width: int = 240, height: int = 110) -> str:
+    """
+    رسم أشرطة أفقية لإشارات الإجهاد الفردية — لا يظهر في الصفحة الثانية أبداً.
+    يعرض 4 إشارات مجمّعة: ماء / خضرة / تغذية / إجهاد مائي مركب.
+    """
+    water  = int(flag_counts.get("water_low", 0)) + int(flag_counts.get("water_below_025", 0))
+    veg    = int(flag_counts.get("ndvi_below_030", 0)) + int(flag_counts.get("ndvi_drop", 0))
+    leaf   = int(flag_counts.get("ndre_low", 0)) + int(flag_counts.get("ndre_below_035", 0))
+    stress = int(flag_counts.get("siwsi_drop", 0)) + int(flag_counts.get("water_drop", 0))
+
+    items = [
+        (water,  "#3b82f6", "إجهاد مائي"),
+        (veg,    "#22c55e", "هبوط الخضرة"),
+        (leaf,   "#0d9488", "ضعف التغذية"),
+        (stress, "#f59e0b", "ضغط مائي مركب"),
+    ]
+
+    mx = max((v for v, _, _ in items), default=1)
+    mx = max(mx, 1)
+
+    bar_h = 13
+    gap = 8
+    left_lbl = 72
+    bar_area = width - left_lbl - 36
+    top = 6
+    parts = []
+
+    for i, (val, color, label) in enumerate(items):
+        y = top + i * (bar_h + gap)
+        bar_w = (val / mx) * bar_area if mx > 0 else 0
+
+        # خلفية
+        parts.append(f'<rect x="{left_lbl}" y="{y}" width="{bar_area}" height="{bar_h}" rx="6" fill="#f1f5f9"/>')
+        # شريط
+        if bar_w > 0:
+            parts.append(f'<rect x="{left_lbl}" y="{y}" width="{bar_w:.1f}" height="{bar_h}" rx="6" fill="{color}" opacity="0.85"/>')
+        # نص التسمية
+        parts.append(f'<text x="{left_lbl-4}" y="{y + bar_h - 3}" text-anchor="end" font-family="Cairo,sans-serif" font-size="8.5" font-weight="700" fill="#334155">{label}</text>')
+        # القيمة
+        val_x = left_lbl + bar_area + 4
+        parts.append(f'<text x="{val_x}" y="{y + bar_h - 3}" font-family="Cairo,sans-serif" font-size="9" font-weight="900" fill="{color if val > 0 else "#94a3b8"}">{val}</text>')
+
+    return f"""
+<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" xmlns="http://www.w3.org/2000/svg">
   {''.join(parts)}
 </svg>
 """.strip()
@@ -381,15 +486,15 @@ def _download_image_as_data_uri(url: str) -> str | None:
         logger.warning(f"Failed to download static map image: {e}")
         return None
 
-def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_polygon: list | None = None) -> str:
+def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_polygon: list | None = None) -> dict:
     norm_poly = _normalize_polygon(farm_polygon)
 
     if not map_points and not norm_poly:
-        return ""
+        return {"bg_data_uri": None, "overlay_svg": ""}
 
     bounds = _map_bounds(map_points, farm_polygon)
     if not bounds:
-        return ""
+        return {"bg_data_uri": None, "overlay_svg": ""}
 
     min_lat = bounds["min_lat"]
     max_lat = bounds["max_lat"]
@@ -414,13 +519,6 @@ def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_pol
     bg_url = _maptiler_static_background_url(bounds, width, height)
     bg_data_uri = _download_image_as_data_uri(bg_url) if bg_url else None
 
-    if bg_data_uri:
-        bg_svg = (
-            f'<image href="{bg_data_uri}" x="0" y="0" width="{width}" height="{height}" '
-            f'preserveAspectRatio="none" opacity="1"/>'
-        )
-    else:
-        bg_svg = f'<rect width="{width}" height="{height}" rx="14" fill="#f8fafc"/>'
 
     poly_svg = ""
     if norm_poly:
@@ -456,26 +554,20 @@ def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_pol
             f'<circle cx="{x}" cy="{y}" r="{r}" fill="{fill}" opacity="0.95" />'
         )
 
-    overlay = f'<rect width="{width}" height="{height}" rx="14" fill="rgba(255,255,255,0.08)"/>'
-
-    return f"""
-<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}"
-     xmlns="http://www.w3.org/2000/svg">
+    overlay_svg = f"""<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}"
+     xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;">
   <clipPath id="mapClip">
     <rect x="0" y="0" width="{width}" height="{height}" rx="14"/>
   </clipPath>
-
   <g clip-path="url(#mapClip)">
-    {bg_svg}
-    {overlay}
     {poly_svg}
     {''.join(circles)}
   </g>
-
   <rect x="0.5" y="0.5" width="{width-1}" height="{height-1}" rx="14"
         fill="none" stroke="#dde8e1"/>
-</svg>
-""".strip()
+</svg>""".strip()
+
+    return {"bg_data_uri": bg_data_uri, "overlay_svg": overlay_svg}
 
 def _delta_badge_html(delta_pct: float) -> str:
     delta_pct = _safe_float(delta_pct, 0.0)
@@ -520,9 +612,9 @@ def _footer_logo_html(logo_data_uri: str | None) -> str:
     if logo_data_uri:
         return (
             f'<img src="{logo_data_uri}" alt="Saaf" '
-            f'style="height:30px; width:auto; max-width:120px; display:block;" />'
+            f'style="height:42px; width:auto; max-width:150px; display:block; object-fit:contain;" />'
         )
-    return '<div style="font-size:14px;font-weight:900;color:#6ee7b7;">سعف</div>'
+    return '<div style="font-size:16px;font-weight:900;color:#6ee7b7;letter-spacing:1px;">سعف</div>'
 
 
 # ─────────────────────────────────────────────
@@ -547,6 +639,9 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
     risk_drivers = (export_data.get("risk_drivers", []) or [])[:3]
     hotspots = (export_data.get("hotspots_table", []) or [])[:3]
     indices_table = export_data.get("indices_table", []) or []
+    climate = export_data.get("climate", {}) or {}
+    alert_context = export_data.get("alert_context", {}) or {}
+    multi_trend = export_data.get("multi_trend", {}) or {}
     owner_name = (
         export_data.get("owner_name")
         or header.get("owner_name")
@@ -575,12 +670,41 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
     gauge_color = _color_for_pct(wellness)
     gauge_svg = _gauge_svg(wellness, gauge_color, size=124)
     sparkline = _trend_sparkline(forecast.get("trend_data", []), color="#2563eb")
-    map_svg = _heatmap_svg(map_points, farm_polygon=farm_poly)
+    map_result = _heatmap_svg(map_points, farm_polygon=farm_poly)
+    map_bg_uri = map_result["bg_data_uri"]
+    map_svg    = map_result["overlay_svg"]
     compare_svg = _distribution_compare_svg(dist, forecast_next)
     drivers_bar_svg = _mini_bar_svg(
         [r.get("count", 0) for r in risk_drivers[:3]],
         ["#0ea5e9", "#f59e0b", "#ef4444"]
     )
+    # ── قرافات جديدة خاصة بالصفحة الأولى ──
+    multi_sparkline_svg = _multi_index_sparkline(multi_trend)
+    flag_bar_svg = _flag_breakdown_svg(alert_context.get("flag_counts", {}))
+
+    # ── بيانات المناخ والسياق ──
+    rain_mm       = _safe_float(climate.get("rain_mm", 0))
+    t_mean        = _safe_float(climate.get("t_mean", 0))
+    rpw_score     = _safe_float(climate.get("rpw_score", 0))
+    total_pixels  = int(climate.get("total_pixels", 0) or alert_context.get("total_pixels", 0) or 0)
+
+    # ── نسبة RPW كنص وصفي ──
+    if rpw_score >= 0.7 and rain_mm < 5:
+       rpw_label, rpw_color = "خطر مرتفع", "#dc2626"
+       rpw_diagnosis = "جفاف + إجهاد مرتفع"
+       rpw_diagnosis_sub = "انخفاض المطر مع الحرارة يزيد الإجهاد المائي"
+    elif rpw_score >= 0.7:
+        rpw_label, rpw_color = "خطر مرتفع", "#dc2626"
+        rpw_diagnosis = "إجهاد مرتفع"
+        rpw_diagnosis_sub = "مؤشرات الماء والخضرة تشير لضغط واضح"
+    elif rpw_score >= 0.4:
+        rpw_label, rpw_color = "خطر متوسط", "#d97706"
+        rpw_diagnosis = "إجهاد متوسط"
+        rpw_diagnosis_sub = "بعض المناطق تحتاج انتباهاً إضافياً"
+    else:
+        rpw_label, rpw_color = "مستوى طبيعي", "#16a34a"
+        rpw_diagnosis = "الوضع طبيعي"
+        rpw_diagnosis_sub = "المؤشرات ضمن النطاقات المتوقعة"
 
     ndvi = biometrics.get("ndvi", {})
     ndmi = biometrics.get("ndmi", {})
@@ -763,11 +887,21 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
         critical_pct=critical_pct,
 
         map_svg=map_svg,
+        map_bg_uri=map_bg_uri,
         map_note=map_note,
         insight_cards=insight_cards,
 
         compare_svg=compare_svg,
         drivers_bar_svg=drivers_bar_svg,
+        multi_sparkline_svg=multi_sparkline_svg,
+        flag_bar_svg=flag_bar_svg,
+
+        rain_mm=f"{rain_mm:.1f}",
+        t_mean=f"{t_mean:.1f}",
+        rpw_score=f"{rpw_score:.2f}",
+        rpw_label=rpw_label,
+        rpw_color=rpw_color,
+        total_pixels=f"{total_pixels:,}".replace(",", "،"),
 
         ndvi_val=f"{_safe_float(ndvi.get('val', 0), 0):.2f}",
         ndmi_val=f"{_safe_float(ndmi.get('val', 0), 0):.2f}",
@@ -795,6 +929,8 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
 
         risk_drivers=risk_drivers,
         hotspots=hotspots,
+        rpw_diagnosis=rpw_diagnosis,
+        rpw_diagnosis_sub=rpw_diagnosis_sub,
     )
 
     output_path = f"/tmp/saaf_report_{farm_id}.pdf"

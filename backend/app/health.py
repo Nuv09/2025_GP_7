@@ -1700,6 +1700,7 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
         top_action
     )
 
+    
     risk_drivers = _build_risk_drivers(alert_signals)
     hotspots_table = _build_hotspots_table(alert_signals)
 
@@ -1712,6 +1713,47 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
         or 0
     )
     total_palms = _safe_int(total_palms, 0)
+
+    # ── بيانات المناخ من site_summary (موجودة في current_health) ──
+    climate = {
+        "rain_mm":      round(_safe_float(current_health.get("rain_mm", 0), 0), 1),
+        "t_mean":       round(_safe_float(current_health.get("t_mean", 0), 0), 1),
+        "rpw_score":    round(_safe_float(current_health.get("RPW_score_med", 0), 0), 3),
+        "total_pixels": int(current_health.get("Total_Pixels_Count", 0) or 0),
+    }
+
+    # ── سياق التنبيهات: تفصيل قواعد التصنيف والعلامات الفردية ──
+    rule_counts = alert_signals.get("rule_counts_latest", {}) or {}
+    flag_counts = alert_signals.get("flag_counts_latest", {}) or {}
+    alert_context = {
+        "total_pixels": int(alert_signals.get("total_pixels_latest", 0) or 0),
+        "rule_counts": {
+            "baseline_drop_critical": int(rule_counts.get("Critical_baseline_drop", 0) or 0),
+            "baseline_drop_monitor":  int(rule_counts.get("Monitor_baseline_drop",  0) or 0),
+            "rpw_critical":           int(rule_counts.get("Critical_RPW_tail",      0) or 0),
+            "rpw_monitor":            int(rule_counts.get("Monitor_RPW_tail",        0) or 0),
+            "if_critical":            int(rule_counts.get("Critical_IF_outlier",    0) or 0),
+            "if_monitor":             int(rule_counts.get("Monitor_IF_outlier",     0) or 0),
+        },
+        "flag_counts": {
+            "water_low":        int(flag_counts.get("flag_NDWI_low", 0) or 0),
+            "water_below_025":  int(flag_counts.get("flag_NDWI_below_025", 0) or 0),
+            "water_drop":       int(flag_counts.get("flag_drop_NDWI10pct", 0) or 0),
+            "siwsi_drop":       int(flag_counts.get("flag_drop_SIWSI10pct", 0) or 0),
+            "ndre_low":         int(flag_counts.get("flag_NDRE_low", 0) or 0),
+            "ndre_below_035":   int(flag_counts.get("flag_NDRE_below_035", 0) or 0),
+            "ndvi_below_030":   int(flag_counts.get("flag_NDVI_below_030", 0) or 0),
+            "ndvi_drop":        int(flag_counts.get("flag_drop_NDVI005", 0) or 0),
+        },
+    }
+
+    # ── بيانات المسار الزمني لكل المؤشرات (NDVI + NDMI + NDRE) ──
+    multi_trend = {
+        "ndvi": [round(float(h.get("NDVI")), 4) for h in history if h.get("NDVI") is not None],
+        "ndmi": [round(float(h.get("NDMI")), 4) for h in history if h.get("NDMI") is not None],
+        "ndre": [round(float(h.get("NDRE")), 4) for h in history if h.get("NDRE") is not None],
+        "dates": [h.get("date", "") for h in history],
+    }
 
     export_payload = {
         "header": {
@@ -1764,6 +1806,10 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
 
         "risk_drivers": risk_drivers,
         "hotspots_table": hotspots_table,
+        # ── جديد ──
+        "climate":       climate,
+        "alert_context": alert_context,
+        "multi_trend":   multi_trend,
     }
 
     return export_payload

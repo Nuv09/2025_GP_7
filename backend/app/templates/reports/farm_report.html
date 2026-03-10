@@ -202,8 +202,7 @@
       margin-bottom: 7px;
     }
 
-    .space-lg { height: 10px; }
-
+    .space-lg { height: 7px; }
     .stack { display: grid; gap: 8px; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
@@ -211,84 +210,18 @@
     .card {
       background: #ffffff;
       border: 1px solid #e2ebe6;
-      border-radius: 16px;
+      border-radius: 14px;
       padding: 9px 10px;
     }
 
-    .summary-card {
-      background: linear-gradient(135deg, #ffffff, #f3fbf7);
-      padding: 10px 12px;
-    }
-
-    .status-pill {
-      display: inline-flex;
-      align-items: center;
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: #dcfce7;
-      color: #166534;
-      font-size: 9.8px;
-      font-weight: 800;
-      margin-bottom: 7px;
-    }
-
-    .summary-text {
-      font-size: 10px;
-      color: #334155;
-      line-height: 1.8;
-    }
-
-    .summary-next {
-      margin-top: 8px;
-      padding-top: 8px;
-      border-top: 1px dashed #d9e7df;
-      font-size: 9.8px;
-      color: #065f46;
-      line-height: 1.6;
-      font-weight: 700;
-    }
-
-    .health-card {
+    .forecast-card {
+      background: linear-gradient(135deg, #eef5ff, #f8fbff);
+      border-color: #cfe0ff;
+      padding: 9px;
       display: grid;
-      grid-template-columns: 124px 1fr;
-      gap: 12px;
-      align-items: center;
-      min-height: 112px;
+      gap: 7px;
+      align-content: start;
     }
-
-    .health-body { min-width: 0; }
-
-    .health-title {
-      font-size: 16px;
-      font-weight: 900;
-      line-height: 1.2;
-      margin-bottom: 5px;
-    }
-
-    .health-desc {
-      font-size: 9.8px;
-      color: #475569;
-      line-height: 1.65;
-    }
-
-    .chips {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      margin-top: 9px;
-    }
-
-    .chip {
-      border-radius: 999px;
-      padding: 4px 10px;
-      font-size: 9px;
-      font-weight: 800;
-      white-space: nowrap;
-    }
-
-    .chip-green { background: #dcfce7; color: #166534; }
-    .chip-amber { background: #fef3c7; color: #92400e; }
-    .chip-red   { background: #fee2e2; color: #b91c1c; }
 
     .page1-bottom {
       display: grid;
@@ -308,26 +241,29 @@
 
     .map-svg svg {
       width: 100%;
-      height: 300px;
+      height: 210px;
       display: block;
     }
 
     .legend {
-  display: grid;
-  grid-template-columns: repeat(4, max-content);
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  column-gap: 14px;
-  row-gap: 0;
-  margin-top: 8px;
-  margin-bottom: 6px;
+  gap: 6px 14px;
+  margin-top: 6px;
+  margin-bottom: 5px;
+  padding: 4px 6px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e9eef3;
 }
 
 .legend-item {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 8.7px;
+  font-size: 8.5px;
   color: #334155;
   white-space: nowrap;
   line-height: 1;
@@ -602,10 +538,11 @@
 }
 
 .ftr-right img {
-  height: 30px !important;
+  height: 42px !important;
   width: auto !important;
-  max-width: 120px;
+  max-width: 150px;
   display: block;
+  object-fit: contain;
 }
 
 .ftr-info {
@@ -657,70 +594,134 @@
     </div>
 
     <div class="content">
-      <div class="stack">
-        <div>
-          <div class="section-title">الملخص التنفيذي</div>
-          <div class="card summary-card">
-            <div class="status-pill">{{ executive_status }}</div>
-            <div class="summary-text">{{ executive_summary }}</div>
-            <div class="summary-next">الإجراء الأول المقترح: {{ executive_next_step }}</div>
+
+      <!-- ══ الملخص التنفيذي ══ -->
+      <div class="section-title">الملخص التنفيذي</div>
+      <div class="grid-2" style="margin-bottom:8px;">
+
+        <!-- Gauge + توزيع الحالة -->
+        <div class="card" style="display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:center; padding:9px 12px;">
+          <div style="flex-shrink:0;">{{ gauge_svg|safe }}</div>
+          <div>
+            <div style="font-size:15px; font-weight:900; color:{{ gauge_color }}; line-height:1.15; margin-bottom:5px;">{{ wellness_text }}</div>
+            <!-- توزيع بصري فريد: أشرطة نسبية -->
+            <div style="margin-bottom:4px;">
+              <div style="font-size:7.8px; color:#64748b; margin-bottom:2px;">توزيع الحالة الصحية</div>
+              <div style="display:flex; height:8px; border-radius:999px; overflow:hidden; gap:1px;">
+                <div style="flex:{{ healthy_pct|round(0)|int }}; background:#22c55e;"></div>
+                <div style="flex:{{ monitor_pct|round(0)|int }}; background:#f59e0b;"></div>
+                <div style="flex:{{ critical_pct|round(0)|int }}; background:#ef4444;"></div>
+              </div>
+              <div style="display:flex; gap:10px; margin-top:4px;">
+                <span style="font-size:8px; color:#166534;">● {{ healthy_pct|round(0)|int }}% سليم</span>
+                <span style="font-size:8px; color:#92400e;">● {{ monitor_pct|round(0)|int }}% متابعة</span>
+                <span style="font-size:8px; color:#b91c1c;">● {{ critical_pct|round(0)|int }}% حرج</span>
+              </div>
+            </div>
+            <div style="font-size:8.5px; color:#064e3b; font-weight:800; margin-top:5px; padding-top:5px; border-top:1px dashed #d9e7df;">
+              الإجراء المقترح: {{ executive_next_step }}
+            </div>
           </div>
         </div>
 
-        <div>
-          <div class="section-title">الحالة العامة للمزرعة</div>
-          <div class="card health-card">
-            <div style="flex-shrink:0;">{{ gauge_svg|safe }}</div>
-            <div class="health-body">
-              <div class="health-title" style="color:{{ gauge_color }};">{{ wellness_text }}</div>
-              <div class="health-desc">{{ wellness_desc }}</div>
-              <div class="chips">
-                <span class="chip chip-green">{{ healthy_pct|round(0)|int }}% سليم</span>
-                <span class="chip chip-amber">{{ monitor_pct|round(0)|int }}% متابعة</span>
-                <span class="chip chip-red">{{ critical_pct|round(0)|int }}% حرج</span>
-              </div>
+        <!-- بيانات البيئة والمناخ — جديدة كلياً، لا تظهر في الصفحة الثانية -->
+        <div class="card" style="padding:9px 11px;">
+          <div style="font-size:9.5px; font-weight:900; color:#065f46; margin-bottom:8px; border-right:3px solid #10b981; padding-right:7px;">
+            السياق البيئي والتشغيلي
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:7px;">
+            <div style="background:#eff6ff; border-radius:10px; padding:6px 9px; border:1px solid #dbeafe;">
+              <div style="font-size:7.8px; color:#64748b; margin-bottom:1px;">هطول الأمطار (٤ أسابيع)</div>
+              <div style="font-size:18px; font-weight:900; color:#1d4ed8; line-height:1.1;">{{ rain_mm }}</div>
+              <div style="font-size:7.5px; color:#3b82f6;">ملم تراكمي</div>
+            </div>
+            <div style="background:#fefce8; border-radius:10px; padding:6px 9px; border:1px solid #fef08a;">
+              <div style="font-size:7.8px; color:#64748b; margin-bottom:1px;">متوسط الحرارة</div>
+              <div style="font-size:18px; font-weight:900; color:#d97706; line-height:1.1;">{{ t_mean }}</div>
+              <div style="font-size:7.5px; color:#f59e0b;">درجة مئوية</div>
+            </div>
+            <div style="background:linear-gradient(135deg,#fef3c7,#fffbeb); border:1.5px solid #f59e0b;
+            border-radius:9px; padding:8px 11px; display:flex; align-items:center;
+            gap:10px; grid-column: 1 / -1;">
+  <svg width="22" height="22" viewBox="0 0 22 22" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+    <circle cx="11" cy="11" r="10" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+    <text x="11" y="15" text-anchor="middle"
+          font-family="Cairo,sans-serif" font-size="12" font-weight="900" fill="#d97706">!</text>
+  </svg>
+  <div>
+    <div style="font-size:8px; color:#92400e; font-weight:700; margin-bottom:2px;">تشخيص النظام</div>
+    <div style="font-size:12px; color:#78350f; font-weight:900; line-height:1.2;">{{ rpw_diagnosis }}</div>
+    <div style="font-size:8px; color:#a16207; margin-top:2px;">{{ rpw_diagnosis_sub }}</div>
+  </div>
+</div>
+            <div style="background:#f8fafc; border-radius:10px; padding:6px 9px; border:1px solid #e2e8f0;">
+              <div style="font-size:7.8px; color:#64748b; margin-bottom:1px;">حجم التحليل</div>
+              <div style="font-size:18px; font-weight:900; color:#0f172a; line-height:1.1;">{{ total_pixels }}</div>
+              <div style="font-size:7.5px; color:#64748b;">بكسل محلّل</div>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="space-lg"></div>
+      <!-- ══ مسار المؤشرات الزمني — جديد كلياً ══ -->
+      <!-- الصفحة الثانية تعرض NDVI فقط في بطاقة التوقعات — هنا نعرض NDVI+NDMI+NDRE معاً كمسار مقارن -->
+      {% if multi_sparkline_svg %}
+      <div class="section-title">مسار المؤشرات الطيفية (آخر الأسابيع المتاحة)</div>
+      <div class="card" style="padding:9px 11px; margin-bottom:8px;">
+        <div style="font-size:8px; color:#475569; margin-bottom:5px;">
+          المسار الزمني المقارن لمؤشرات الخضرة (NDVI) · الرطوبة (NDMI) · حيوية الأوراق (NDRE) — مستوى المزرعة كاملاً
+        </div>
+        <div style="direction:ltr;">{{ multi_sparkline_svg|safe }}</div>
+      </div>
+      {% endif %}
 
-      <div class="section-title">الخريطة المكانية لحالة النخيل</div>
+      <!-- ══ تفصيل إشارات الإجهاد — جديد كلياً ══ -->
+      <!-- الصفحة الثانية تعرض جدول أسباب الخطر بالأعداد الإجمالية فقط — هنا نعرض الإشارات الفردية -->
+      <div class="section-title">الخريطة المكانية وتحليل إشارات الإجهاد</div>
       <div class="page1-bottom">
         <div class="card map-card">
-          <div class="map-frame">
-            <div class="map-svg">{{ map_svg|safe }}</div>
-          </div>
-
+          <div class="map-frame" style="position:relative; overflow:hidden; border-radius:14px;">
+  {% if map_bg_uri %}
+    <img src="{{ map_bg_uri }}" style="width:100%; height:210px; object-fit:cover; display:block;"/>
+  {% else %}
+    <div style="width:100%; height:210px; background:#e4ede8; border-radius:14px;
+                display:flex; align-items:center; justify-content:center; font-size:11px; color:#94a3b8;">
+      لا تتوفر صورة الخريطة
+    </div>
+  {% endif %}
+  <div style="position:absolute; top:0; left:0; width:100%; height:100%;">
+    {{ map_svg|safe }}
+  </div>
+</div>
           <div class="legend">
             <div class="legend-item"><span class="legend-dot" style="background:#22c55e;"></span><span>سليم</span></div>
             <div class="legend-item"><span class="legend-dot" style="background:#f59e0b;"></span><span>متابعة</span></div>
             <div class="legend-item"><span class="legend-dot" style="background:#ef4444;"></span><span>حرج</span></div>
             <div class="legend-item"><span class="legend-ring"></span><span>تغير متوقع</span></div>
           </div>
-
           <div class="map-note">{{ map_note }}</div>
         </div>
 
+        <!-- إشارات الإجهاد الفردية — هذا المحتوى غير موجود في أي مكان آخر بالتقرير -->
         <div class="side-stack">
-  {% for insight in insight_cards %}
-    <div class="mini-card">
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
-        <div class="mini-title" style="margin-bottom:0;">{{ insight.title }}</div>
-        <span class="badge {{ insight.badge_class }}">{{ insight.badge }}</span>
-      </div>
-
-      <div class="mini-text" style="font-weight:800; color:#0f172a; margin-bottom:5px;">
-        {{ insight.headline }}
-      </div>
-
-      <div class="mini-text">
-        {{ insight.body }}
-      </div>
-    </div>
-  {% endfor %}
-</div>
+          <div class="mini-card">
+            <div class="mini-title" style="margin-bottom:6px;">تفصيل إشارات الإجهاد</div>
+            <div class="mini-text" style="margin-bottom:7px; color:#64748b;">
+              يعرض عدد البكسلات التي رُصدت فيها كل نوع من أنواع الإجهاد بصورة منفردة
+            </div>
+            <div style="direction:ltr;">{{ flag_bar_svg|safe }}</div>
+          </div>
+          {% for insight in insight_cards %}
+          <div class="mini-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
+              <div class="mini-title" style="margin-bottom:0;">{{ insight.title }}</div>
+              <span class="badge {{ insight.badge_class }}">{{ insight.badge }}</span>
+            </div>
+            <div class="mini-text" style="font-weight:800; color:#0f172a; margin-bottom:5px;">{{ insight.headline }}</div>
+            <div class="mini-text">{{ insight.body }}</div>
+          </div>
+          {% endfor %}
+        </div>
       </div>
     </div>
 
@@ -836,21 +837,6 @@
             <div class="spark-cap">مسار NDVI خلال آخر الأسابيع المتاحة</div>
           </div>
           {% endif %}
-
-          <div class="forecast-mini">
-            <div class="mini">
-              <div class="mini-label">السليم المتوقع</div>
-              <div class="mini-value">{{ forecast_summary.healthy }}</div>
-            </div>
-            <div class="mini">
-              <div class="mini-label">المتابعة المتوقعة</div>
-              <div class="mini-value">{{ forecast_summary.monitor }}</div>
-            </div>
-            <div class="mini">
-              <div class="mini-label">الحرج المتوقع</div>
-              <div class="mini-value">{{ forecast_summary.critical }}</div>
-            </div>
-          </div>
 
           <div class="chart-panel">
             {{ compare_svg|safe }}
