@@ -56,6 +56,20 @@ def _safe_int(v, default=0):
     except Exception:
         return default
 
+def _load_local_image_as_data_uri(*relative_parts) -> str | None:
+    try:
+        path = os.path.join(os.path.dirname(__file__), *relative_parts)
+        if not os.path.exists(path):
+            return None
+        with open(path, "rb") as img_file:
+            img_b64 = base64.b64encode(img_file.read()).decode("utf-8")
+        ext = os.path.splitext(path)[1].lower()
+        mime = "image/png" if ext == ".png" else "image/jpeg" if ext in {".jpg", ".jpeg"} else "image/svg+xml" if ext == ".svg" else "application/octet-stream"
+        return f"data:{mime};base64,{img_b64}"
+    except Exception as e:
+        logger.warning(f"Failed to load local image {'/'.join(relative_parts)}: {e}")
+        return None
+
 
 def _color_for_pct(pct: float) -> str:
     if pct >= 75:
@@ -131,15 +145,9 @@ def _distribution_compare_svg(
     current_dist: dict,
     next_dist: dict,
     width: int = 300,
-    height: int = 170
+    height: int = 150
 ) -> str:
-    """
-    رسم أوضح لمقارنة التوزيع الحالي مع المتوقع:
-    - 3 مجموعات: سليم / متابعة / حرج
-    - لكل مجموعة عمودان: الحالي + المتوقع
-    - نسبة فوق كل عمود
-    - labels واضحة أسفل كل مجموعة
-    """
+    """رسم أعمدة واضح بدون نصوص عربية داخل SVG لتجنب انعكاسها في PDF."""
 
     current_vals = [
         _safe_float(current_dist.get("Healthy_Pct", 0)),
@@ -152,95 +160,49 @@ def _distribution_compare_svg(
         _safe_float(next_dist.get("Critical_Pct_next", 0)),
     ]
 
-    labels = ["سليم", "متابعة", "حرج"]
+    strong_colors = ["#22c55e", "#f59e0b", "#ef4444"]
+    light_colors  = ["#bbf7d0", "#fde68a", "#fecaca"]
 
-    # ألوان الفئات
-    strong_colors = ["#22c55e", "#f59e0b", "#ef4444"]   # الحالي
-    light_colors  = ["#bbf7d0", "#fde68a", "#fecaca"]   # المتوقع
-
-    top_pad = 24
-    chart_h = 78
-    base_y = top_pad + chart_h
-    bar_w = 18
-    inner_gap = 8
-    group_gap = 34
-    left_pad = 24
-
+    pad_l, pad_r, pad_t, pad_b = 18, 18, 20, 26
+    chart_h = height - pad_t - pad_b
+    base_y = pad_t + chart_h
+    bar_w = 22
+    inner_gap = 7
+    group_gap = 24
+    x = pad_l
     parts = []
 
-    # خط الأساس
-    parts.append(
-        f'<line x1="14" y1="{base_y}" x2="{width-14}" y2="{base_y}" '
-        f'stroke="#d1d5db" stroke-width="1.4"/>'
-    )
+    for frac in [0.25, 0.5, 0.75, 1.0]:
+        gy = pad_t + chart_h * (1 - frac)
+        label = int(frac * 100)
+        parts.append(f'<line x1="{pad_l}" y1="{gy:.1f}" x2="{width-pad_r}" y2="{gy:.1f}" stroke="#eef2f7" stroke-width="1"/>')
+        parts.append(f'<text x="{pad_l-4}" y="{gy+3:.1f}" text-anchor="end" font-family="Arial, sans-serif" font-size="8" fill="#94a3b8">{label}</text>')
 
-    x = left_pad
+    parts.append(f'<line x1="{pad_l}" y1="{base_y}" x2="{width-pad_r}" y2="{base_y}" stroke="#cbd5e1" stroke-width="1.2"/>')
 
     for i in range(3):
         cur_v = max(0.0, min(100.0, current_vals[i]))
         nxt_v = max(0.0, min(100.0, next_vals[i]))
-
         cur_h = (cur_v / 100.0) * chart_h
         nxt_h = (nxt_v / 100.0) * chart_h
-
         cur_x = x
         nxt_x = x + bar_w + inner_gap
-
         cur_y = base_y - cur_h
         nxt_y = base_y - nxt_h
 
-        # عمود الحالي
-        parts.append(
-            f'<rect x="{cur_x}" y="{cur_y:.1f}" width="{bar_w}" height="{cur_h:.1f}" '
-            f'rx="7" fill="{strong_colors[i]}"/>'
-        )
+        parts.append(f'<rect x="{cur_x}" y="{cur_y:.1f}" width="{bar_w}" height="{cur_h:.1f}" rx="7" fill="{strong_colors[i]}"/>')
+        parts.append(f'<rect x="{nxt_x}" y="{nxt_y:.1f}" width="{bar_w}" height="{nxt_h:.1f}" rx="7" fill="{light_colors[i]}" stroke="{strong_colors[i]}" stroke-width="0.9"/>')
 
-        # عمود المتوقع
-        parts.append(
-            f'<rect x="{nxt_x}" y="{nxt_y:.1f}" width="{bar_w}" height="{nxt_h:.1f}" '
-            f'rx="7" fill="{light_colors[i]}" stroke="{strong_colors[i]}" stroke-width="0.8"/>'
-        )
-
-        # نسبة فوق الحالي
-        parts.append(
-            f'<text x="{cur_x + bar_w/2:.1f}" y="{cur_y - 6:.1f}" text-anchor="middle" '
-            f'font-family="Cairo, sans-serif" font-size="9" font-weight="800" fill="{strong_colors[i]}">'
-            f'{cur_v:.0f}%</text>'
-        )
-
-        # نسبة فوق المتوقع
-        parts.append(
-            f'<text x="{nxt_x + bar_w/2:.1f}" y="{nxt_y - 6:.1f}" text-anchor="middle" '
-            f'font-family="Cairo, sans-serif" font-size="9" font-weight="800" fill="#475569">'
-            f'{nxt_v:.0f}%</text>'
-        )
-
-        # label تحت المجموعة
-        group_center = x + bar_w + (inner_gap / 2)
-        parts.append(
-    f'<text x="{group_center:.1f}" y="{base_y + 22}" text-anchor="middle" '
-    f'font-family="Cairo, sans-serif" font-size="10" font-weight="800" fill="#334155">'
-    f'{labels[i]}</text>'
-)
+        parts.append(f'<text x="{cur_x + bar_w/2:.1f}" y="{cur_y - 4:.1f}" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" font-weight="700" fill="{strong_colors[i]}">{cur_v:.0f}%</text>')
+        parts.append(f'<text x="{nxt_x + bar_w/2:.1f}" y="{nxt_y - 4:.1f}" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" font-weight="700" fill="#64748b">{nxt_v:.0f}%</text>')
 
         x += (bar_w * 2 + inner_gap + group_gap)
 
-    # legend أعلى الرسم
-    legend_y = 12
-    legend_x1 = 14
-    parts.append(f'<rect x="{legend_x1}" y="{legend_y-8}" width="12" height="12" rx="4" fill="#0f766e"/>')
-    parts.append(f'<text x="{legend_x1+16}" y="{legend_y+2}" text-anchor="start" font-family="Cairo, sans-serif" font-size="9" font-weight="700" fill="#475569">الحالي</text>')
-    legend_x2 = 80
-    parts.append(f'<rect x="{legend_x2}" y="{legend_y-8}" width="12" height="12" rx="4" fill="#e2e8f0" stroke="#64748b" stroke-width="0.8"/>')
-    parts.append(f'<text x="{legend_x2+16}" y="{legend_y+2}" text-anchor="start" font-family="Cairo, sans-serif" font-size="9" font-weight="700" fill="#475569">المتوقع</text>')
-
     return f"""
-<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}"
-     xmlns="http://www.w3.org/2000/svg">
+<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" xmlns="http://www.w3.org/2000/svg">
   {''.join(parts)}
 </svg>
 """.strip()
-
 
 def _mini_bar_svg(values: list[float], colors: list[str], width: int = 215, height: int = 84) -> str:
     """
@@ -278,17 +240,13 @@ def _mini_bar_svg(values: list[float], colors: list[str], width: int = 215, heig
 def _multi_index_sparkline(
     multi_trend: dict,
     width: int = 390,
-    height: int = 90,
+    height: int = 112,
 ) -> str:
-    """
-    رسم مسار زمني لثلاثة مؤشرات (NDVI / NDMI / NDRE) على نفس المحور.
-    هذا المحتوى لا يظهر في الصفحة الثانية — الصفحة الثانية تعرض NDVI فقط.
-    """
+    """رسم أوضح للمؤشرات الطيفية مع محور رأسي وتدرجات رقمية."""
     ndvi = [_safe_float(v) for v in (multi_trend.get("ndvi") or []) if v is not None]
     ndmi = [_safe_float(v) for v in (multi_trend.get("ndmi") or []) if v is not None]
     ndre = [_safe_float(v) for v in (multi_trend.get("ndre") or []) if v is not None]
 
-    # نحتاج على الأقل مؤشرين بنقطتين
     series = [(ndvi, "#16a34a", "NDVI"), (ndmi, "#2563eb", "NDMI"), (ndre, "#0f766e", "NDRE")]
     valid = [(vals, c, lbl) for vals, c, lbl in series if len(vals) >= 2]
     if not valid:
@@ -297,22 +255,31 @@ def _multi_index_sparkline(
     all_vals = [v for vals, _, _ in valid for v in vals]
     mn = min(all_vals)
     mx = max(all_vals)
-    rng = mx - mn if mx != mn else 0.1
+    if mx == mn:
+        mn -= 0.1
+        mx += 0.1
+    rng = mx - mn
 
-    pad_l, pad_r, pad_t, pad_b = 6, 8, 14, 18
+    pad_l, pad_r, pad_t, pad_b = 30, 10, 12, 24
     chart_w = width - pad_l - pad_r
     chart_h = height - pad_t - pad_b
-
     parts = []
 
-    # خط الأساس
-    base_y = pad_t + chart_h
-    parts.append(f'<line x1="{pad_l}" y1="{base_y}" x2="{width-pad_r}" y2="{base_y}" stroke="#e2e8f0" stroke-width="1"/>')
-
-    # خطوط دليل أفقية خفيفة
-    for frac in [0.25, 0.5, 0.75]:
+    for frac in [0, 0.25, 0.5, 0.75, 1]:
+        value = mn + rng * frac
         gy = pad_t + chart_h * (1 - frac)
-        parts.append(f'<line x1="{pad_l}" y1="{gy:.1f}" x2="{width-pad_r}" y2="{gy:.1f}" stroke="#f1f5f9" stroke-width="0.8"/>')
+        parts.append(f'<line x1="{pad_l}" y1="{gy:.1f}" x2="{width-pad_r}" y2="{gy:.1f}" stroke="#eef2f7" stroke-width="1"/>')
+        parts.append(f'<text x="{pad_l-6}" y="{gy+3:.1f}" text-anchor="end" font-family="Arial, sans-serif" font-size="8" fill="#94a3b8">{value:.2f}</text>')
+
+    parts.append(f'<line x1="{pad_l}" y1="{pad_t}" x2="{pad_l}" y2="{pad_t+chart_h}" stroke="#cbd5e1" stroke-width="1.1"/>')
+    parts.append(f'<line x1="{pad_l}" y1="{pad_t+chart_h}" x2="{width-pad_r}" y2="{pad_t+chart_h}" stroke="#cbd5e1" stroke-width="1.1"/>')
+
+    max_points = max(len(vals) for vals, _, _ in valid)
+    if max_points >= 2:
+        step = chart_w / (max_points - 1)
+        for i in range(max_points):
+            x = pad_l + i * step
+            parts.append(f'<line x1="{x:.1f}" y1="{pad_t+chart_h}" x2="{x:.1f}" y2="{pad_t+chart_h+4}" stroke="#cbd5e1" stroke-width="1"/>')
 
     for vals, color, label in valid:
         n = len(vals)
@@ -323,21 +290,16 @@ def _multi_index_sparkline(
             y = pad_t + chart_h - ((v - mn) / rng) * chart_h
             pts.append((x, y))
 
-        # خط
         polyline = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
-        parts.append(f'<polyline points="{polyline}" fill="none" stroke="{color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>')
+        parts.append(f'<polyline points="{polyline}" fill="none" stroke="{color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>')
+        for x, y in pts:
+            parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="2.5" fill="{color}"/>')
 
-        # نقطة آخر قيمة فقط
-        lx, ly = pts[-1]
-        parts.append(f'<circle cx="{lx:.1f}" cy="{ly:.1f}" r="3.2" fill="{color}"/>')
-
-    # legend أسفل الرسم
-    legend_items = [(c, lbl) for vals, c, lbl in valid]
     lx = pad_l
-    for color, lbl in legend_items:
-        parts.append(f'<rect x="{lx}" y="{height-11}" width="10" height="7" rx="3" fill="{color}"/>')
-        parts.append(f'<text x="{lx+13}" y="{height-4}" font-family="Cairo,sans-serif" font-size="8" fill="#475569">{lbl}</text>')
-        lx += 56
+    for _, color, lbl in valid:
+        parts.append(f'<rect x="{lx}" y="{height-12}" width="10" height="7" rx="3" fill="{color}"/>')
+        parts.append(f'<text x="{lx+14}" y="{height-5}" font-family="Arial, sans-serif" font-size="8" fill="#475569">{lbl}</text>')
+        lx += 58
 
     return f"""
 <svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" xmlns="http://www.w3.org/2000/svg">
@@ -345,55 +307,78 @@ def _multi_index_sparkline(
 </svg>
 """.strip()
 
-
-def _flag_breakdown_svg(flag_counts: dict, width: int = 240, height: int = 110) -> str:
-    """
-    رسم أشرطة أفقية لإشارات الإجهاد الفردية — لا يظهر في الصفحة الثانية أبداً.
-    يعرض 4 إشارات مجمّعة: ماء / خضرة / تغذية / إجهاد مائي مركب.
-    """
-    water  = int(flag_counts.get("water_low", 0)) + int(flag_counts.get("water_below_025", 0))
-    veg    = int(flag_counts.get("ndvi_below_030", 0)) + int(flag_counts.get("ndvi_drop", 0))
-    leaf   = int(flag_counts.get("ndre_low", 0)) + int(flag_counts.get("ndre_below_035", 0))
+def _flag_breakdown_rows(flag_counts: dict) -> list[dict]:
+    """بيانات HTML بدل SVG لتجنب انعكاس العربية داخل الرسوم."""
+    water = int(flag_counts.get("water_low", 0)) + int(flag_counts.get("water_below_025", 0))
+    veg = int(flag_counts.get("ndvi_below_030", 0)) + int(flag_counts.get("ndvi_drop", 0))
+    leaf = int(flag_counts.get("ndre_low", 0)) + int(flag_counts.get("ndre_below_035", 0))
     stress = int(flag_counts.get("siwsi_drop", 0)) + int(flag_counts.get("water_drop", 0))
 
-    items = [
-        (water,  "#3b82f6", "إجهاد مائي"),
-        (veg,    "#22c55e", "هبوط الخضرة"),
-        (leaf,   "#0d9488", "ضعف التغذية"),
-        (stress, "#f59e0b", "ضغط مائي مركب"),
+    rows = [
+        {"label": "إجهاد مائي", "value": water, "color": "#3b82f6"},
+        {"label": "هبوط الخضرة", "value": veg, "color": "#22c55e"},
+        {"label": "ضعف التغذية", "value": leaf, "color": "#0d9488"},
+        {"label": "ضغط مائي مركب", "value": stress, "color": "#f59e0b"},
     ]
+    max_value = max([r["value"] for r in rows] + [1])
+    for row in rows:
+        row["pct"] = round((row["value"] / max_value) * 100, 1) if max_value else 0
+    return rows
 
-    mx = max((v for v, _, _ in items), default=1)
-    mx = max(mx, 1)
+def _sector_distribution_rows(map_points: list) -> list[dict]:
+    """تلخيص توزيع الحالات حسب القطاع المكاني داخل المزرعة."""
+    points = []
+    for p in map_points or []:
+        try:
+            lat = float(p.get("lat"))
+            lng = float(p.get("lng"))
+            s = int(p.get("s", 0))
+            points.append((lat, lng, s))
+        except Exception:
+            continue
 
-    bar_h = 13
-    gap = 8
-    left_lbl = 72
-    bar_area = width - left_lbl - 36
-    top = 6
-    parts = []
+    if not points:
+        return [
+            {"label": "شمال", "healthy_pct": 0, "monitor_pct": 0, "critical_pct": 0, "total": 0},
+            {"label": "جنوب", "healthy_pct": 0, "monitor_pct": 0, "critical_pct": 0, "total": 0},
+            {"label": "شرق", "healthy_pct": 0, "monitor_pct": 0, "critical_pct": 0, "total": 0},
+            {"label": "غرب", "healthy_pct": 0, "monitor_pct": 0, "critical_pct": 0, "total": 0},
+        ]
 
-    for i, (val, color, label) in enumerate(items):
-        y = top + i * (bar_h + gap)
-        bar_w = (val / mx) * bar_area if mx > 0 else 0
+    lats = [p[0] for p in points]
+    lngs = [p[1] for p in points]
+    lat_mid = (min(lats) + max(lats)) / 2
+    lng_mid = (min(lngs) + max(lngs)) / 2
 
-        # خلفية
-        parts.append(f'<rect x="{left_lbl}" y="{y}" width="{bar_area}" height="{bar_h}" rx="6" fill="#f1f5f9"/>')
-        # شريط
-        if bar_w > 0:
-            parts.append(f'<rect x="{left_lbl}" y="{y}" width="{bar_w:.1f}" height="{bar_h}" rx="6" fill="{color}" opacity="0.85"/>')
-        # نص التسمية
-        parts.append(f'<text x="{left_lbl-4}" y="{y + bar_h - 3}" text-anchor="end" font-family="Cairo,sans-serif" font-size="8.5" font-weight="700" fill="#334155">{label}</text>')
-        # القيمة
-        val_x = left_lbl + bar_area + 4
-        parts.append(f'<text x="{val_x}" y="{y + bar_h - 3}" font-family="Cairo,sans-serif" font-size="9" font-weight="900" fill="{color if val > 0 else "#94a3b8"}">{val}</text>')
+    buckets = {
+        "شمال": {0: 0, 1: 0, 2: 0},
+        "جنوب": {0: 0, 1: 0, 2: 0},
+        "شرق": {0: 0, 1: 0, 2: 0},
+        "غرب": {0: 0, 1: 0, 2: 0},
+    }
 
-    return f"""
-<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" xmlns="http://www.w3.org/2000/svg">
-  {''.join(parts)}
-</svg>
-""".strip()
+    for lat, lng, s in points:
+        if abs(lat - lat_mid) >= abs(lng - lng_mid):
+            key = "شمال" if lat >= lat_mid else "جنوب"
+        else:
+            key = "شرق" if lng >= lng_mid else "غرب"
+        buckets[key][2 if s == 2 else 1 if s == 1 else 0] += 1
 
+    rows = []
+    for label in ["شمال", "جنوب", "شرق", "غرب"]:
+        counts = buckets[label]
+        total = counts[0] + counts[1] + counts[2]
+        if total == 0:
+            rows.append({"label": label, "healthy_pct": 0, "monitor_pct": 0, "critical_pct": 0, "total": 0})
+        else:
+            rows.append({
+                "label": label,
+                "healthy_pct": round((counts[0] / total) * 100, 1),
+                "monitor_pct": round((counts[1] / total) * 100, 1),
+                "critical_pct": round((counts[2] / total) * 100, 1),
+                "total": total,
+            })
+    return rows
 
 def _normalize_polygon(poly: list | None) -> list[tuple[float, float]]:
     out = []
@@ -680,7 +665,10 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
     )
     # ── قرافات جديدة خاصة بالصفحة الأولى ──
     multi_sparkline_svg = _multi_index_sparkline(multi_trend)
-    flag_bar_svg = _flag_breakdown_svg(alert_context.get("flag_counts", {}))
+    flag_rows = _flag_breakdown_rows(alert_context.get("flag_counts", {}))
+    total_flag_signals = sum(int(r.get("value", 0) or 0) for r in flag_rows)
+    sector_rows = _sector_distribution_rows(map_points)
+    total_map_points = len([p for p in (map_points or []) if p.get("lat") is not None and p.get("lng") is not None])
 
     # ── بيانات المناخ والسياق ──
     rain_mm       = _safe_float(climate.get("rain_mm", 0))
@@ -768,95 +756,9 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
             },
         ]
 
-    primary_driver = risk_drivers[0] if risk_drivers else {}
-    first_hotspot = hotspots[0] if hotspots else {}
-    second_driver = risk_drivers[1] if len(risk_drivers) > 1 else {}
 
-    primary_driver_title = primary_driver.get("title", "لا توجد إشارة بارزة")
-    primary_driver_note = primary_driver.get("note", "لم تظهر إشارات تشغيلية قوية هذا الأسبوع.")
-    primary_driver_priority = primary_driver.get("priority", "منخفضة")
-    primary_driver_count = int(_safe_float(primary_driver.get("count", 0), 0))
-
-    hotspot_status = first_hotspot.get("status", "—")
-    hotspot_note = first_hotspot.get("note", "لا توجد نقطة مميزة تتطلب زيارة عاجلة.")
-    hotspot_lat = first_hotspot.get("lat", "—")
-    hotspot_lon = first_hotspot.get("lon", "—")
-
-    if hotspot_lat != "—":
-        hotspot_lat = f"{_safe_float(hotspot_lat, 0):.6f}"
-    if hotspot_lon != "—":
-        hotspot_lon = f"{_safe_float(hotspot_lon, 0):.6f}"
-
-    next_healthy = _safe_float(forecast_next.get("Healthy_Pct_next", healthy_pct), healthy_pct)
-    next_monitor = _safe_float(forecast_next.get("Monitor_Pct_next", monitor_pct), monitor_pct)
-    next_critical = _safe_float(forecast_next.get("Critical_Pct_next", critical_pct), critical_pct)
-    next_delta = _safe_float(forecast_next.get("ndvi_delta_next_mean", 0), 0) * 100.0
-
-    if next_delta > 0.05:
-        forecast_direction_text = "تحسن متوقع"
-    elif next_delta < -0.05:
-        forecast_direction_text = "تراجع متوقع"
-    else:
-        forecast_direction_text = "استقرار متوقع"
-
-    insight_cards = [
-        {
-            "title": "أقوى ملاحظة تشغيلية",
-            "headline": primary_driver_title,
-            "body": (
-                f"{primary_driver_note} "
-                f"تم رصد {primary_driver_count} إشارة، "
-                f"وبمستوى أولوية {primary_driver_priority}."
-            ),
-            "badge": primary_driver_priority,
-            "badge_class": (
-                "badge-red" if primary_driver_priority == "مرتفعة"
-                else "badge-orange" if primary_driver_priority == "متوسطة"
-                else "badge-green"
-            ),
-        },
-        {
-            "title": "أهم نقطة تستحق الزيارة",
-            "headline": f"الحالة: {hotspot_status}",
-            "body": (
-                f"{hotspot_note} "
-                f"الإحداثيات: {hotspot_lat} ، {hotspot_lon}."
-                if hotspot_status != "—"
-                else "لا توجد حاليًا نقطة واحدة متقدمة بوضوح على بقية النقاط."
-            ),
-            "badge": hotspot_status if hotspot_status != "—" else "لا يوجد",
-            "badge_class": (
-                "badge-red" if hotspot_status == "حرجة"
-                else "badge-orange" if hotspot_status == "متابعة"
-                else "badge-blue"
-            ),
-        },
-        {
-            "title": "ملخص الأسبوع القادم",
-            "headline": forecast_direction_text,
-            "body": (
-                f"المتوقع الأسبوع القادم: "
-                f"{next_healthy:.0f}% سليم، "
-                f"{next_monitor:.0f}% متابعة، "
-                f"{next_critical:.0f}% حرج. "
-                f"صافي التغير المتوقع في الخضرة: {abs(next_delta):.1f}%."
-            ),
-            "badge": "توقعات",
-            "badge_class": "badge-blue",
-        },
-    ]
-
-    map_note = (
-        "اللون يوضح الحالة الحالية لكل نقطة داخل حدود المزرعة، "
-        "والحلقة الزرقاء تشير إلى نقاط قد تتغير حالتها لاحقًا."
-    )
-
-    logo_data_uri = None
-    logo_path = os.path.join(os.path.dirname(__file__), "static", "images", "saaf_logo.png")
-    if os.path.exists(logo_path):
-        with open(logo_path, "rb") as img_file:
-            logo_b64 = base64.b64encode(img_file.read()).decode("utf-8")
-            logo_data_uri = f"data:image/png;base64,{logo_b64}"
+    logo_data_uri = _load_local_image_as_data_uri("static", "images", "saaf_logo.png")
+    palm_icon_data_uri = _load_local_image_as_data_uri("static", "images", "PalmIcon.png")
 
     footer_logo_html = _footer_logo_html(logo_data_uri)
 
@@ -872,6 +774,7 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
         owner_name=owner_name,
 
         logo_data_uri=logo_data_uri,
+        palm_icon_data_uri=palm_icon_data_uri,
         footer_logo_html=footer_logo_html,
 
         executive_status=executive_status,
@@ -888,13 +791,15 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
 
         map_svg=map_svg,
         map_bg_uri=map_bg_uri,
-        map_note=map_note,
-        insight_cards=insight_cards,
+        compare_labels=["سليم", "متابعة", "حرج"],
+        total_flag_signals=total_flag_signals,
+        sector_rows=sector_rows,
+        total_map_points=total_map_points,
 
         compare_svg=compare_svg,
         drivers_bar_svg=drivers_bar_svg,
         multi_sparkline_svg=multi_sparkline_svg,
-        flag_bar_svg=flag_bar_svg,
+        flag_rows=flag_rows,
 
         rain_mm=f"{rain_mm:.1f}",
         t_mean=f"{t_mean:.1f}",
