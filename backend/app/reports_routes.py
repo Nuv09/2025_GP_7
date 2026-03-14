@@ -477,7 +477,7 @@ def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_pol
     if not bounds:
         return {"bg_data_uri": None, "overlay_svg": ""}
 
-    stitched = _stitch_maptiler_tiles(bounds, width, height, zoom=12)
+    stitched = _stitch_maptiler_tiles(bounds, width, height)
     bg_data_uri = stitched.get("bg_data_uri")
     meta = stitched.get("meta")
 
@@ -547,11 +547,23 @@ def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_pol
             f'<circle cx="{x}" cy="{y}" r="{r}" fill="{fill}" stroke="white" stroke-width="1.2" opacity="0.98" />'
         )
 
-    overlay_svg = f"""<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}"
-     xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;">
+    overlay_svg = f"""<svg
+    width="100%"
+    height="100%"
+    viewBox="0 0 {width} {height}"
+    preserveAspectRatio="none"
+    xmlns="http://www.w3.org/2000/svg"
+    style="position:absolute; inset:0; width:100%; height:100%; z-index:3; pointer-events:none;">
   {poly_svg}
   {''.join(circles)}
 </svg>""".strip()
+    
+    logger.info(
+    "Heatmap debug | points=%s | bg=%s | meta=%s",
+    len(map_points or []),
+    bool(bg_data_uri),
+    meta,
+)
 
     return {"bg_data_uri": bg_data_uri, "overlay_svg": overlay_svg}
 
@@ -618,7 +630,14 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
     forecast = export_data.get("forecast", {})
     forecast_next = export_data.get("forecast_next_week", {})
     top_action = export_data.get("top_action") or {}
-    map_points = (export_data.get("health_map_points") or export_data.get("health_map") or farm_doc.get("healthMap", []) or []  )
+    health_root = farm_doc.get("health", {}) if isinstance(farm_doc.get("health"), dict) else {}
+    map_points = (
+    export_data.get("health_map_points")
+    or export_data.get("health_map")
+    or farm_doc.get("healthMap", [])
+    or health_root.get("health_map", [])
+    or []
+     )    
     farm_poly = export_data.get("farm_polygon", []) or farm_doc.get("polygon", [])
     risk_drivers = (export_data.get("risk_drivers", []) or [])[:3]
     hotspots = (export_data.get("hotspots_table", []) or [])[:3]
@@ -1056,24 +1075,27 @@ def _farm_centroid_from_polygon(poly: list | None):
     lng = sum(p[1] for p in pts) / len(pts)
     return lat, lng
 
-
 def _get_report_weather_live(farm_data: dict) -> dict:
+    if not WEATHERAPI_KEY:
+        logger.error("WEATHERAPI_KEY missing in reports route")
+        return {"rain_mm": 0.0, "t_mean": 0.0}
+
+    poly = farm_data.get("polygon") or []
+    lat, lng = _farm_centroid_from_polygon(poly)
+
+    if lat is None or lng is None:
+        logger.error("Farm polygon missing/invalid for live weather")
+        return {"rain_mm": 0.0, "t_mean": 0.0}
+
+    logger.info("Weather debug | centroid lat=%s lng=%s", lat, lng)
+
     try:
-        if not WEATHERAPI_KEY:
-            logger.warning("WEATHERAPI_KEY missing in reports route")
-            return {"rain_mm": 0.0, "t_mean": 0.0}
-
-        poly = farm_data.get("polygon") or []
-        lat, lng = _farm_centroid_from_polygon(poly)
-        if lat is None or lng is None:
-            logger.warning("Farm polygon missing/invalid for live weather")
-            return {"rain_mm": 0.0, "t_mean": 0.0}
-
         end_dt = datetime.utcnow().date()
         start_dt = end_dt - __import__("datetime").timedelta(days=29)
 
         rows = []
         current = start_dt
+
         while current <= end_dt:
             d = current.strftime("%Y-%m-%d")
             url = "https://api.weatherapi.com/v1/history.json"
@@ -1084,10 +1106,15 @@ def _get_report_weather_live(farm_data: dict) -> dict:
             }
 
             resp = requests.get(url, params=params, timeout=20)
-            resp.raise_for_status()
-            data = resp.json()
+            logger.info("WeatherAPI request | date=%s | status=%s", d, resp.status_code)
 
+            if resp.status_code != 200:
+                logger.error("WeatherAPI failed | date=%s | body=%s", d, resp.text[:500])
+                resp.raise_for_status()
+
+            data = resp.json()
             day = ((data.get("forecast") or {}).get("forecastday") or [{}])[0].get("day", {})
+
             rows.append({
                 "precip_mm": float(day.get("totalprecip_mm", 0) or 0),
                 "t2m_mean": float(day.get("avgtemp_c", 0) or 0),
@@ -1096,17 +1123,18 @@ def _get_report_weather_live(farm_data: dict) -> dict:
             current += __import__("datetime").timedelta(days=1)
 
         if not rows:
+            logger.error("WeatherAPI returned no rows")
             return {"rain_mm": 0.0, "t_mean": 0.0}
 
         rain_mm = round(sum(r["precip_mm"] for r in rows), 1)
         t_mean = round(sum(r["t2m_mean"] for r in rows) / len(rows), 1)
 
-        logger.info("Live WeatherAPI in reports | rain_mm=%s | t_mean=%s", rain_mm, t_mean)
+        logger.info("Live WeatherAPI success | rain_mm=%s | t_mean=%s", rain_mm, t_mean)
         return {"rain_mm": rain_mm, "t_mean": t_mean}
 
-    except Exception as e:
-        logger.warning(f"Live WeatherAPI failed in reports route: {e}")
-        return {"rain_mm": 0.0, "t_mean": 0.0}   
+    except Exception:
+        logger.error("Live WeatherAPI crashed:\n%s", traceback.format_exc())
+        return {"rain_mm": 0.0, "t_mean": 0.0}
 
 def _merge_export_with_live_farm_data(export_data: dict, farm_data: dict) -> dict:
     export_data = dict(export_data or {})
@@ -1215,9 +1243,9 @@ def _merge_export_with_live_farm_data(export_data: dict, farm_data: dict) -> dic
     climate = dict(export_data.get("climate", {}) or {})
 
     need_live_weather = (
-        _safe_float(climate.get("rain_mm"), 0.0) == 0.0 and
-        _safe_float(climate.get("t_mean"), 0.0) == 0.0
-    )
+    _safe_float(climate.get("rain_mm"), 0.0) == 0.0 or
+    _safe_float(climate.get("t_mean"), 0.0) == 0.0
+     )
 
     live_weather = _get_report_weather_live(farm_data) if need_live_weather else {}
 
