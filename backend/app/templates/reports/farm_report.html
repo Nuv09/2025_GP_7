@@ -36,20 +36,7 @@
       z-index: 0;
       overflow: hidden;
     }
-    .page-watermark::before {
-      content: "";
-      position: absolute;
-      width: 155mm;
-      height: 155mm;
-      left: 50%;
-      top: 58%;
-      transform: translate(-50%, -50%);
-      background-image: url('{{ palm_icon_data_uri if palm_icon_data_uri else logo_data_uri }}');
-      background-repeat: no-repeat;
-      background-position: center;
-      background-size: contain;
-      opacity: 0.045;
-    }
+   
 
     .hdr, .content, .ftr { position: relative; z-index: 1; }
 
@@ -438,7 +425,14 @@
 <body>
 
   <div class="page">
-    <div class="page-watermark"></div>
+    <div class="page-watermark">
+  {% if palm_icon_data_uri %}
+  <img src="{{ palm_icon_data_uri }}"
+       style="position:absolute;width:155mm;height:155mm;left:50%;top:58%;
+              transform:translate(-50%,-50%);object-fit:contain;opacity:0.045;
+              pointer-events:none;" />
+  {% endif %}
+</div>
 
     <div class="hdr">
       <div class="hdr-inner">
@@ -609,7 +603,14 @@
   </div>
 
   <div class="page">
-    <div class="page-watermark"></div>
+    <div class="page-watermark">
+  {% if palm_icon_data_uri %}
+  <img src="{{ palm_icon_data_uri }}"
+       style="position:absolute;width:155mm;height:155mm;left:50%;top:58%;
+              transform:translate(-50%,-50%);object-fit:contain;opacity:0.045;
+              pointer-events:none;" />
+  {% endif %}
+</div>
 
     <div class="hdr">
       <div class="hdr-inner">

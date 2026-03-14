@@ -1,4 +1,5 @@
 import base64
+import math
 import os
 import logging
 import traceback
@@ -43,7 +44,10 @@ def _safe_float(v, default=0.0):
     try:
         if v is None:
             return default
-        return float(v)
+        result = float(v)
+        if math.isnan(result) or math.isinf(result):
+            return default
+        return result
     except Exception:
         return default
 
@@ -559,7 +563,7 @@ def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_pol
             f'<circle cx="{x}" cy="{y}" r="{r}" fill="{fill}" opacity="0.95" />'
         )
 
-    overlay_svg = f"""<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}"
+    overlay_svg = f"""<svg width="100%" height="100%" viewBox="0 0 {width} {height}"
      xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;">
   <clipPath id="mapClip">
     <rect x="0" y="0" width="{width}" height="{height}" rx="14"/>
@@ -1061,7 +1065,8 @@ def _prefer_live_number(old_value, live_value, default=0):
         old_num = float(old_value)
         live_num = float(live_value) if live_value is not None else None
 
-        if old_num == 0 and live_num not in (None, 0):
+        if (math.isnan(old_num) or old_num == 0) and live_num not in (None, 0):
+
             return live_value
 
         return old_value

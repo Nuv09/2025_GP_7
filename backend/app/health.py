@@ -946,7 +946,8 @@ def site_summary(dfx: pd.DataFrame) -> Dict[str, Any]:
         "Critical_Pct": float(class_counts.get("Critical", 0.0)),
         "RPW_score_med": float(dfx_last4.get("RPW_score", pd.Series([np.nan])).median()),
         "rain_mm": float(dfx_last4.get("precip_mm", pd.Series([0.0])).sum()),
-        "t_mean": float(dfx_last4.get("t2m_mean", pd.Series([np.nan])).mean()),
+        "t_mean": float(dfx_last4["t2m_mean"].dropna().mean()) if "t2m_mean" in dfx_last4.columns and not dfx_last4["t2m_mean"].dropna().empty else 0.0,
+
     }
 
 def indices_history_last_weeks(
