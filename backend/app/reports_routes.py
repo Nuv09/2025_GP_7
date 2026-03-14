@@ -454,8 +454,8 @@ def _map_bounds(map_points: list, farm_polygon: list | None = None):
     min_lng, max_lng = min(lngs), max(lngs)
 
     # padding بسيط حتى ما تكون الحدود ملاصقة للصورة
-    lat_pad = max((max_lat - min_lat) * 0.08, 0.0008)
-    lng_pad = max((max_lng - min_lng) * 0.08, 0.0008)
+    lat_pad = max((max_lat - min_lat) * 0.025, 0.00015)
+    lng_pad = max((max_lng - min_lng) * 0.025, 0.00015)
 
     return {
         "min_lat": min_lat - lat_pad,
@@ -583,7 +583,8 @@ def _footer_logo_html(logo_data_uri: str | None) -> str:
 def _delta_badge_html(delta_pct: float) -> str:
     delta_pct = _safe_float(delta_pct, 0.0)
 
-    if abs(delta_pct) < 0.05:
+    # ارفعي العتبة حتى لا يظهر كل شيء "بدون تغير"
+    if abs(delta_pct) < 0.5:
         return '<span style="color:#64748b;">بدون تغير ملحوظ</span>'
 
     if delta_pct > 0:
@@ -897,6 +898,14 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     from openpyxl.utils import get_column_letter
     from openpyxl.chart import BarChart, PieChart, LineChart, Reference
     from openpyxl.chart.label import DataLabelList
+    from openpyxl.drawing.image import Image as XLImage
+
+    logo_path = os.path.join(os.path.dirname(__file__), "static", "images", "saaf_logo.png")
+    if os.path.exists(logo_path):
+      logo_img = XLImage(logo_path)
+      logo_img.width = 115
+      logo_img.height = 42
+      ws.add_image(logo_img, "A2")
 
     wb = openpyxl.Workbook()
 
@@ -1502,16 +1511,7 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
 
     row2 = end_flags + 1
 
-    # قواعد التصنيف
-    rule_rows_excel = [[k, v] for k, v in rule_counts.items()] or [["—", "—"]]
-    write_table(
-        ws2,
-        row2,
-        "تفصيل قواعد التصنيف",
-        ["القاعدة", "العدد"],
-        rule_rows_excel,
-        title_color=BLUE
-    )
+   
 
     # ─────────────────────────────────────────────
     # Sheet 3: المخاطر والمناطق
@@ -1994,7 +1994,7 @@ def _stitch_maptiler_tiles(bounds: dict, width: int, height: int, zoom: int | No
         if not api_key or not bounds:
             return {"bg_data_uri": None, "meta": None}
 
-        pad = 24
+        pad = 8
 
         min_lat = bounds["min_lat"]
         max_lat = bounds["max_lat"]

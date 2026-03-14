@@ -1352,9 +1352,11 @@ def build_alert_signals(df_all: pd.DataFrame) -> Dict[str, Any]:
             flag_counts[c] = 0
 
     pixels_with_any_flag = 0
-    if existing_flag_cols:
-        flag_matrix = d[existing_flag_cols].apply(pd.to_numeric, errors="coerce").fillna(0).astype(bool)
-        pixels_with_any_flag = int(flag_matrix.any(axis=1).sum())
+    if "pixel_risk_class" in d.columns:
+         pixels_with_any_flag = int(
+           ((d["pixel_risk_class"].astype(str) == "Monitor") |
+           (d["pixel_risk_class"].astype(str) == "Critical")).sum()
+          )
 
     # --- Hotspots (top points by RPW_score then IF_score) ---
     if "RPW_score" not in d.columns:
@@ -1778,9 +1780,14 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
     def calculate_delta(key):
       c_val = _safe_float(curr.get(key), None)
       p_val = _safe_float(prev.get(key), None)
+
       if c_val is None or p_val is None:
           return 0.0
-      return round(c_val - p_val, 3)
+
+      if abs(p_val) < 1e-9:
+          return 0.0
+
+      return round(((c_val - p_val) / abs(p_val)) * 100.0, 1)
 
     current_health = health_result.get("current_health", {})
     report_weather = get_report_weather_from_weatherapi(farm_doc)
