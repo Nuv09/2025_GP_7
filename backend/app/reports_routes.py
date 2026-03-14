@@ -18,7 +18,7 @@ DB = firestore.Client()
 reports_bp = Blueprint("reports_bp", __name__)
 TILE_SIZE_MAP = 512
 REPORT_TILE_URL = "https://api.maptiler.com/maps/satellite/{zoom}/{x}/{y}.jpg?key={key}"
-
+WEATHERAPI_KEY = os.environ.get("WEATHERAPI_KEY", "").strip()
 
 # ─────────────────────────────────────────────
 # helpers
@@ -477,19 +477,9 @@ def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_pol
     if not bounds:
         return {"bg_data_uri": None, "overlay_svg": ""}
 
-    min_lat = bounds["min_lat"]
-    max_lat = bounds["max_lat"]
-    min_lng = bounds["min_lng"]
-    max_lng = bounds["max_lng"]
-
-    lat_rng = max(max_lat - min_lat, 1e-6)
-    lng_rng = max(max_lng - min_lng, 1e-6)
-    pad = 8
-
-    def to_xy(lat, lng):
-        x = pad + ((lng - min_lng) / lng_rng) * (width - pad * 2)
-        y = pad + ((max_lat - lat) / lat_rng) * (height - pad * 2)
-        return round(x, 1), round(y, 1)
+    stitched = _stitch_maptiler_tiles(bounds, width, height, zoom=12)
+    bg_data_uri = stitched.get("bg_data_uri")
+    meta = stitched.get("meta")
 
     color_map = {
         0: "#22c55e",
@@ -497,14 +487,34 @@ def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_pol
         2: "#ef4444",
     }
 
-    bg_data_uri = _stitch_maptiler_tiles(bounds, width, height, zoom=18)
+    def to_xy(lat, lng):
+        if meta:
+            gx, gy = _latlon_to_global_pixels(lat, lng, meta["zoom"])
+            px = gx - (meta["start_x"] * TILE_SIZE_MAP) - meta["crop_x"]
+            py = gy - (meta["start_y"] * TILE_SIZE_MAP) - meta["crop_y"]
+            return round(px, 1), round(py, 1)
+
+        # fallback only
+        min_lat = bounds["min_lat"]
+        max_lat = bounds["max_lat"]
+        min_lng = bounds["min_lng"]
+        max_lng = bounds["max_lng"]
+        lat_rng = max(max_lat - min_lat, 1e-6)
+        lng_rng = max(max_lng - min_lng, 1e-6)
+        pad = 8
+        x = pad + ((lng - min_lng) / lng_rng) * (width - pad * 2)
+        y = pad + ((max_lat - lat) / lat_rng) * (height - pad * 2)
+        return round(x, 1), round(y, 1)
 
     poly_svg = ""
     if norm_poly:
-        pts = " ".join(f"{x},{y}" for x, y in [to_xy(lat, lng) for lat, lng in norm_poly])
+        pts = []
+        for lat, lng in norm_poly:
+            x, y = to_xy(lat, lng)
+            pts.append(f"{x},{y}")
         poly_svg = (
-            f'<polygon points="{pts}" fill="white" fill-opacity="0.10" stroke="#10b981" '
-            f'stroke-width="2.2" opacity="1"/>'
+            f'<polygon points="{" ".join(pts)}" fill="white" fill-opacity="0.08" '
+            f'stroke="#10b981" stroke-width="2.2" opacity="1"/>'
         )
 
     circles = []
@@ -518,19 +528,23 @@ def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_pol
             continue
 
         x, y = to_xy(lat, lng)
-        r = 4.8 if s == 2 else 4.3 if s == 1 else 3.9
+
+        if x < -20 or x > width + 20 or y < -20 or y > height + 20:
+            continue
+
+        r = 7.2 if s == 2 else 6.2 if s == 1 else 5.2
         fill = color_map.get(s, "#22c55e")
 
         ring = ""
         if ps != s:
             ring = (
-                f'<circle cx="{x}" cy="{y}" r="{r + 2.8}" fill="none" '
-                f'stroke="#2563eb" stroke-width="1.5" opacity="0.95"/>'
+                f'<circle cx="{x}" cy="{y}" r="{r + 3.4}" fill="none" '
+                f'stroke="#2563eb" stroke-width="2.0" opacity="0.95"/>'
             )
 
         circles.append(
             ring +
-            f'<circle cx="{x}" cy="{y}" r="{r}" fill="{fill}" opacity="0.95" />'
+            f'<circle cx="{x}" cy="{y}" r="{r}" fill="{fill}" stroke="white" stroke-width="1.2" opacity="0.98" />'
         )
 
     overlay_svg = f"""<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}"
@@ -540,6 +554,15 @@ def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_pol
 </svg>""".strip()
 
     return {"bg_data_uri": bg_data_uri, "overlay_svg": overlay_svg}
+
+
+def _footer_logo_html(logo_data_uri: str | None) -> str:
+    if logo_data_uri:
+        return (
+            f'<img src="{logo_data_uri}" alt="Saaf" '
+            f'style="height:42px; width:auto; max-width:150px; display:block; object-fit:contain;" />'
+        )
+    return '<div style="font-size:16px;font-weight:900;color:#6ee7b7;letter-spacing:1px;">سعف</div>'
 
 def _delta_badge_html(delta_pct: float) -> str:
     delta_pct = _safe_float(delta_pct, 0.0)
@@ -578,17 +601,6 @@ def _metric_verdict(code: str, value: float):
         return "منخفضة", "#fee2e2", "#b91c1c"
 
     return "—", "#f1f5f9", "#475569"
-
-
-def _footer_logo_html(logo_data_uri: str | None) -> str:
-    if logo_data_uri:
-        return (
-            f'<img src="{logo_data_uri}" alt="Saaf" '
-            f'style="height:42px; width:auto; max-width:150px; display:block; object-fit:contain;" />'
-        )
-    return '<div style="font-size:16px;font-weight:900;color:#6ee7b7;letter-spacing:1px;">سعف</div>'
-
-
 # ─────────────────────────────────────────────
 # PDF Generation — weasyprint
 # ─────────────────────────────────────────────
@@ -1035,7 +1047,66 @@ def _prefer_live_number(old_value, live_value, default=0):
         return old_value
     except Exception:
         return live_value if live_value is not None else default
-    
+
+def _farm_centroid_from_polygon(poly: list | None):
+    pts = _normalize_polygon(poly)
+    if len(pts) < 3:
+        return None, None
+    lat = sum(p[0] for p in pts) / len(pts)
+    lng = sum(p[1] for p in pts) / len(pts)
+    return lat, lng
+
+
+def _get_report_weather_live(farm_data: dict) -> dict:
+    try:
+        if not WEATHERAPI_KEY:
+            logger.warning("WEATHERAPI_KEY missing in reports route")
+            return {"rain_mm": 0.0, "t_mean": 0.0}
+
+        poly = farm_data.get("polygon") or []
+        lat, lng = _farm_centroid_from_polygon(poly)
+        if lat is None or lng is None:
+            logger.warning("Farm polygon missing/invalid for live weather")
+            return {"rain_mm": 0.0, "t_mean": 0.0}
+
+        end_dt = datetime.utcnow().date()
+        start_dt = end_dt - __import__("datetime").timedelta(days=29)
+
+        rows = []
+        current = start_dt
+        while current <= end_dt:
+            d = current.strftime("%Y-%m-%d")
+            url = "https://api.weatherapi.com/v1/history.json"
+            params = {
+                "key": WEATHERAPI_KEY,
+                "q": f"{lat},{lng}",
+                "dt": d,
+            }
+
+            resp = requests.get(url, params=params, timeout=20)
+            resp.raise_for_status()
+            data = resp.json()
+
+            day = ((data.get("forecast") or {}).get("forecastday") or [{}])[0].get("day", {})
+            rows.append({
+                "precip_mm": float(day.get("totalprecip_mm", 0) or 0),
+                "t2m_mean": float(day.get("avgtemp_c", 0) or 0),
+            })
+
+            current += __import__("datetime").timedelta(days=1)
+
+        if not rows:
+            return {"rain_mm": 0.0, "t_mean": 0.0}
+
+        rain_mm = round(sum(r["precip_mm"] for r in rows), 1)
+        t_mean = round(sum(r["t2m_mean"] for r in rows) / len(rows), 1)
+
+        logger.info("Live WeatherAPI in reports | rain_mm=%s | t_mean=%s", rain_mm, t_mean)
+        return {"rain_mm": rain_mm, "t_mean": t_mean}
+
+    except Exception as e:
+        logger.warning(f"Live WeatherAPI failed in reports route: {e}")
+        return {"rain_mm": 0.0, "t_mean": 0.0}   
 
 def _merge_export_with_live_farm_data(export_data: dict, farm_data: dict) -> dict:
     """
@@ -1153,13 +1224,15 @@ def _merge_export_with_live_farm_data(export_data: dict, farm_data: dict) -> dic
 
     # ── climate / alert_context ─────────────────
     climate = dict(export_data.get("climate", {}) or {})
+    live_weather = _get_report_weather_live(farm_data)
+
     export_data["climate"] = {
-        **climate,
-        "rain_mm": _first_non_empty(climate.get("rain_mm"), 0),
-        "t_mean": _first_non_empty(climate.get("t_mean"), 0),
-        "total_pixels": _prefer_live_number(climate.get("total_pixels"), current_health.get("total_pixels"), 0),
-        "rpw_score": _prefer_live_number(climate.get("rpw_score"), current_health.get("rpw_score"), 0),
-    }
+    **climate,
+    "rain_mm": live_weather.get("rain_mm", 0.0),
+    "t_mean": live_weather.get("t_mean", 0.0),
+    "total_pixels": _prefer_live_number(climate.get("total_pixels"), current_health.get("total_pixels"), 0),
+    "rpw_score": _prefer_live_number(climate.get("rpw_score"), current_health.get("rpw_score"), 0),
+      }
 
     alert_context = dict(export_data.get("alert_context", {}) or {})
     export_data["alert_context"] = {
@@ -1196,20 +1269,28 @@ def _deg_to_tile(lat: float, lon: float, zoom: int):
     )
     return xtile, ytile
 
+def _latlon_to_global_pixels(lat: float, lon: float, zoom: int):
+    siny = math.sin(math.radians(lat))
+    siny = min(max(siny, -0.9999), 0.9999)
 
-def _stitch_maptiler_tiles(bounds: dict, width: int, height: int, zoom: int = 18) -> str | None:
+    scale = TILE_SIZE_MAP * (2 ** zoom)
+    x = (lon + 180.0) / 360.0 * scale
+    y = (0.5 - math.log((1 + siny) / (1 - siny)) / (4 * math.pi)) * scale
+    return x, y
+
+def _stitch_maptiler_tiles(bounds: dict, width: int, height: int, zoom: int = 16) -> dict:
     try:
         api_key = os.environ.get("MAPTILER_KEY", "").strip()
         if not api_key or not bounds:
-            return None
+            return {"bg_data_uri": None, "meta": None}
 
         center_lat = (bounds["min_lat"] + bounds["max_lat"]) / 2.0
         center_lng = (bounds["min_lng"] + bounds["max_lng"]) / 2.0
 
         cx, cy = _deg_to_tile(center_lat, center_lng, zoom)
 
-        tiles_x = max(1, math.ceil(width / TILE_SIZE_MAP))
-        tiles_y = max(1, math.ceil(height / TILE_SIZE_MAP))
+        tiles_x = max(2, math.ceil(width / TILE_SIZE_MAP) + 1)
+        tiles_y = max(2, math.ceil(height / TILE_SIZE_MAP) + 1)
 
         start_x = cx - (tiles_x // 2)
         start_y = cy - (tiles_y // 2)
@@ -1228,16 +1309,30 @@ def _stitch_maptiler_tiles(bounds: dict, width: int, height: int, zoom: int = 18
                 tile_img = Image.open(io.BytesIO(resp.content)).convert("RGB")
                 stitched.paste(tile_img, (ix * TILE_SIZE_MAP, iy * TILE_SIZE_MAP))
 
-        stitched = stitched.crop((0, 0, width, height))
+        crop_x = max(0, (stitched.width - width) // 2)
+        crop_y = max(0, (stitched.height - height) // 2)
+        stitched = stitched.crop((crop_x, crop_y, crop_x + width, crop_y + height))
 
         buffer = io.BytesIO()
         stitched.save(buffer, format="JPEG", quality=85)
         img_b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
-        return f"data:image/jpeg;base64,{img_b64}"
+
+        meta = {
+            "zoom": zoom,
+            "start_x": start_x,
+            "start_y": start_y,
+            "crop_x": crop_x,
+            "crop_y": crop_y,
+        }
+
+        return {
+            "bg_data_uri": f"data:image/jpeg;base64,{img_b64}",
+            "meta": meta,
+        }
 
     except Exception as e:
         logger.warning(f"Failed to stitch MapTiler tiles: {e}")
-        return None
+        return {"bg_data_uri": None, "meta": None}
     
 @reports_bp.route('/reports/<farm_id>/pdf', methods=['GET'])
 def export_pdf(farm_id):
