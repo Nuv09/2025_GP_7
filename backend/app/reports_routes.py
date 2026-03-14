@@ -5,6 +5,8 @@ import logging
 import traceback
 from datetime import datetime
 import requests
+import io
+from PIL import Image
 
 from flask import Blueprint, jsonify, render_template
 from google.cloud import firestore
@@ -14,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 DB = firestore.Client()
 reports_bp = Blueprint("reports_bp", __name__)
+TILE_SIZE_MAP = 512
+REPORT_TILE_URL = "https://api.maptiler.com/maps/satellite/{zoom}/{x}/{y}.jpg?key={key}"
 
 
 # ─────────────────────────────────────────────
@@ -461,39 +465,7 @@ def _map_bounds(map_points: list, farm_polygon: list | None = None):
     }
 
 
-def _maptiler_static_background_url(bounds: dict, width: int, height: int) -> str | None:
-    """
-    يبني رابط static map من MapTiler بنفس فكرة الداشبورد.
-    """
-    api_key = os.environ.get("MAPTILER_KEY", "").strip()
-    if not api_key or not bounds:
-        return None
 
-    min_lng = bounds["min_lng"]
-    min_lat = bounds["min_lat"]
-    max_lng = bounds["max_lng"]
-    max_lat = bounds["max_lat"]
-
-    return (
-        f"https://api.maptiler.com/maps/hybrid/static/"
-        f"{min_lng},{min_lat},{max_lng},{max_lat}/{width}x{height}.png"
-        f"?padding=24&key={api_key}"
-    )
-
-def _download_image_as_data_uri(url: str) -> str | None:
-    try:
-        if not url:
-            return None
-
-        resp = requests.get(url, timeout=20)
-        resp.raise_for_status()
-
-        content_type = resp.headers.get("Content-Type", "image/png")
-        img_b64 = base64.b64encode(resp.content).decode("utf-8")
-        return f"data:{content_type};base64,{img_b64}"
-    except Exception as e:
-        logger.warning(f"Failed to download static map image: {e}")
-        return None
 
 def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_polygon: list | None = None) -> dict:
     norm_poly = _normalize_polygon(farm_polygon)
@@ -525,9 +497,7 @@ def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_pol
         2: "#ef4444",
     }
 
-    bg_url = _maptiler_static_background_url(bounds, width, height)
-    bg_data_uri = _download_image_as_data_uri(bg_url) if bg_url else None
-
+    bg_data_uri = _stitch_maptiler_tiles(bounds, width, height, zoom=18)
 
     poly_svg = ""
     if norm_poly:
@@ -636,7 +606,7 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
     forecast = export_data.get("forecast", {})
     forecast_next = export_data.get("forecast_next_week", {})
     top_action = export_data.get("top_action") or {}
-    map_points = export_data.get("health_map_points") or farm_doc.get("healthMap", []) or []
+    map_points = (export_data.get("health_map_points") or export_data.get("health_map") or farm_doc.get("healthMap", []) or []  )
     farm_poly = export_data.get("farm_polygon", []) or farm_doc.get("polygon", [])
     risk_drivers = (export_data.get("risk_drivers", []) or [])[:3]
     hotspots = (export_data.get("hotspots_table", []) or [])[:3]
@@ -1185,8 +1155,8 @@ def _merge_export_with_live_farm_data(export_data: dict, farm_data: dict) -> dic
     climate = dict(export_data.get("climate", {}) or {})
     export_data["climate"] = {
         **climate,
-        "rain_mm": _prefer_live_number(climate.get("rain_mm"), current_health.get("rain_mm"), 0),
-        "t_mean": _prefer_live_number(climate.get("t_mean"), current_health.get("t_mean"), 0),
+        "rain_mm": _first_non_empty(climate.get("rain_mm"), 0),
+        "t_mean": _first_non_empty(climate.get("t_mean"), 0),
         "total_pixels": _prefer_live_number(climate.get("total_pixels"), current_health.get("total_pixels"), 0),
         "rpw_score": _prefer_live_number(climate.get("rpw_score"), current_health.get("rpw_score"), 0),
     }
@@ -1217,7 +1187,58 @@ def _merge_export_with_live_farm_data(export_data: dict, farm_data: dict) -> dic
 # ─────────────────────────────────────────────
 # Routes
 # ─────────────────────────────────────────────
+def _deg_to_tile(lat: float, lon: float, zoom: int):
+    lat_rad = math.radians(lat)
+    n = 2.0 ** zoom
+    xtile = int((lon + 180.0) / 360.0 * n)
+    ytile = int(
+        n * (1.0 - math.log(math.tan(lat_rad) + (1 / math.cos(lat_rad))) / math.pi) / 2.0
+    )
+    return xtile, ytile
 
+
+def _stitch_maptiler_tiles(bounds: dict, width: int, height: int, zoom: int = 18) -> str | None:
+    try:
+        api_key = os.environ.get("MAPTILER_KEY", "").strip()
+        if not api_key or not bounds:
+            return None
+
+        center_lat = (bounds["min_lat"] + bounds["max_lat"]) / 2.0
+        center_lng = (bounds["min_lng"] + bounds["max_lng"]) / 2.0
+
+        cx, cy = _deg_to_tile(center_lat, center_lng, zoom)
+
+        tiles_x = max(1, math.ceil(width / TILE_SIZE_MAP))
+        tiles_y = max(1, math.ceil(height / TILE_SIZE_MAP))
+
+        start_x = cx - (tiles_x // 2)
+        start_y = cy - (tiles_y // 2)
+
+        stitched = Image.new("RGB", (tiles_x * TILE_SIZE_MAP, tiles_y * TILE_SIZE_MAP))
+
+        for ix in range(tiles_x):
+            for iy in range(tiles_y):
+                x = start_x + ix
+                y = start_y + iy
+                url = REPORT_TILE_URL.format(zoom=zoom, x=x, y=y, key=api_key)
+
+                resp = requests.get(url, timeout=20)
+                resp.raise_for_status()
+
+                tile_img = Image.open(io.BytesIO(resp.content)).convert("RGB")
+                stitched.paste(tile_img, (ix * TILE_SIZE_MAP, iy * TILE_SIZE_MAP))
+
+        stitched = stitched.crop((0, 0, width, height))
+
+        buffer = io.BytesIO()
+        stitched.save(buffer, format="JPEG", quality=85)
+        img_b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+        return f"data:image/jpeg;base64,{img_b64}"
+
+    except Exception as e:
+        logger.warning(f"Failed to stitch MapTiler tiles: {e}")
+        return None
+    
 @reports_bp.route('/reports/<farm_id>/pdf', methods=['GET'])
 def export_pdf(farm_id):
     try:

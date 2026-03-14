@@ -36,6 +36,7 @@ IF_MODEL_GS_URI = os.environ.get("IF_MODEL_GS_URI", "")
 IF_MEANS_GS_URI = os.environ.get("IF_MEANS_GS_URI", "")
 
 FORECAST_MODEL_GS_URI = os.environ.get("FORECAST_MODEL_GS_URI", "")
+WEATHERAPI_KEY = os.environ.get("WEATHERAPI_KEY", "")
 
 
 INDEX_COLS_ALL = [
@@ -1715,6 +1716,60 @@ def _safe_int(v, default=0):
     except Exception:
         return default
     
+def get_report_weather_from_weatherapi(farm_doc: Dict[str, Any]) -> Dict[str, float]:
+    try:
+        if not WEATHERAPI_KEY:
+            return {"rain_mm": 0.0, "t_mean": 0.0}
+
+        poly = farm_doc.get("polygon") or []
+        if len(poly) < 3:
+            return {"rain_mm": 0.0, "t_mean": 0.0}
+
+        coords = [(p["lng"], p["lat"]) for p in poly]
+        poly_for_centroid = [{"lat": lat, "lng": lon} for (lon, lat) in coords]
+        lat, lon = polygon_centroid(poly_for_centroid)
+
+        end_dt = pd.Timestamp.utcnow().normalize()
+        start_dt = end_dt - pd.Timedelta(days=29)
+
+        rows = []
+        current = start_dt
+
+        while current <= end_dt:
+            d = current.strftime("%Y-%m-%d")
+            url = "https://api.weatherapi.com/v1/history.json"
+            params = {
+                "key": WEATHERAPI_KEY,
+                "q": f"{lat},{lon}",
+                "dt": d,
+            }
+
+            r = session.get(url, params=params, timeout=30)
+            r.raise_for_status()
+            data = r.json()
+
+            day = ((data.get("forecast") or {}).get("forecastday") or [{}])[0].get("day", {})
+
+            rows.append({
+                "precip_mm": float(day.get("totalprecip_mm", 0) or 0),
+                "t2m_mean": float(day.get("avgtemp_c", 0) or 0),
+            })
+
+            current += pd.Timedelta(days=1)
+
+        if not rows:
+            return {"rain_mm": 0.0, "t_mean": 0.0}
+
+        df = pd.DataFrame(rows)
+        return {
+            "rain_mm": round(float(df["precip_mm"].sum()), 1),
+            "t_mean": round(float(df["t2m_mean"].mean()), 1),
+        }
+
+    except Exception as e:
+        print(f"[REPORT WEATHER] WeatherAPI failed: {e}")
+        return {"rain_mm": 0.0, "t_mean": 0.0}
+    
 def prepare_export_data(farm_doc, health_result, detected_count=None):
     history = health_result.get("indices_history_last_month", [])
     curr = history[-1] if len(history) > 0 else {}
@@ -1728,6 +1783,7 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
         return 0.0
 
     current_health = health_result.get("current_health", {})
+    report_weather = get_report_weather_from_weatherapi(farm_doc)
     forecast_next = health_result.get("forecast_next_week", {})
     alert_signals = health_result.get("alert_signals", {})
     health_map = health_result.get("health_map", []) or []
@@ -1765,11 +1821,11 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
     total_pixels_alerts = int(alert_signals.get("total_pixels_latest", 0) or 0)
 
     climate = {
-        "rain_mm": round(_safe_float(current_health.get("rain_mm", 0), 0), 1),
-        "t_mean": round(_safe_float(current_health.get("t_mean", 0), 0), 1),
-        "rpw_score": round(_safe_float(current_health.get("RPW_score_med", 0), 0), 3),
-        "total_pixels": int(total_pixels_current or total_pixels_alerts or 0),
-    }
+    "rain_mm": round(_safe_float(report_weather.get("rain_mm", 0), 0), 1),
+    "t_mean": round(_safe_float(report_weather.get("t_mean", 0), 0), 1),
+    "rpw_score": round(_safe_float(current_health.get("RPW_score_med", 0), 0), 3),
+    "total_pixels": int(total_pixels_current or total_pixels_alerts or 0),
+     }
 
     # ── سياق التنبيهات: تفصيل قواعد التصنيف والعلامات الفردية ──
     rule_counts = alert_signals.get("rule_counts_latest", {}) or {}
