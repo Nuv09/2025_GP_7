@@ -938,17 +938,19 @@ def site_summary(dfx: pd.DataFrame) -> Dict[str, Any]:
         class_counts = recent_data["pixel_risk_class"].value_counts(normalize=True) * 100.0
     else:
         class_counts = {}
+        
+    rain_s = dfx_last4["precip_mm"].dropna() if "precip_mm" in dfx_last4.columns else pd.Series(dtype=float)
+    temp_s = dfx_last4["t2m_mean"].dropna()  if "t2m_mean"  in dfx_last4.columns else pd.Series(dtype=float)
 
     return {
-        "Total_Pixels_Count": int(total_pixels),
-        "Healthy_Pct": float(class_counts.get("Healthy", 0.0)),
-        "Monitor_Pct": float(class_counts.get("Monitor", 0.0)),
-        "Critical_Pct": float(class_counts.get("Critical", 0.0)),
-        "RPW_score_med": float(dfx_last4.get("RPW_score", pd.Series([np.nan])).median()),
-        "rain_mm": float(dfx_last4.get("precip_mm", pd.Series([0.0])).sum()),
-        "t_mean": float(dfx_last4["t2m_mean"].dropna().mean()) if "t2m_mean" in dfx_last4.columns and not dfx_last4["t2m_mean"].dropna().empty else 0.0,
-
-    }
+    "Total_Pixels_Count": int(total_pixels),
+    "Healthy_Pct": float(class_counts.get("Healthy", 0.0)),
+    "Monitor_Pct": float(class_counts.get("Monitor", 0.0)),
+    "Critical_Pct": float(class_counts.get("Critical", 0.0)),
+    "RPW_score_med": float(dfx_last4.get("RPW_score", pd.Series([np.nan])).median()),
+    "rain_mm": float(rain_s.sum())  if not rain_s.empty else 0.0,
+    "t_mean":  float(temp_s.mean()) if not temp_s.empty else 0.0,
+     } 
 
 def indices_history_last_weeks(
     df_all: pd.DataFrame,
