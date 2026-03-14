@@ -489,10 +489,10 @@ def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_pol
 
     def to_xy(lat, lng):
         if meta:
-            gx, gy = _latlon_to_global_pixels(lat, lng, meta["zoom"])
-            px = gx - (meta["start_x"] * TILE_SIZE_MAP) - meta["crop_x"]
-            py = gy - (meta["start_y"] * TILE_SIZE_MAP) - meta["crop_y"]
-            return round(px, 1), round(py, 1)
+           gx, gy = _latlon_to_global_pixels(lat, lng, meta["zoom"])
+           px = gx - meta["origin_x"]
+           py = gy - meta["origin_y"]
+           return round(px, 1), round(py, 1)
 
         # fallback only
         min_lat = bounds["min_lat"]
@@ -1109,10 +1109,6 @@ def _get_report_weather_live(farm_data: dict) -> dict:
         return {"rain_mm": 0.0, "t_mean": 0.0}   
 
 def _merge_export_with_live_farm_data(export_data: dict, farm_data: dict) -> dict:
-    """
-    يوحّد مصدر بيانات التقرير مع البيانات الحية الموجودة في وثيقة المزرعة.
-    الهدف: إذا export_data ناقص أو قديم، نأخذ fallback من farm_data.
-    """
     export_data = dict(export_data or {})
     farm_data = farm_data or {}
 
@@ -1120,7 +1116,6 @@ def _merge_export_with_live_farm_data(export_data: dict, farm_data: dict) -> dic
     current_health = health_root.get("current_health") if isinstance(health_root.get("current_health"), dict) else {}
     forecast_next = health_root.get("forecast_next_week") if isinstance(health_root.get("forecast_next_week"), dict) else {}
 
-    # ── Header fallback ─────────────────────────
     header = dict(export_data.get("header", {}) or {})
     header["name"] = _first_non_empty(header.get("name"), farm_data.get("farmName"), "—")
     header["area"] = _first_non_empty(header.get("area"), farm_data.get("farmSize"), "—")
@@ -1137,7 +1132,6 @@ def _merge_export_with_live_farm_data(export_data: dict, farm_data: dict) -> dic
     )
     export_data["header"] = header
 
-    # ── حقول مباشرة ─────────────────────────────
     export_data["farmName"] = _first_non_empty(export_data.get("farmName"), farm_data.get("farmName"))
     export_data["farmSize"] = _first_non_empty(export_data.get("farmSize"), farm_data.get("farmSize"))
     export_data["finalCount"] = _first_non_empty(
@@ -1149,21 +1143,19 @@ def _merge_export_with_live_farm_data(export_data: dict, farm_data: dict) -> dic
     )
     export_data["owner_name"] = _first_non_empty(export_data.get("owner_name"), farm_data.get("ownerName"), "—")
 
-    # ── polygon fallback ────────────────────────
     export_data["farm_polygon"] = _first_non_empty(
         export_data.get("farm_polygon"),
         farm_data.get("polygon"),
         [],
     )
 
-    # ── الخريطة ─────────────────────────────────
     export_data["health_map_points"] = _first_non_empty(
         export_data.get("health_map_points"),
         farm_data.get("healthMap"),
+        health_root.get("health_map"),
         [],
     )
 
-    # ── التوزيع الحالي ─────────────────────────
     dist = dict(export_data.get("distribution", {}) or {})
     export_data["distribution"] = {
         "Healthy_Pct": _prefer_live_number(dist.get("Healthy_Pct"), current_health.get("Healthy_Pct"), 0),
@@ -1171,7 +1163,6 @@ def _merge_export_with_live_farm_data(export_data: dict, farm_data: dict) -> dic
         "Critical_Pct": _prefer_live_number(dist.get("Critical_Pct"), current_health.get("Critical_Pct"), 0),
     }
 
-    # ── توقع الأسبوع القادم ────────────────────
     next_week = dict(export_data.get("forecast_next_week", {}) or {})
     export_data["forecast_next_week"] = {
         "Healthy_Pct_next": _prefer_live_number(next_week.get("Healthy_Pct_next"), forecast_next.get("Healthy_Pct_next"), 0),
@@ -1181,7 +1172,6 @@ def _merge_export_with_live_farm_data(export_data: dict, farm_data: dict) -> dic
         "ndmi_delta_next_mean": _prefer_live_number(next_week.get("ndmi_delta_next_mean"), forecast_next.get("ndmi_delta_next_mean"), 0),
     }
 
-    # ── المؤشرات الحيوية ────────────────────────
     biometrics = dict(export_data.get("biometrics", {}) or {})
     export_data["biometrics"] = {
         "ndvi": {
@@ -1222,17 +1212,22 @@ def _merge_export_with_live_farm_data(export_data: dict, farm_data: dict) -> dic
         },
     }
 
-    # ── climate / alert_context ─────────────────
     climate = dict(export_data.get("climate", {}) or {})
-    live_weather = _get_report_weather_live(farm_data)
+
+    need_live_weather = (
+        _safe_float(climate.get("rain_mm"), 0.0) == 0.0 and
+        _safe_float(climate.get("t_mean"), 0.0) == 0.0
+    )
+
+    live_weather = _get_report_weather_live(farm_data) if need_live_weather else {}
 
     export_data["climate"] = {
-    **climate,
-    "rain_mm": live_weather.get("rain_mm", 0.0),
-    "t_mean": live_weather.get("t_mean", 0.0),
-    "total_pixels": _prefer_live_number(climate.get("total_pixels"), current_health.get("total_pixels"), 0),
-    "rpw_score": _prefer_live_number(climate.get("rpw_score"), current_health.get("rpw_score"), 0),
-      }
+        **climate,
+        "rain_mm": _prefer_live_number(climate.get("rain_mm"), live_weather.get("rain_mm"), 0.0),
+        "t_mean": _prefer_live_number(climate.get("t_mean"), live_weather.get("t_mean"), 0.0),
+        "total_pixels": _prefer_live_number(climate.get("total_pixels"), current_health.get("total_pixels"), 0),
+        "rpw_score": _prefer_live_number(climate.get("rpw_score"), current_health.get("rpw_score"), 0),
+    }
 
     alert_context = dict(export_data.get("alert_context", {}) or {})
     export_data["alert_context"] = {
@@ -1246,7 +1241,6 @@ def _merge_export_with_live_farm_data(export_data: dict, farm_data: dict) -> dic
         "flag_counts": _first_non_empty(alert_context.get("flag_counts"), {}),
     }
 
-    # ── trend fallback ──────────────────────────
     if not export_data.get("multi_trend"):
         hist = health_root.get("indices_history_last_month", []) or []
         export_data["multi_trend"] = {
@@ -1278,39 +1272,72 @@ def _latlon_to_global_pixels(lat: float, lon: float, zoom: int):
     y = (0.5 - math.log((1 + siny) / (1 - siny)) / (4 * math.pi)) * scale
     return x, y
 
-def _stitch_maptiler_tiles(bounds: dict, width: int, height: int, zoom: int = 16) -> dict:
+def _stitch_maptiler_tiles(bounds: dict, width: int, height: int, zoom: int | None = None) -> dict:
     try:
         api_key = os.environ.get("MAPTILER_KEY", "").strip()
         if not api_key or not bounds:
             return {"bg_data_uri": None, "meta": None}
 
-        center_lat = (bounds["min_lat"] + bounds["max_lat"]) / 2.0
-        center_lng = (bounds["min_lng"] + bounds["max_lng"]) / 2.0
+        pad = 24
 
-        cx, cy = _deg_to_tile(center_lat, center_lng, zoom)
+        min_lat = bounds["min_lat"]
+        max_lat = bounds["max_lat"]
+        min_lng = bounds["min_lng"]
+        max_lng = bounds["max_lng"]
 
-        tiles_x = max(2, math.ceil(width / TILE_SIZE_MAP) + 1)
-        tiles_y = max(2, math.ceil(height / TILE_SIZE_MAP) + 1)
+        # نختار زوم يخلي كامل حدود المزرعة تدخل داخل الصورة
+        chosen_zoom = 16
+        for z in range(18, 9, -1):
+            gx1, gy1 = _latlon_to_global_pixels(max_lat, min_lng, z)  # top-left
+            gx2, gy2 = _latlon_to_global_pixels(min_lat, max_lng, z)  # bottom-right
 
-        start_x = cx - (tiles_x // 2)
-        start_y = cy - (tiles_y // 2)
+            req_w = abs(gx2 - gx1)
+            req_h = abs(gy2 - gy1)
 
-        stitched = Image.new("RGB", (tiles_x * TILE_SIZE_MAP, tiles_y * TILE_SIZE_MAP))
+            if req_w <= (width - pad * 2) and req_h <= (height - pad * 2):
+                chosen_zoom = z
+                break
 
-        for ix in range(tiles_x):
-            for iy in range(tiles_y):
-                x = start_x + ix
-                y = start_y + iy
-                url = REPORT_TILE_URL.format(zoom=zoom, x=x, y=y, key=api_key)
+        if zoom is not None:
+            chosen_zoom = zoom
+
+        gx1, gy1 = _latlon_to_global_pixels(max_lat, min_lng, chosen_zoom)  # top-left
+        gx2, gy2 = _latlon_to_global_pixels(min_lat, max_lng, chosen_zoom)  # bottom-right
+
+        farm_w = abs(gx2 - gx1)
+        farm_h = abs(gy2 - gy1)
+
+        # نخلي حدود المزرعة بمنتصف الكانفس
+        origin_x = min(gx1, gx2) - ((width - farm_w) / 2.0)
+        origin_y = min(gy1, gy2) - ((height - farm_h) / 2.0)
+
+        end_x = origin_x + width
+        end_y = origin_y + height
+
+        start_tile_x = int(math.floor(origin_x / TILE_SIZE_MAP))
+        start_tile_y = int(math.floor(origin_y / TILE_SIZE_MAP))
+        end_tile_x = int(math.floor(end_x / TILE_SIZE_MAP))
+        end_tile_y = int(math.floor(end_y / TILE_SIZE_MAP))
+
+        stitched_w = (end_tile_x - start_tile_x + 1) * TILE_SIZE_MAP
+        stitched_h = (end_tile_y - start_tile_y + 1) * TILE_SIZE_MAP
+        stitched = Image.new("RGB", (stitched_w, stitched_h))
+
+        for tx in range(start_tile_x, end_tile_x + 1):
+            for ty in range(start_tile_y, end_tile_y + 1):
+                url = REPORT_TILE_URL.format(zoom=chosen_zoom, x=tx, y=ty, key=api_key)
 
                 resp = requests.get(url, timeout=20)
                 resp.raise_for_status()
 
                 tile_img = Image.open(io.BytesIO(resp.content)).convert("RGB")
-                stitched.paste(tile_img, (ix * TILE_SIZE_MAP, iy * TILE_SIZE_MAP))
+                px = (tx - start_tile_x) * TILE_SIZE_MAP
+                py = (ty - start_tile_y) * TILE_SIZE_MAP
+                stitched.paste(tile_img, (px, py))
 
-        crop_x = max(0, (stitched.width - width) // 2)
-        crop_y = max(0, (stitched.height - height) // 2)
+        crop_x = int(round(origin_x - start_tile_x * TILE_SIZE_MAP))
+        crop_y = int(round(origin_y - start_tile_y * TILE_SIZE_MAP))
+
         stitched = stitched.crop((crop_x, crop_y, crop_x + width, crop_y + height))
 
         buffer = io.BytesIO()
@@ -1318,11 +1345,9 @@ def _stitch_maptiler_tiles(bounds: dict, width: int, height: int, zoom: int = 16
         img_b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
 
         meta = {
-            "zoom": zoom,
-            "start_x": start_x,
-            "start_y": start_y,
-            "crop_x": crop_x,
-            "crop_y": crop_y,
+            "zoom": chosen_zoom,
+            "origin_x": origin_x,
+            "origin_y": origin_y,
         }
 
         return {
