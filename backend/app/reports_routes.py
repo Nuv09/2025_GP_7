@@ -533,7 +533,7 @@ def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_pol
     if norm_poly:
         pts = " ".join(f"{x},{y}" for x, y in [to_xy(lat, lng) for lat, lng in norm_poly])
         poly_svg = (
-            f'<polygon points="{pts}" fill="rgba(255,255,255,0.10)" stroke="#10b981" '
+            f'<polygon points="{pts}" fill="white" fill-opacity="0.10" stroke="#10b981" '
             f'stroke-width="2.2" opacity="1"/>'
         )
 
@@ -563,17 +563,10 @@ def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_pol
             f'<circle cx="{x}" cy="{y}" r="{r}" fill="{fill}" opacity="0.95" />'
         )
 
-    overlay_svg = f"""<svg width="100%" height="100%" viewBox="0 0 {width} {height}"
+    overlay_svg = f"""<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}"
      xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;">
-  <clipPath id="mapClip">
-    <rect x="0" y="0" width="{width}" height="{height}" rx="14"/>
-  </clipPath>
-  <g clip-path="url(#mapClip)">
-    {poly_svg}
-    {''.join(circles)}
-  </g>
-  <rect x="0.5" y="0.5" width="{width-1}" height="{height-1}" rx="14"
-        fill="none" stroke="#dde8e1"/>
+  {poly_svg}
+  {''.join(circles)}
 </svg>""".strip()
 
     return {"bg_data_uri": bg_data_uri, "overlay_svg": overlay_svg}
@@ -679,7 +672,7 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
     gauge_color = _color_for_pct(wellness)
     gauge_svg = _gauge_svg(wellness, gauge_color, size=124)
     sparkline = _trend_sparkline(forecast.get("trend_data", []), color="#2563eb")
-    map_result = _heatmap_svg(map_points, farm_polygon=farm_poly)
+    map_result = _heatmap_svg(map_points, width=490, height=176, farm_polygon=farm_poly)
     map_bg_uri = map_result["bg_data_uri"]
     map_svg    = map_result["overlay_svg"]
     compare_svg = _distribution_compare_svg(dist, forecast_next)
