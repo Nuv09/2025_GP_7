@@ -268,7 +268,12 @@
       background: linear-gradient(135deg, #dde9e2 0%, #edf3ef 60%, #d6e3db 100%);
       display:block;
     }
-    .map-overlay { position:absolute; inset:0; }
+.map-overlay,
+.map-overlay svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
     .legend {
       display:flex; flex-wrap:wrap; justify-content:center; align-items:center;
       gap: 8px 14px; margin-top: 5px; padding: 4px 6px;
@@ -491,12 +496,12 @@
           <div class="env-title">السياق البيئي والتشغيلي</div>
           <div class="env-grid">
             <div class="env-stat" style="background:#eff6ff; border-color:#dbeafe;">
-              <div class="label">هطول الأمطار<br>آخر 4 أسابيع</div>
+              <div class="label">هطول الأمطار<br>آخر اسبوع</div>
               <div class="value" style="color:#1d4ed8;">{{ rain_mm }}</div>
               <div class="hint" style="color:#3b82f6;">ملم تراكمي</div>
             </div>
             <div class="env-stat" style="background:#fefce8; border-color:#fde68a;">
-              <div class="label">متوسط الحرارة<br>آخر 4 أسابيع</div>
+              <div class="label">متوسط الحرارة<br>آخر اسبوع</div>
               <div class="value" style="color:#d97706;">{{ t_mean }}</div>
               <div class="hint" style="color:#f59e0b;">°م</div>
             </div>
@@ -530,13 +535,8 @@
       <div class="page1-bottom">
         <div class="card map-card">
           <div class="map-frame">
-            {% if map_bg_uri %}
-              <img src="{{ map_bg_uri }}" style="width:100%; height:100%; object-fit:cover; display:block;"/>
-            {% else %}
-              <div class="map-fallback"></div>
-            {% endif %}
-            <div class="map-overlay">{{ map_svg|safe }}</div>
-          </div>
+  <div class="map-overlay">{{ map_svg|safe }}</div>
+</div>
           <div class="legend">
             <div class="legend-item"><span>سليم</span><span class="legend-dot" style="background:#22c55e;"></span></div>
             <div class="legend-item"><span>متابعة</span><span class="legend-dot" style="background:#f59e0b;"></span></div>

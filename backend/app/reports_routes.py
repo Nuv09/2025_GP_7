@@ -547,17 +547,21 @@ def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_pol
             f'<circle cx="{x}" cy="{y}" r="{r}" fill="{fill}" stroke="white" stroke-width="1.2" opacity="0.98" />'
         )
 
-    overlay_svg = f"""<svg
-    width="100%"
-    height="100%"
+    if bg_data_uri:
+       bg_layer = f'<image href="{bg_data_uri}" x="0" y="0" width="{width}" height="{height}" preserveAspectRatio="none"/>'
+    else:
+       bg_layer = f'<rect x="0" y="0" width="{width}" height="{height}" fill="#e5efe8"/>'
+
+    combined_svg = f"""<svg
+    width="{width}"
+    height="{height}"
     viewBox="0 0 {width} {height}"
-    preserveAspectRatio="none"
-    xmlns="http://www.w3.org/2000/svg"
-    style="position:absolute; inset:0; width:100%; height:100%; z-index:3; pointer-events:none;">
+    xmlns="http://www.w3.org/2000/svg">
+  {bg_layer}
   {poly_svg}
   {''.join(circles)}
 </svg>""".strip()
-    
+
     logger.info(
     "Heatmap debug | points=%s | bg=%s | meta=%s",
     len(map_points or []),
@@ -565,7 +569,7 @@ def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_pol
     meta,
 )
 
-    return {"bg_data_uri": bg_data_uri, "overlay_svg": overlay_svg}
+    return {"bg_data_uri": None, "overlay_svg": combined_svg}
 
 
 def _footer_logo_html(logo_data_uri: str | None) -> str:
@@ -1091,7 +1095,7 @@ def _get_report_weather_live(farm_data: dict) -> dict:
 
     try:
         end_dt = datetime.utcnow().date()
-        start_dt = end_dt - __import__("datetime").timedelta(days=29)
+        start_dt = end_dt - __import__("datetime").timedelta(days=7)
 
         rows = []
         current = start_dt
