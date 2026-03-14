@@ -893,6 +893,7 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
 # Excel Generation — openpyxl
 # ─────────────────────────────────────────────
 def generate_excel_report(export_data: dict, farm_id: str) -> str:
+    import os
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
@@ -900,28 +901,18 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     from openpyxl.chart.label import DataLabelList
     from openpyxl.drawing.image import Image as XLImage
 
-    logo_path = os.path.join(os.path.dirname(__file__), "static", "images", "saaf_logo.png")
-    if os.path.exists(logo_path):
-      logo_img = XLImage(logo_path)
-      logo_img.width = 115
-      logo_img.height = 42
-      ws.add_image(logo_img, "A2")
-
     wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "الملخص التنفيذي"
+    ws.sheet_view.rightToLeft = True
 
     # ─────────────────────────────────────────────
-    # ألوان وتنسيقات
+    # helpers
     # ─────────────────────────────────────────────
     GREEN_DARK = "064E3B"
     GREEN_MID = "10B981"
     GREEN_LIGHT = "D1FAE5"
     GREEN_SOFT = "ECFDF5"
-
-    GOLD = "EBB974"
-
-    BLUE = "2563EB"
-    BLUE_LIGHT = "DBEAFE"
-    BLUE_SOFT = "EFF6FF"
 
     ORANGE = "F59E0B"
     ORANGE_LIGHT = "FEF3C7"
@@ -931,48 +922,62 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     RED_LIGHT = "FEE2E2"
     RED_SOFT = "FEF2F2"
 
+    BLUE = "2563EB"
+    BLUE_LIGHT = "DBEAFE"
+    BLUE_SOFT = "EFF6FF"
+
     SLATE = "334155"
     SLATE_2 = "64748B"
     SLATE_LIGHT = "F8FAFC"
     WHITE = "FFFFFF"
-    BORDER_CLR = "E2E8F0"
-
-    def side(color=BORDER_CLR, style="thin"):
-        return Side(style=style, color=color)
-
-    def full_border(color=BORDER_CLR, style="thin"):
-        s = side(color, style)
-        return Border(left=s, right=s, top=s, bottom=s)
-
-    def header_font(sz=12, bold=True, color=WHITE):
-        return Font(name="Cairo", size=sz, bold=bold, color=color)
-
-    def body_font(sz=11, bold=False, color="1E293B"):
-        return Font(name="Cairo", size=sz, bold=bold, color=color)
+    BORDER = "E2E8F0"
+    GOLD = "B45309"
 
     def fill(hex_color):
         return PatternFill("solid", fgColor=hex_color)
 
-    def center(wrap=False):
+    def side(color=BORDER, style="thin"):
+        return Side(style=style, color=color)
+
+    def border(color=BORDER, style="thin"):
+        s = side(color, style)
+        return Border(left=s, right=s, top=s, bottom=s)
+
+    def font(size=11, bold=False, color="1E293B"):
+        return Font(name="Cairo", size=size, bold=bold, color=color)
+
+    def align_center(wrap=False):
         return Alignment(horizontal="center", vertical="center", wrap_text=wrap, readingOrder=2)
 
-    def right(wrap=False):
+    def align_right(wrap=False):
         return Alignment(horizontal="right", vertical="center", wrap_text=wrap, readingOrder=2)
 
-    def left(wrap=False):
-        return Alignment(horizontal="left", vertical="center", wrap_text=wrap, readingOrder=2)
-
-    def set_cell(cell, value=None, font=None, fill_color=None, alignment=None, border=None):
+    def set_cell(cell, value=None, *, f=None, bg=None, al=None, bd=None):
         if value is not None:
             cell.value = value
-        if font is not None:
-            cell.font = font
-        if fill_color is not None:
-            cell.fill = fill(fill_color)
-        if alignment is not None:
-            cell.alignment = alignment
-        if border is not None:
-            cell.border = border
+        if f is not None:
+            cell.font = f
+        if bg is not None:
+            cell.fill = fill(bg)
+        if al is not None:
+            cell.alignment = al
+        if bd is not None:
+            cell.border = bd
+
+    def merge_value(ws_, cell_range, value, *, f=None, bg=None, al=None, bd=None):
+        ws_.merge_cells(cell_range)
+        cell = ws_[cell_range.split(":")[0]]
+        set_cell(cell, value, f=f, bg=bg, al=al, bd=bd)
+        return cell
+
+    def pct(v):
+        return f"{_safe_float(v, 0.0):.1f}%"
+
+    def num(v, digits=2):
+        return f"{_safe_float(v, 0.0):.{digits}f}"
+
+    def delta_abs(v, digits=3):
+        return f"{_safe_float(v, 0.0):+.{digits}f}"
 
     def safe_dict(v):
         return v if isinstance(v, dict) else {}
@@ -980,204 +985,175 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     def safe_list(v):
         return v if isinstance(v, list) else []
 
-    def pct_text(v):
-        return f"{_safe_float(v):.1f}%"
-
-    def num_text(v, digits=2):
-        return f"{_safe_float(v):.{digits}f}"
-
-    def delta_text(v, digits=1):
-        val = _safe_float(v)
-        return f"{val:+.{digits}f}%"
-
-    def status_fill_by_value(val: float):
-        val = _safe_float(val)
-        if val >= 75:
-            return GREEN_SOFT, "166534"
-        if val >= 45:
-            return ORANGE_LIGHT, "92400E"
-        return RED_LIGHT, "991B1B"
-
-    def priority_fill(priority: str):
-        p = str(priority or "").strip()
-        if "عاج" in p or "حرج" in p:
-            return RED_SOFT, "991B1B"
-        if "مرتفع" in p:
-            return ORANGE_SOFT, "9A3412"
-        if "متوسط" in p:
-            return BLUE_SOFT, "1D4ED8"
-        if "منخفض" in p:
-            return GREEN_SOFT, "166534"
-        return SLATE_LIGHT, "334155"
-
-    def decode_status(v):
-        try:
-            v = int(v)
-        except Exception:
-            return "—"
-        if v == 0:
-            return "سليم"
-        if v == 1:
-            return "متابعة"
-        if v == 2:
-            return "حرج"
-        return str(v)
-
-    def status_row_style(status_text: str):
-        s = str(status_text or "")
+    def status_fill(status_text: str):
+        s = str(status_text or "").strip()
         if "حرج" in s:
             return RED_SOFT
-        if "متابعة" in s or "مراقبة" in s:
+        if "متابعة" in s:
             return ORANGE_SOFT
         if "سليم" in s:
             return GREEN_SOFT
         return None
 
-    def sheet_title(ws, title):
-        ws.merge_cells("A1:H1")
-        c = ws["A1"]
-        set_cell(
-            c,
-            title,
-            font=Font(name="Cairo", size=16, bold=True, color=WHITE),
-            fill_color=GREEN_DARK,
-            alignment=center(),
-            border=full_border(GREEN_DARK),
-        )
-        ws.row_dimensions[1].height = 28
+    def priority_fill(priority_text: str):
+        p = str(priority_text or "").strip()
+        if "مرتفعة" in p or "عاج" in p or "حرج" in p:
+            return RED_LIGHT
+        if "متوسطة" in p:
+            return ORANGE_LIGHT
+        if "منخفضة" in p:
+            return GREEN_SOFT
+        return SLATE_LIGHT
 
-    def set_default_widths(ws, widths):
-        for col, width in widths.items():
-            ws.column_dimensions[col].width = width
+    def metric_fill(metric_code, value):
+        v = _safe_float(value, 0.0)
+        if metric_code == "NDVI":
+            if v >= 0.60:
+                return GREEN_SOFT, "166534"
+            if v >= 0.35:
+                return ORANGE_LIGHT, "92400E"
+            return RED_LIGHT, "991B1B"
+        if metric_code == "NDMI":
+            if v >= 0.30:
+                return BLUE_SOFT, "1D4ED8"
+            if v >= 0.10:
+                return ORANGE_LIGHT, "92400E"
+            return RED_LIGHT, "991B1B"
+        if metric_code == "NDRE":
+            if v >= 0.45:
+                return GREEN_SOFT, "166534"
+            if v >= 0.25:
+                return ORANGE_LIGHT, "92400E"
+            return RED_LIGHT, "991B1B"
+        return SLATE_LIGHT, SLATE
 
-    def make_section_title(ws, row, title, end_col=8, color=GREEN_MID):
-        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=end_col)
-        c = ws.cell(row, 1)
-        set_cell(
-            c,
-            title,
-            font=header_font(12),
-            fill_color=color,
-            alignment=center(),
-            border=full_border()
-        )
+    def decode_status(code):
+        try:
+            code = int(code)
+        except Exception:
+            return "—"
+        if code == 0:
+            return "سليم"
+        if code == 1:
+            return "متابعة"
+        if code == 2:
+            return "حرج"
+        return "—"
 
-    def draw_kpi_box(ws, start_col, row_top, title, value, subtitle="", tone="green"):
-        tone_map = {
-            "green": (GREEN_SOFT, GREEN_DARK, "166534"),
+    def add_logo(target_ws):
+        logo_path = os.path.join(os.path.dirname(__file__), "static", "images", "saaf_logo.png")
+        if os.path.exists(logo_path):
+            try:
+                img = XLImage(logo_path)
+                img.width = 115
+                img.height = 42
+                target_ws.add_image(img, "A1")
+            except Exception:
+                pass
+
+    def draw_kpi_box(target_ws, start_col, row_top, title, value, subtitle="", tone="green"):
+        tones = {
+            "green":  (GREEN_SOFT, GREEN_DARK, "166534"),
             "orange": (ORANGE_LIGHT, ORANGE, "92400E"),
-            "red": (RED_LIGHT, RED, "991B1B"),
-            "blue": (BLUE_LIGHT, BLUE, "1D4ED8"),
-            "slate": (SLATE_LIGHT, SLATE, "334155"),
-            "gold": ("FFF7ED", GOLD, "92400E"),
+            "red":    (RED_LIGHT, RED, "991B1B"),
+            "blue":   (BLUE_LIGHT, BLUE, "1D4ED8"),
+            "slate":  (SLATE_LIGHT, SLATE, "334155"),
+            "gold":   ("FFF7ED", GOLD, "92400E"),
         }
-        box_fill, border_color, value_color = tone_map.get(tone, tone_map["slate"])
-
+        bg, bd, fg = tones.get(tone, tones["slate"])
         end_col = start_col + 1
-        ws.merge_cells(start_row=row_top, start_column=start_col, end_row=row_top, end_column=end_col)
-        ws.merge_cells(start_row=row_top + 1, start_column=start_col, end_row=row_top + 1, end_column=end_col)
-        ws.merge_cells(start_row=row_top + 2, start_column=start_col, end_row=row_top + 2, end_column=end_col)
 
         for r in range(row_top, row_top + 3):
             for c in range(start_col, end_col + 1):
-                cell = ws.cell(r, c)
-                cell.fill = fill(box_fill)
-                cell.border = full_border(border_color)
+                cell = target_ws.cell(r, c)
+                cell.fill = fill(bg)
+                cell.border = border(bd)
+
+        target_ws.merge_cells(start_row=row_top, start_column=start_col, end_row=row_top, end_column=end_col)
+        target_ws.merge_cells(start_row=row_top + 1, start_column=start_col, end_row=row_top + 1, end_column=end_col)
+        target_ws.merge_cells(start_row=row_top + 2, start_column=start_col, end_row=row_top + 2, end_column=end_col)
 
         set_cell(
-            ws.cell(row_top, start_col),
+            target_ws.cell(row_top, start_col),
             title,
-            font=body_font(10, bold=True, color=SLATE_2),
-            alignment=center(wrap=True),
+            f=font(10, True, SLATE_2),
+            al=align_center(True)
         )
         set_cell(
-            ws.cell(row_top + 1, start_col),
+            target_ws.cell(row_top + 1, start_col),
             value,
-            font=Font(name="Cairo", size=16, bold=True, color=value_color),
-            alignment=center(),
+            f=font(16, True, fg),
+            al=align_center(True)
         )
         set_cell(
-            ws.cell(row_top + 2, start_col),
+            target_ws.cell(row_top + 2, start_col),
             subtitle,
-            font=body_font(9, bold=False, color=SLATE_2),
-            alignment=center(wrap=True),
+            f=font(9, False, SLATE_2),
+            al=align_center(True)
         )
 
-    def write_info_table(ws, start_row, title, items):
-        make_section_title(ws, start_row, title, end_col=8, color=GREEN_MID)
+    def write_label_value_table(target_ws, start_row, title, rows):
+        merge_value(
+            target_ws, f"A{start_row}:H{start_row}", title,
+            f=font(12, True, WHITE), bg=GREEN_MID, al=align_center(), bd=border()
+        )
         r = start_row + 1
-        for label, value in items:
-            ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=2)
-            ws.merge_cells(start_row=r, start_column=3, end_row=r, end_column=8)
-
-            c1 = ws.cell(r, 1)
-            c2 = ws.cell(r, 3)
-
-            set_cell(
-                c1, label,
-                font=body_font(10, bold=True, color=GREEN_DARK),
-                fill_color=GREEN_LIGHT,
-                alignment=center(wrap=True),
-                border=full_border()
+        for label, value in rows:
+            merge_value(
+                target_ws, f"A{r}:B{r}", label,
+                f=font(10, True, GREEN_DARK), bg=GREEN_LIGHT, al=align_center(True), bd=border()
             )
-            set_cell(
-                c2, value,
-                font=body_font(10),
-                alignment=right(wrap=True),
-                border=full_border()
+            merge_value(
+                target_ws, f"C{r}:H{r}", value,
+                f=font(10, False, "1E293B"), bg=WHITE, al=align_right(True), bd=border()
             )
             r += 1
         return r
 
-    def write_table(ws, start_row, title, headers, rows, title_color=GREEN_MID, row_fills=None):
-        make_section_title(ws, start_row, title, end_col=len(headers), color=title_color)
+    def write_table(target_ws, start_row, title, headers, rows, *, title_color=GREEN_MID):
+        last_col = len(headers)
+        merge_value(
+            target_ws,
+            f"A{start_row}:{get_column_letter(last_col)}{start_row}",
+            title,
+            f=font(12, True, WHITE),
+            bg=title_color,
+            al=align_center(),
+            bd=border()
+        )
 
-        hdr_row = start_row + 1
+        hdr = start_row + 1
         for i, h in enumerate(headers, start=1):
             set_cell(
-                ws.cell(hdr_row, i),
+                target_ws.cell(hdr, i),
                 h,
-                font=body_font(10, bold=True, color=SLATE),
-                fill_color=SLATE_LIGHT,
-                alignment=center(wrap=True),
-                border=full_border()
+                f=font(10, True, SLATE),
+                bg=SLATE_LIGHT,
+                al=align_center(True),
+                bd=border()
             )
 
-        row_ptr = hdr_row + 1
-        for idx, row_data in enumerate(rows):
-            row_fill = row_fills[idx] if row_fills and idx < len(row_fills) else None
-            for i, v in enumerate(row_data, start=1):
-                cell = ws.cell(row_ptr, i)
+        r = hdr + 1
+        for row_data in rows:
+            row_bg = None
+            if len(row_data) > 0:
+                row_bg = status_fill(str(row_data[0])) if headers and headers[0] == "الحالة" else None
+
+            for i, val in enumerate(row_data, start=1):
+                cell = target_ws.cell(r, i)
                 set_cell(
                     cell,
-                    v,
-                    font=body_font(10),
-                    fill_color=row_fill,
-                    alignment=center(wrap=True) if i != len(headers) else right(wrap=True),
-                    border=full_border()
+                    val,
+                    f=font(10, False, "1E293B"),
+                    bg=row_bg,
+                    al=align_center(True) if i != len(row_data) else align_right(True),
+                    bd=border()
                 )
-            row_ptr += 1
-
-        return row_ptr
-
-    def style_priority_column(ws, start_row, end_row, col_idx):
-        for r in range(start_row, end_row + 1):
-            cell = ws.cell(r, col_idx)
-            bg, fg = priority_fill(cell.value)
-            cell.fill = fill(bg)
-            cell.font = body_font(10, bold=True, color=fg)
-            cell.alignment = center()
-
-    def style_status_column(ws, start_row, end_row, col_idx):
-        for r in range(start_row, end_row + 1):
-            cell = ws.cell(r, col_idx)
-            row_fill = status_row_style(str(cell.value))
-            if row_fill:
-                cell.fill = fill(row_fill)
-                cell.font = body_font(10, bold=True)
+            r += 1
+        return r
 
     # ─────────────────────────────────────────────
-    # سحب البيانات
+    # data
     # ─────────────────────────────────────────────
     header = safe_dict(export_data.get("header"))
     dist = safe_dict(export_data.get("distribution"))
@@ -1192,22 +1168,22 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     multi_trend = safe_dict(export_data.get("multi_trend"))
     map_points = safe_list(export_data.get("health_map_points"))
 
-    owner_name = export_data.get("owner_name", "—")
-    farm_name = header.get("name", export_data.get("farmName", "—"))
-    contract_number = header.get("contract_number", "—")
-    region = header.get("city", "—")
-    farm_area = header.get("area", export_data.get("farmSize", "—"))
-    total_palms = header.get("total_palms") or export_data.get("finalCount") or 0
-    report_date = header.get("date", datetime.now().strftime("%Y-%m-%d"))
+    farm_name = header.get("name") or export_data.get("farmName") or "—"
+    contract_number = header.get("contract_number") or "—"
+    region = header.get("city") or "—"
+    owner_name = export_data.get("owner_name") or header.get("owner_name") or "—"
+    farm_area = str(header.get("area") or export_data.get("farmSize") or "—")
+    total_palms = _safe_int(header.get("total_palms") or export_data.get("finalCount") or 0)
+    report_date = header.get("date") or datetime.now().strftime("%Y-%m-%d")
 
     healthy_pct = _safe_float(dist.get("Healthy_Pct", 0))
     monitor_pct = _safe_float(dist.get("Monitor_Pct", 0))
     critical_pct = _safe_float(dist.get("Critical_Pct", 0))
-    wellness = float(export_data.get("wellness_score", healthy_pct))
+    wellness = _safe_float(export_data.get("wellness_score", healthy_pct), 0)
 
-    executive_status = export_data.get("executive_status", "ملخص الحالة")
-    executive_summary = export_data.get("executive_summary", "—")
-    executive_next_step = export_data.get("executive_next_step", "—")
+    executive_status = export_data.get("executive_status") or "ملخص الحالة"
+    executive_summary = export_data.get("executive_summary") or "—"
+    executive_next_step = export_data.get("executive_next_step") or "—"
 
     rain_mm = _safe_float(climate.get("rain_mm", 0))
     t_mean = _safe_float(climate.get("t_mean", 0))
@@ -1215,7 +1191,7 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     rpw_score = _safe_float(climate.get("rpw_score", 0))
 
     pixels_with_any_flag = _safe_int(alert_context.get("pixels_with_any_flag", 0))
-    signal_note = alert_context.get("signal_note", "—")
+    signal_note = alert_context.get("signal_note") or "—"
     flag_counts = safe_dict(alert_context.get("flag_counts"))
     rule_counts = safe_dict(alert_context.get("rule_counts"))
 
@@ -1231,7 +1207,7 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     ndmi_delta = _safe_float(ndmi.get("delta", 0))
     ndre_delta = _safe_float(ndre.get("delta", 0))
 
-    forecast_text = forecast.get("text", "—")
+    forecast_text = forecast.get("text") or "—"
     healthy_next = _safe_float(forecast_next.get("Healthy_Pct_next", healthy_pct))
     monitor_next = _safe_float(forecast_next.get("Monitor_Pct_next", monitor_pct))
     critical_next = _safe_float(forecast_next.get("Critical_Pct_next", critical_pct))
@@ -1241,355 +1217,320 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     # ─────────────────────────────────────────────
     # Sheet 1: الملخص التنفيذي
     # ─────────────────────────────────────────────
-    ws = wb.active
-    ws.title = "الملخص التنفيذي"
-    ws.sheet_view.rightToLeft = True
-    sheet_title(ws, "سعف — تقرير تحليل صحة المزرعة")
-    set_default_widths(ws, {
-        "A": 18, "B": 18, "C": 18, "D": 18,
-        "E": 18, "F": 18, "G": 18, "H": 18
-    })
+    add_logo(ws)
+    for col, width in {
+        "A": 16, "B": 16, "C": 16, "D": 16,
+        "E": 16, "F": 16, "G": 16, "H": 16
+    }.items():
+        ws.column_dimensions[col].width = width
 
-    # كروت تنفيذية أجمل
-    make_section_title(ws, 3, "لوحة الملخص التنفيذي", end_col=8, color=GREEN_MID)
+    merge_value(
+        ws, "A1:H1", "سعف — تقرير تحليل صحة المزرعة",
+        f=font(16, True, WHITE), bg=GREEN_DARK, al=align_center(), bd=border(GREEN_DARK)
+    )
+    ws.row_dimensions[1].height = 30
+    ws.row_dimensions[2].height = 10
 
-    draw_kpi_box(ws, 1, 4, "مؤشر الحالة", pct_text(wellness), "الوضع العام", "green")
-    draw_kpi_box(ws, 3, 4, "نسبة السليم", pct_text(healthy_pct), "الحالة الحالية", "green")
-    draw_kpi_box(ws, 5, 4, "نسبة المتابعة", pct_text(monitor_pct), "تحتاج مراقبة", "orange")
-    draw_kpi_box(ws, 7, 4, "نسبة الحرج", pct_text(critical_pct), "تحتاج تدخل", "red")
+    merge_value(
+        ws, "A3:H3", "لوحة الملخص التنفيذي",
+        f=font(12, True, WHITE), bg=GREEN_MID, al=align_center(), bd=border()
+    )
 
-    draw_kpi_box(ws, 1, 8, "الأمطار", num_text(rain_mm, 1), "ملم", "blue")
-    draw_kpi_box(ws, 3, 8, "متوسط الحرارة", num_text(t_mean, 1), "°م", "gold")
+    draw_kpi_box(ws, 1, 4, "مؤشر الحالة", pct(wellness), "الوضع العام", "green")
+    draw_kpi_box(ws, 3, 4, "السليم", pct(healthy_pct), "الحالة الحالية", "green")
+    draw_kpi_box(ws, 5, 4, "المتابعة", pct(monitor_pct), "تحتاج مراقبة", "orange")
+    draw_kpi_box(ws, 7, 4, "الحرج", pct(critical_pct), "تحتاج تدخل", "red")
+
+    draw_kpi_box(ws, 1, 8, "الأمطار", num(rain_mm, 1), "ملم", "blue")
+    draw_kpi_box(ws, 3, 8, "متوسط الحرارة", num(t_mean, 1), "°م", "gold")
     draw_kpi_box(ws, 5, 8, "البكسلات المحللة", str(total_pixels), "آخر قراءة", "slate")
-    draw_kpi_box(ws, 7, 8, "البكسلات المتأثرة", str(pixels_with_any_flag), "إجهاد واحد فأكثر", "orange")
+    draw_kpi_box(ws, 7, 8, "البكسلات المتأثرة", str(pixels_with_any_flag), "Monitor/Critical", "orange")
 
-    ws.merge_cells("A12:H12")
-    set_cell(
-        ws["A12"],
-        executive_status,
-        font=Font(name="Cairo", size=14, bold=True, color=GREEN_DARK),
-        fill_color="F0FDF4",
-        alignment=center(wrap=True),
-        border=full_border(GREEN_MID)
+    merge_value(
+        ws, "A12:H12", executive_status,
+        f=font(13, True, GREEN_DARK), bg="F0FDF4", al=align_center(True), bd=border(GREEN_MID)
     )
-    ws.merge_cells("A13:H14")
-    set_cell(
-        ws["A13"],
-        executive_summary,
-        font=body_font(11),
-        fill_color=WHITE,
-        alignment=right(wrap=True),
-        border=full_border()
+    merge_value(
+        ws, "A13:H15", executive_summary,
+        f=font(11, False, "1E293B"), bg=WHITE, al=align_right(True), bd=border()
     )
-    ws.merge_cells("A15:H15")
-    set_cell(
-        ws["A15"],
-        f"الإجراء المقترح: {executive_next_step}",
-        font=body_font(11, bold=True, color=GREEN_DARK),
-        fill_color=GREEN_LIGHT,
-        alignment=center(wrap=True),
-        border=full_border()
+    merge_value(
+        ws, "A16:H16", f"الإجراء المقترح: {executive_next_step}",
+        f=font(11, True, GREEN_DARK), bg=GREEN_LIGHT, al=align_center(True), bd=border()
     )
 
-    # بيانات المزرعة
-    row = 17
-    info_items = [
+    info_rows = [
         ("اسم المزرعة", farm_name),
         ("رقم العقد", contract_number),
         ("المنطقة", region),
         ("اسم المالك", owner_name),
-        ("المساحة", str(farm_area)),
+        ("المساحة", farm_area),
         ("عدد النخيل", str(total_palms)),
         ("تاريخ التقرير", report_date),
-        ("RPW Score", num_text(rpw_score, 2)),
+        ("RPW Score", num(rpw_score, 2)),
     ]
-    row = write_info_table(ws, row, "بيانات المزرعة والسياق", info_items)
+    row = write_label_value_table(ws, 18, "بيانات المزرعة", info_rows)
 
-    # جدول توزيع الحالة
-    row += 1
-    dist_rows = [
-        ["سليم", pct_text(healthy_pct), "الحالة الصحية الجيدة"],
-        ["متابعة", pct_text(monitor_pct), "تحتاج مراقبة ميدانية"],
-        ["حرج", pct_text(critical_pct), "تحتاج استجابة أسرع"],
+    forecast_rows = [
+        ("نص التوقع", forecast_text),
+        ("السليم المتوقع", pct(healthy_next)),
+        ("المتابعة المتوقعة", pct(monitor_next)),
+        ("الحرج المتوقع", pct(critical_next)),
+        ("Delta NDVI القادم", delta_abs(ndvi_delta_next, 3)),
+        ("Delta NDMI القادم", delta_abs(ndmi_delta_next, 3)),
+        ("ملاحظة", signal_note),
     ]
-    dist_fills = [GREEN_SOFT, ORANGE_SOFT, RED_SOFT]
-    end_row = write_table(
-        ws,
-        row,
-        "توزيع الحالة الصحية",
-        ["الفئة", "النسبة", "الوصف"],
-        dist_rows,
-        title_color=GREEN_MID,
-        row_fills=dist_fills
-    )
+    row = write_label_value_table(ws, row + 1, "توقع الأسبوع القادم", forecast_rows)
 
-    # بيانات مساعدة للرسم
-    chart_data_row = end_row + 2
-    ws.cell(chart_data_row, 1, "الفئة")
-    ws.cell(chart_data_row, 2, "الحالي")
-    ws.cell(chart_data_row, 3, "المتوقع")
-    ws.cell(chart_data_row + 1, 1, "سليم")
-    ws.cell(chart_data_row + 1, 2, healthy_pct)
-    ws.cell(chart_data_row + 1, 3, healthy_next)
-    ws.cell(chart_data_row + 2, 1, "متابعة")
-    ws.cell(chart_data_row + 2, 2, monitor_pct)
-    ws.cell(chart_data_row + 2, 3, monitor_next)
-    ws.cell(chart_data_row + 3, 1, "حرج")
-    ws.cell(chart_data_row + 3, 2, critical_pct)
-    ws.cell(chart_data_row + 3, 3, critical_next)
+    # بيانات للرسم أسفل الشيت بعيدًا عن الدمج
+    data_row = row + 3
+    ws.cell(data_row, 1, "الفئة")
+    ws.cell(data_row, 2, "الحالي")
+    ws.cell(data_row, 3, "المتوقع")
+    ws.cell(data_row + 1, 1, "سليم")
+    ws.cell(data_row + 1, 2, healthy_pct)
+    ws.cell(data_row + 1, 3, healthy_next)
+    ws.cell(data_row + 2, 1, "متابعة")
+    ws.cell(data_row + 2, 2, monitor_pct)
+    ws.cell(data_row + 2, 3, monitor_next)
+    ws.cell(data_row + 3, 1, "حرج")
+    ws.cell(data_row + 3, 2, critical_pct)
+    ws.cell(data_row + 3, 3, critical_next)
 
-    for r in range(chart_data_row, chart_data_row + 4):
+    for r in range(data_row, data_row + 5):
         ws.row_dimensions[r].hidden = True
 
-    # Pie Chart
     pie = PieChart()
-    pie.title = "توزيع الحالة الحالية"
-    labels = Reference(ws, min_col=1, min_row=chart_data_row + 1, max_row=chart_data_row + 3)
-    data = Reference(ws, min_col=2, min_row=chart_data_row, max_row=chart_data_row + 3)
-    pie.add_data(data, titles_from_data=True)
-    pie.set_categories(labels)
+    pie.title = "التوزيع الحالي"
     pie.height = 8
     pie.width = 10
+    pie.add_data(Reference(ws, min_col=2, min_row=data_row, max_row=data_row + 3), titles_from_data=True)
+    pie.set_categories(Reference(ws, min_col=1, min_row=data_row + 1, max_row=data_row + 3))
     pie.dataLabels = DataLabelList()
     pie.dataLabels.showPercent = True
-    pie.dataLabels.showLeaderLines = True
-    ws.add_chart(pie, "E17")
+    ws.add_chart(pie, "A37")
 
-    # Bar Chart مقارنة الحالي والمتوقع
     bar = BarChart()
     bar.type = "col"
     bar.style = 10
-    bar.title = "مقارنة الحالي والمتوقع"
+    bar.title = "الحالي مقابل المتوقع"
     bar.y_axis.title = "النسبة %"
-    bar.x_axis.title = "الفئة"
-    data = Reference(ws, min_col=2, max_col=3, min_row=chart_data_row, max_row=chart_data_row + 3)
-    cats = Reference(ws, min_col=1, min_row=chart_data_row + 1, max_row=chart_data_row + 3)
-    bar.add_data(data, titles_from_data=True)
-    bar.set_categories(cats)
     bar.height = 8
     bar.width = 12
-    ws.add_chart(bar, "E31")
-
-    # التوقع القادم
-    row = 31
-    forecast_items = [
-        ("نص التوقع", forecast_text),
-        ("السليم المتوقع", pct_text(healthy_next)),
-        ("المتابعة المتوقعة", pct_text(monitor_next)),
-        ("الحرج المتوقع", pct_text(critical_next)),
-        ("اتجاه NDVI المتوقع", f"{_safe_float(ndvi_delta_next):+.2f}"),
-        ("اتجاه NDMI المتوقع", f"{_safe_float(ndmi_delta_next):+.2f}"),
-        ("ملاحظة الإشارات", signal_note),
-    ]
-    write_info_table(ws, row, "توقع الأسبوع القادم", forecast_items)
+    bar.add_data(Reference(ws, min_col=2, max_col=3, min_row=data_row, max_row=data_row + 3), titles_from_data=True)
+    bar.set_categories(Reference(ws, min_col=1, min_row=data_row + 1, max_row=data_row + 3))
+    ws.add_chart(bar, "E37")
 
     # ─────────────────────────────────────────────
-    # Sheet 2: التحليل التفصيلي
+    # Sheet 2: المؤشرات والتحليل
     # ─────────────────────────────────────────────
-    ws2 = wb.create_sheet("التحليل التفصيلي")
+    ws2 = wb.create_sheet("المؤشرات والتحليل")
     ws2.sheet_view.rightToLeft = True
-    sheet_title(ws2, f"التحليل التفصيلي — {farm_name}")
-    set_default_widths(ws2, {
-        "A": 22, "B": 14, "C": 14, "D": 50,
-        "E": 18, "F": 18, "G": 18, "H": 18
-    })
+    add_logo(ws2)
+    for col, width in {
+        "A": 22, "B": 14, "C": 14, "D": 46, "E": 14, "F": 14, "G": 14, "H": 14
+    }.items():
+        ws2.column_dimensions[col].width = width
 
-    row2 = 3
+    merge_value(
+        ws2, "A1:H1", f"المؤشرات والتحليل — {farm_name}",
+        f=font(16, True, WHITE), bg=GREEN_DARK, al=align_center(), bd=border(GREEN_DARK)
+    )
 
-    # بطاقات مؤشرات
-    make_section_title(ws2, row2, "ملخص المؤشرات الطيفية", end_col=8)
-    draw_kpi_box(ws2, 1, row2 + 1, "NDVI", num_text(ndvi_val), delta_text(ndvi_delta), "green")
-    draw_kpi_box(ws2, 3, row2 + 1, "NDMI", num_text(ndmi_val), delta_text(ndmi_delta), "blue")
-    draw_kpi_box(ws2, 5, row2 + 1, "NDRE", num_text(ndre_val), delta_text(ndre_delta), "gold")
-    draw_kpi_box(ws2, 7, row2 + 1, "RPW Score", num_text(rpw_score), "قراءة إجهاد", "red" if rpw_score >= 0.66 else "orange" if rpw_score >= 0.40 else "green")
+    merge_value(
+        ws2, "A3:H3", "ملخص المؤشرات الرئيسية",
+        f=font(12, True, WHITE), bg=GREEN_MID, al=align_center(), bd=border()
+    )
 
-    row2 += 5
+    draw_kpi_box(ws2, 1, 4, "NDVI", num(ndvi_val, 2), delta_abs(ndvi_delta, 3), "green")
+    draw_kpi_box(ws2, 3, 4, "NDMI", num(ndmi_val, 2), delta_abs(ndmi_delta, 3), "blue")
+    draw_kpi_box(ws2, 5, 4, "NDRE", num(ndre_val, 2), delta_abs(ndre_delta, 3), "gold")
+    draw_kpi_box(
+        ws2, 7, 4, "RPW Score", num(rpw_score, 2),
+        "قراءة إجهاد", "red" if rpw_score >= 0.66 else "orange" if rpw_score >= 0.40 else "green"
+    )
 
-    # جدول المؤشرات
     index_rows = []
-    for row in indices_table:
+    for item in indices_table:
+        code = item.get("code", "—")
+        value = _safe_float(item.get("value", 0))
         index_rows.append([
-            row.get("label", "—"),
-            row.get("code", "—"),
-            row.get("value", "—"),
-            row.get("note", "—"),
+            item.get("label", "—"),
+            code,
+            value,
+            item.get("note", "—"),
         ])
+
     if not index_rows:
         index_rows = [["—", "—", "—", "لا توجد بيانات مؤشرات"]]
 
-    end_indices = write_table(
-        ws2,
-        row2,
-        "جدول المؤشرات الطيفية",
+    row2 = 9
+    end2 = write_table(
+        ws2, row2, "جدول المؤشرات الطيفية",
         ["المؤشر", "الرمز", "القيمة", "التفسير"],
         index_rows,
         title_color=GREEN_MID
     )
 
-    # تلوين تلقائي حسب القيمة
-    for r in range(row2 + 2, end_indices):
-        val_cell = ws2.cell(r, 3)
-        try:
-            v = float(val_cell.value)
-            bg, fg = status_fill_by_value(v * 100 if v <= 1.5 else v)
-            val_cell.fill = fill(bg)
-            val_cell.font = body_font(10, bold=True, color=fg)
-        except Exception:
-            pass
+    for r in range(row2 + 2, end2):
+        code = str(ws2.cell(r, 2).value)
+        val = ws2.cell(r, 3).value
+        bg, fg = metric_fill(code, val)
+        ws2.cell(r, 3).fill = fill(bg)
+        ws2.cell(r, 3).font = font(10, True, fg)
 
-    row2 = end_indices + 1
-
-    # جدول الدلتا
     delta_rows = [
-        ["NDVI", num_text(ndvi_val), delta_text(ndvi_delta)],
-        ["NDMI", num_text(ndmi_val), delta_text(ndmi_delta)],
-        ["NDRE", num_text(ndre_val), delta_text(ndre_delta)],
-        ["NDVI Next", "—", f"{_safe_float(ndvi_delta_next):+.2f}"],
-        ["NDMI Next", "—", f"{_safe_float(ndmi_delta_next):+.2f}"],
+        ["NDVI", num(ndvi_val, 2), delta_abs(ndvi_delta, 3)],
+        ["NDMI", num(ndmi_val, 2), delta_abs(ndmi_delta, 3)],
+        ["NDRE", num(ndre_val, 2), delta_abs(ndre_delta, 3)],
+        ["NDVI القادم", "—", delta_abs(ndvi_delta_next, 3)],
+        ["NDMI القادم", "—", delta_abs(ndmi_delta_next, 3)],
     ]
+    row2 = end2 + 1
     end_delta = write_table(
-        ws2,
-        row2,
-        "التغيرات (Delta)",
+        ws2, row2, "التغيرات (Delta)",
         ["المؤشر", "القيمة الحالية", "التغير"],
         delta_rows,
         title_color=BLUE
     )
+
     for r in range(row2 + 2, end_delta):
-        delta_cell = ws2.cell(r, 3)
+        cell = ws2.cell(r, 3)
         try:
-            txt = str(delta_cell.value)
-            num = float(txt.replace("%", ""))
-            if num > 0:
-                delta_cell.fill = fill(GREEN_SOFT)
-                delta_cell.font = body_font(10, bold=True, color="166534")
-            elif num < 0:
-                delta_cell.fill = fill(RED_SOFT)
-                delta_cell.font = body_font(10, bold=True, color="991B1B")
+            value = float(str(cell.value).replace("%", ""))
+            if value > 0:
+                cell.fill = fill(GREEN_SOFT)
+                cell.font = font(10, True, "166534")
+            elif value < 0:
+                cell.fill = fill(RED_SOFT)
+                cell.font = font(10, True, "991B1B")
             else:
-                delta_cell.fill = fill(SLATE_LIGHT)
-                delta_cell.font = body_font(10, bold=True, color=SLATE)
+                cell.fill = fill(SLATE_LIGHT)
+                cell.font = font(10, True, SLATE)
         except Exception:
             pass
 
-    row2 = end_delta + 1
+    flags_rows = [[k, _safe_int(v)] for k, v in flag_counts.items()]
+    if not flags_rows:
+        flags_rows = [["—", 0]]
 
-    # إشارات الإجهاد
-    flag_rows_excel = [[k, v] for k, v in flag_counts.items()] or [["—", "—"]]
+    row2 = end_delta + 1
     end_flags = write_table(
-        ws2,
-        row2,
-        "تفصيل إشارات الإجهاد",
-        ["نوع الإشارة", "العدد"],
-        flag_rows_excel,
+        ws2, row2, "تفصيل إشارات الإجهاد",
+        ["الإشارة", "العدد"],
+        flags_rows,
         title_color=ORANGE
     )
 
-    # بيانات مخفية للرسم
-    hidden_row = end_flags + 2
-    ws2.cell(hidden_row, 1, "الإشارة")
-    ws2.cell(hidden_row, 2, "العدد")
-    for i, (k, v) in enumerate(flag_rows_excel, start=1):
-        ws2.cell(hidden_row + i, 1, str(k))
-        ws2.cell(hidden_row + i, 2, _safe_int(v))
-
-    for r in range(hidden_row, hidden_row + len(flag_rows_excel) + 2):
+    # chart source
+    chart_row2 = end_flags + 3
+    ws2.cell(chart_row2, 1, "الإشارة")
+    ws2.cell(chart_row2, 2, "العدد")
+    for i, item in enumerate(flags_rows, start=1):
+        ws2.cell(chart_row2 + i, 1, item[0])
+        ws2.cell(chart_row2 + i, 2, item[1])
+    for r in range(chart_row2, chart_row2 + len(flags_rows) + 2):
         ws2.row_dimensions[r].hidden = True
 
-    # Chart للإشارات
     flags_chart = BarChart()
     flags_chart.type = "bar"
     flags_chart.style = 11
     flags_chart.title = "أكثر إشارات الإجهاد تكرارًا"
     flags_chart.height = 8
     flags_chart.width = 14
-    flags_data = Reference(ws2, min_col=2, min_row=hidden_row, max_row=hidden_row + len(flag_rows_excel))
-    flags_cats = Reference(ws2, min_col=1, min_row=hidden_row + 1, max_row=hidden_row + len(flag_rows_excel))
-    flags_chart.add_data(flags_data, titles_from_data=True)
-    flags_chart.set_categories(flags_cats)
-    ws2.add_chart(flags_chart, "E15")
-
-    row2 = end_flags + 1
-
-   
+    flags_chart.add_data(
+        Reference(ws2, min_col=2, min_row=chart_row2, max_row=chart_row2 + len(flags_rows)),
+        titles_from_data=True
+    )
+    flags_chart.set_categories(
+        Reference(ws2, min_col=1, min_row=chart_row2 + 1, max_row=chart_row2 + len(flags_rows))
+    )
+    ws2.add_chart(flags_chart, "A34")
 
     # ─────────────────────────────────────────────
     # Sheet 3: المخاطر والمناطق
     # ─────────────────────────────────────────────
     ws3 = wb.create_sheet("المخاطر والمناطق")
     ws3.sheet_view.rightToLeft = True
-    sheet_title(ws3, f"المخاطر والمناطق — {farm_name}")
-    set_default_widths(ws3, {
-        "A": 24, "B": 14, "C": 14, "D": 48,
-        "E": 8, "F": 18, "G": 18, "H": 16
-    })
+    add_logo(ws3)
+    for col, width in {
+        "A": 22, "B": 14, "C": 14, "D": 46, "E": 10
+    }.items():
+        ws3.column_dimensions[col].width = width
 
-    row3 = 3
+    merge_value(
+        ws3, "A1:E1", f"المخاطر والمناطق — {farm_name}",
+        f=font(16, True, WHITE), bg=GREEN_DARK, al=align_center(), bd=border(GREEN_DARK)
+    )
 
     risk_rows = []
-    risk_fills = []
     for item in risk_drivers[:10]:
-        priority = item.get("priority", "—")
         risk_rows.append([
             item.get("title", "—"),
-            item.get("count", 0),
-            priority,
+            _safe_int(item.get("count", 0)),
+            item.get("priority", "—"),
             item.get("note", "—"),
         ])
-        risk_fills.append(None)
-
     if not risk_rows:
-        risk_rows = [["—", "—", "—", "لا توجد بيانات متاحة"]]
-        risk_fills = [None]
+        risk_rows = [["—", 0, "—", "لا توجد بيانات متاحة"]]
 
+    row3 = 3
     end_risk = write_table(
-        ws3,
-        row3,
-        "أسباب الخطر الرئيسية",
+        ws3, row3, "أسباب الخطر الرئيسية",
         ["السبب", "عدد الإشارات", "الأولوية", "التفسير"],
         risk_rows,
         title_color=ORANGE
     )
-    style_priority_column(ws3, row3 + 2, end_risk - 1, 3)
-
-    row3 = end_risk + 1
+    for r in range(row3 + 2, end_risk):
+        cell = ws3.cell(r, 3)
+        cell.fill = fill(priority_fill(cell.value))
+        cell.font = font(10, True, "1E293B")
 
     hotspot_rows = []
-    hotspot_fills = []
-    for idx, h in enumerate(hotspots[:15], start=1):
-        status = h.get("status", "—")
+    for i, item in enumerate(hotspots[:15], start=1):
         hotspot_rows.append([
-            idx,
-            h.get("lat", "—"),
-            h.get("lon", "—"),
-            status,
-            h.get("note", "—"),
+            i,
+            item.get("lat", "—"),
+            item.get("lon", "—"),
+            item.get("status", "—"),
+            item.get("note", "—"),
         ])
-        hotspot_fills.append(status_row_style(status))
-
     if not hotspot_rows:
         hotspot_rows = [["—", "—", "—", "—", "لا توجد نقاط بارزة حاليًا"]]
-        hotspot_fills = [None]
 
-    end_hot = write_table(
-        ws3,
-        row3,
-        "أهم المناطق التي تحتاج متابعة",
-        ["#", "خط العرض", "خط الطول", "الحالة", "الوصف"],
-        hotspot_rows,
-        title_color=RED,
-        row_fills=hotspot_fills
+    row3 = end_risk + 1
+    merge_value(
+        ws3, f"A{row3}:E{row3}", "أهم المناطق التي تحتاج متابعة",
+        f=font(12, True, WHITE), bg=RED, al=align_center(), bd=border()
     )
-    style_status_column(ws3, row3 + 2, end_hot - 1, 4)
+    headers = ["#", "خط العرض", "خط الطول", "الحالة", "الوصف"]
+    for i, h in enumerate(headers, start=1):
+        set_cell(
+            ws3.cell(row3 + 1, i), h,
+            f=font(10, True, SLATE), bg=SLATE_LIGHT, al=align_center(True), bd=border()
+        )
 
-    # Chart لأسباب الخطر
-    hidden_r = end_hot + 2
-    ws3.cell(hidden_r, 1, "السبب")
-    ws3.cell(hidden_r, 2, "العدد")
-    for i, row_data in enumerate(risk_rows, start=1):
-        ws3.cell(hidden_r + i, 1, row_data[0])
-        ws3.cell(hidden_r + i, 2, _safe_int(row_data[1]))
-    for r in range(hidden_r, hidden_r + len(risk_rows) + 2):
+    cur = row3 + 2
+    for row_data in hotspot_rows:
+        row_bg = status_fill(str(row_data[3]))
+        for i, val in enumerate(row_data, start=1):
+            set_cell(
+                ws3.cell(cur, i), val,
+                f=font(10, i == 4, "1E293B"),
+                bg=row_bg,
+                al=align_center(True) if i != 5 else align_right(True),
+                bd=border()
+            )
+        cur += 1
+
+    # risk chart data
+    chart_row3 = cur + 2
+    ws3.cell(chart_row3, 1, "السبب")
+    ws3.cell(chart_row3, 2, "العدد")
+    for i, item in enumerate(risk_rows, start=1):
+        ws3.cell(chart_row3 + i, 1, item[0])
+        ws3.cell(chart_row3 + i, 2, item[1])
+    for r in range(chart_row3, chart_row3 + len(risk_rows) + 2):
         ws3.row_dimensions[r].hidden = True
 
     risk_chart = BarChart()
@@ -1597,82 +1538,79 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     risk_chart.style = 10
     risk_chart.height = 8
     risk_chart.width = 13
-    risk_data = Reference(ws3, min_col=2, min_row=hidden_r, max_row=hidden_r + len(risk_rows))
-    risk_cats = Reference(ws3, min_col=1, min_row=hidden_r + 1, max_row=hidden_r + len(risk_rows))
-    risk_chart.add_data(risk_data, titles_from_data=True)
-    risk_chart.set_categories(risk_cats)
-    ws3.add_chart(risk_chart, "F3")
+    risk_chart.add_data(
+        Reference(ws3, min_col=2, min_row=chart_row3, max_row=chart_row3 + len(risk_rows)),
+        titles_from_data=True
+    )
+    risk_chart.set_categories(
+        Reference(ws3, min_col=1, min_row=chart_row3 + 1, max_row=chart_row3 + len(risk_rows))
+    )
+    ws3.add_chart(risk_chart, "A30")
 
     # ─────────────────────────────────────────────
     # Sheet 4: البيانات المكانية
     # ─────────────────────────────────────────────
     ws4 = wb.create_sheet("البيانات المكانية")
     ws4.sheet_view.rightToLeft = True
-    sheet_title(ws4, f"البيانات المكانية — {farm_name}")
-    set_default_widths(ws4, {
-        "A": 8, "B": 18, "C": 18, "D": 20, "E": 20
-    })
+    add_logo(ws4)
+    for col, width in {
+        "A": 8, "B": 18, "C": 18, "D": 18, "E": 18
+    }.items():
+        ws4.column_dimensions[col].width = width
+
+    merge_value(
+        ws4, "A1:E1", f"البيانات المكانية — {farm_name}",
+        f=font(16, True, WHITE), bg=GREEN_DARK, al=align_center(), bd=border(GREEN_DARK)
+    )
 
     headers = ["م", "خط العرض", "خط الطول", "الحالة الحالية", "الحالة المتوقعة"]
     for i, h in enumerate(headers, start=1):
         set_cell(
-            ws4.cell(3, i),
-            h,
-            font=body_font(10, bold=True, color=SLATE),
-            fill_color=SLATE_LIGHT,
-            alignment=center(wrap=True),
-            border=full_border()
+            ws4.cell(3, i), h,
+            f=font(10, True, SLATE), bg=SLATE_LIGHT, al=align_center(True), bd=border()
         )
 
-    start_map_row = 4
-    for idx, pt in enumerate(map_points, start=start_map_row):
+    r = 4
+    for idx, pt in enumerate(map_points, start=1):
         s_text = decode_status(pt.get("s"))
         ps_text = decode_status(pt.get("ps"))
-        row_fill = status_row_style(s_text)
-
-        vals = [
-            idx - start_map_row + 1,
-            pt.get("lat", "—"),
-            pt.get("lng", "—"),
-            s_text,
-            ps_text,
-        ]
-        for col_idx, value in enumerate(vals, start=1):
+        row_bg = status_fill(s_text)
+        values = [idx, pt.get("lat", "—"), pt.get("lng", "—"), s_text, ps_text]
+        for c, val in enumerate(values, start=1):
             set_cell(
-                ws4.cell(idx, col_idx),
-                value,
-                font=body_font(10, bold=(col_idx in [4, 5])),
-                fill_color=row_fill,
-                alignment=center(wrap=True),
-                border=full_border()
+                ws4.cell(r, c), val,
+                f=font(10, c in [4, 5], "1E293B"),
+                bg=row_bg,
+                al=align_center(True),
+                bd=border()
             )
+        r += 1
 
     # ─────────────────────────────────────────────
-    # Sheet 5: المسار الزمني + chart
+    # Sheet 5: المسار الزمني
     # ─────────────────────────────────────────────
     ws5 = wb.create_sheet("المسار الزمني")
     ws5.sheet_view.rightToLeft = True
-    sheet_title(ws5, f"المسار الزمني — {farm_name}")
-    set_default_widths(ws5, {
-        "A": 18, "B": 14, "C": 14, "D": 14
-    })
+    add_logo(ws5)
+    for col, width in {"A": 18, "B": 14, "C": 14, "D": 14}.items():
+        ws5.column_dimensions[col].width = width
+
+    merge_value(
+        ws5, "A1:H1", f"المسار الزمني — {farm_name}",
+        f=font(16, True, WHITE), bg=GREEN_DARK, al=align_center(), bd=border(GREEN_DARK)
+    )
 
     trend_headers = ["التاريخ", "NDVI", "NDMI", "NDRE"]
     for i, h in enumerate(trend_headers, start=1):
         set_cell(
-            ws5.cell(3, i),
-            h,
-            font=body_font(10, bold=True, color=SLATE),
-            fill_color=SLATE_LIGHT,
-            alignment=center(),
-            border=full_border()
+            ws5.cell(3, i), h,
+            f=font(10, True, SLATE), bg=SLATE_LIGHT, al=align_center(), bd=border()
         )
 
     trend_dates = safe_list(multi_trend.get("dates"))
     trend_ndvi = safe_list(multi_trend.get("ndvi"))
     trend_ndmi = safe_list(multi_trend.get("ndmi"))
     trend_ndre = safe_list(multi_trend.get("ndre"))
-
     max_len = max(len(trend_dates), len(trend_ndvi), len(trend_ndmi), len(trend_ndre), 0)
 
     for i in range(max_len):
@@ -1682,37 +1620,92 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
             _safe_float(trend_ndmi[i]) if i < len(trend_ndmi) else None,
             _safe_float(trend_ndre[i]) if i < len(trend_ndre) else None,
         ]
-        for j, v in enumerate(vals, start=1):
+        for j, val in enumerate(vals, start=1):
             set_cell(
-                ws5.cell(i + 4, j),
-                v,
-                font=body_font(10),
-                alignment=center(),
-                border=full_border()
+                ws5.cell(i + 4, j), val,
+                f=font(10, False, "1E293B"),
+                al=align_center(),
+                bd=border()
             )
 
     if max_len > 0:
         lc = LineChart()
         lc.title = "تغير المؤشرات عبر الزمن"
-        lc.y_axis.title = "القيمة"
-        lc.x_axis.title = "التاريخ"
         lc.style = 10
         lc.height = 10
         lc.width = 16
-        data = Reference(ws5, min_col=2, max_col=4, min_row=3, max_row=3 + max_len)
-        cats = Reference(ws5, min_col=1, min_row=4, max_row=3 + max_len)
-        lc.add_data(data, titles_from_data=True)
-        lc.set_categories(cats)
+        lc.y_axis.title = "القيمة"
+        lc.x_axis.title = "التاريخ"
+        lc.add_data(Reference(ws5, min_col=2, max_col=4, min_row=3, max_row=3 + max_len), titles_from_data=True)
+        lc.set_categories(Reference(ws5, min_col=1, min_row=4, max_row=3 + max_len))
         ws5.add_chart(lc, "F3")
 
     # ─────────────────────────────────────────────
-    # تنسيق نهائي
+    # Sheet 6: مصدر الرسوم فقط
+    # ─────────────────────────────────────────────
+    ws6 = wb.create_sheet("chart_data")
+    ws6.sheet_state = "hidden"
+
+    # page1
+    ws6["A1"] = "الفئة"
+    ws6["B1"] = "الحالي"
+    ws6["C1"] = "المتوقع"
+    ws6["A2"] = "سليم";   ws6["B2"] = healthy_pct;   ws6["C2"] = healthy_next
+    ws6["A3"] = "متابعة"; ws6["B3"] = monitor_pct;   ws6["C3"] = monitor_next
+    ws6["A4"] = "حرج";    ws6["B4"] = critical_pct;  ws6["C4"] = critical_next
+
+    # page2
+    ws6["E1"] = "الإشارة"
+    ws6["F1"] = "العدد"
+    for i, item in enumerate(flags_rows, start=2):
+        ws6.cell(i, 5, item[0])
+        ws6.cell(i, 6, item[1])
+
+    # page3
+    ws6["H1"] = "السبب"
+    ws6["I1"] = "العدد"
+    for i, item in enumerate(risk_rows, start=2):
+        ws6.cell(i, 8, item[0])
+        ws6.cell(i, 9, item[1])
+
+    # ─────────────────────────────────────────────
+    # إعادة ربط الرسوم بمصدر مستقل hidden
+    # ─────────────────────────────────────────────
+    # pie
+    pie.series = []
+    pie.add_data(Reference(ws6, min_col=2, min_row=1, max_row=4), titles_from_data=True)
+    pie.set_categories(Reference(ws6, min_col=1, min_row=2, max_row=4))
+
+    # bar
+    bar.series = []
+    bar.add_data(Reference(ws6, min_col=2, max_col=3, min_row=1, max_row=4), titles_from_data=True)
+    bar.set_categories(Reference(ws6, min_col=1, min_row=2, max_row=4))
+
+    # flags chart
+    flags_chart.series = []
+    flags_chart.add_data(
+        Reference(ws6, min_col=6, min_row=1, max_row=1 + len(flags_rows)),
+        titles_from_data=True
+    )
+    flags_chart.set_categories(
+        Reference(ws6, min_col=5, min_row=2, max_row=1 + len(flags_rows))
+    )
+
+    # risk chart
+    risk_chart.series = []
+    risk_chart.add_data(
+        Reference(ws6, min_col=9, min_row=1, max_row=1 + len(risk_rows)),
+        titles_from_data=True
+    )
+    risk_chart.set_categories(
+        Reference(ws6, min_col=8, min_row=2, max_row=1 + len(risk_rows))
+    )
+
+    # ─────────────────────────────────────────────
+    # final formatting
     # ─────────────────────────────────────────────
     for sheet in wb.worksheets:
-        for row in sheet.iter_rows():
-            for cell in row:
-                if cell.value is not None and cell.border == Border():
-                    cell.border = full_border()
+        sheet.sheet_view.showGridLines = False
 
     output_path = f"/tmp/saaf_report_{farm_id}.xlsx"
     wb.save(output_path)
