@@ -1776,11 +1776,11 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
     prev = history[-2] if len(history) > 1 else curr
 
     def calculate_delta(key):
-        c_val = curr.get(key)
-        p_val = prev.get(key)
-        if c_val is not None and p_val is not None and p_val != 0:
-            return round(((c_val - p_val) / p_val) * 100, 1)
-        return 0.0
+      c_val = _safe_float(curr.get(key), None)
+      p_val = _safe_float(prev.get(key), None)
+      if c_val is None or p_val is None:
+          return 0.0
+      return round(c_val - p_val, 3)
 
     current_health = health_result.get("current_health", {})
     report_weather = get_report_weather_from_weatherapi(farm_doc)
