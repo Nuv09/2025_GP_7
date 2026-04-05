@@ -1001,11 +1001,10 @@ const SizedBox(height: 20),
         if (!optional && (value == null || value.isEmpty)) {
           return 'هذا الحقل مطلوب';
         }
-          // ✅ تحقق خاص لرقم العقد (10-12 رقم)
   if (controller == _contractNumberController) {
     final v = value?.trim() ?? '';
-    if (!RegExp(r'^\d{10,12}$').hasMatch(v)) {
-      return 'رقم الصك يجب ان يتكون من 10 إلى 12 خانة';
+    if (!RegExp(r'^\d{10}$').hasMatch(v)) {
+      return 'يجب أن يتكون رقم الصك من 10 خانات';
     }
   }
         return null;
