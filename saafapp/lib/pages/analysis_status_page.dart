@@ -149,6 +149,17 @@ class _LoadingViewState extends State<_LoadingView> {
               ),
             ],
           ),
+          const SizedBox(height: 14),
+Text(
+  'يمكنك مغادرة هذه الصفحة، وسيستمر التحليل تلقائيًا.',
+  textAlign: TextAlign.center,
+  style: GoogleFonts.almarai(
+    color: Colors.white54,
+    fontSize: 14,
+    height: 1.6,
+    fontWeight: FontWeight.w600,
+  ),
+),
         ],
       ),
     );

@@ -17,3 +17,4 @@ final TextStyle saafPageTitle = GoogleFonts.almarai(
   fontSize: 26,   // ← الموحد لجميع الصفحات
   fontWeight: FontWeight.w700,
 );
+ 

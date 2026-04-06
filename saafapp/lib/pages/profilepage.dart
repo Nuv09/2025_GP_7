@@ -951,8 +951,9 @@ Future<void> _deleteAccountLogic() async {
     }
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      backgroundColor: kDeepGreen,
+  extendBody: true,
+  extendBodyBehindAppBar: true,
+  backgroundColor: Colors.transparent,
       appBar: AppBar(
   backgroundColor: Colors.transparent,
   surfaceTintColor: Colors.transparent,
@@ -1002,7 +1003,7 @@ Future<void> _deleteAccountLogic() async {
     _buildLuxBackground(),
     SafeArea(
       child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 120),
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 190),
         child: SingleChildScrollView(
           child: _glassCard(
             padding: const EdgeInsets.all(20),

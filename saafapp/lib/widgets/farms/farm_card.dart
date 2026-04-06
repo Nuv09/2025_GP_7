@@ -119,13 +119,13 @@ class FarmCard extends StatelessWidget {
         ),
 
         Positioned(
-          left: 5,
-          top: 4,
-          child: _ActionButtons(
-            onEdit: onEdit,
-            onDelete: onDelete,
-          ),
-        ), 
+  left: 10,
+  top: 6,
+  child: _ActionButtons(
+    onEdit: onEdit,
+    onDelete: onDelete,
+  ),
+),
       ],
     ),
   ),
@@ -634,22 +634,21 @@ class _ActionButtons extends StatelessWidget {
         IconButton(
           onPressed: onEdit,
           tooltip: 'تعديل',
-          icon: const Icon(Icons.edit, color: lightGreenColor, size: 20),
-          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+          icon: const Icon(Icons.edit, color: lightGreenColor, size: 24),
+          constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
           padding: EdgeInsets.zero,
           visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-          splashRadius: 18,
+          splashRadius: 20,
         ),
-        const SizedBox(width: 0),
+        const SizedBox(width: 2),
         IconButton(
           onPressed: onDelete,
           tooltip: 'حذف',
-          icon: const Icon(Icons.delete_outline, color: prownColor, size: 20),
-          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-          visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-
+          icon: const Icon(Icons.delete_outline, color: prownColor, size: 24),
+          constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
           padding: EdgeInsets.zero,
-          splashRadius: 18,
+          visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+          splashRadius: 20,
         ),
       ],
     );

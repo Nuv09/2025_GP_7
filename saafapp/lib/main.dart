@@ -257,7 +257,7 @@ class _MainShellState extends State<MainShell> {
       bottomNavigationBar: CurvedNavigationBar(
         height: 65,
         color:Color(0xFFE6D7B9),
-        backgroundColor: darkGreenColor,
+        backgroundColor: Colors.transparent,
         animationDuration: const Duration(milliseconds: 300),
         index: _index,
 items: [

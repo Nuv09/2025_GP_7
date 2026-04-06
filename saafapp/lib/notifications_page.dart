@@ -170,7 +170,7 @@ void _showSnack(String msg) {
                 style: GoogleFonts.almarai(
                   color: Colors.white,
                   fontSize: 26,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               Text(
@@ -178,7 +178,6 @@ void _showSnack(String msg) {
                 style: GoogleFonts.almarai(
                   color: goldColor,
                   fontSize: 13,
-                  letterSpacing: 1.2,
                 ),
               ),
             ],
@@ -353,7 +352,7 @@ void _showSnack(String msg) {
                 style: GoogleFonts.almarai(
                   color: Colors.white,
                   fontSize: 16,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 6),

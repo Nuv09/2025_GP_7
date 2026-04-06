@@ -658,7 +658,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
                 style: GoogleFonts.almarai(
                   color: Colors.white,
                   fontSize: 22,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               Text(
@@ -666,6 +666,7 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
                 style: GoogleFonts.almarai(
                   color: Color(0xFFEBB974),
                   fontSize: 13,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 6),
@@ -1898,7 +1899,7 @@ class _RecoCardExpandableState extends State<_RecoCardExpandable> {
                               title,
                               style: GoogleFonts.almarai(
                                 color: Colors.white,
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w700,
                                 fontSize: 13,
                               ),
                             ),

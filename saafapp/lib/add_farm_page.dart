@@ -562,8 +562,7 @@ Future<String?> _reverseRegionFromCentroid() async {
     .replaceAll(RegExp(r'\s+'), '') // removes ALL spaces/newlines, not just ends
     .trim();
 
-// ✅ تحقق أن رقم العقد 10 إلى 12 رقم
-final isValidContract = RegExp(r'^[0-9]{10,12}$').hasMatch(contract); // matches rules expectations
+final isValidContract = RegExp(r'^\d{10}$').hasMatch(contract); // matches rules expectations
 if (!isValidContract) {
   _showSnackBar('Contract must be 10–12 digits (0-9).', isError: true);
   if (mounted) setState(() => _isSaving = false);

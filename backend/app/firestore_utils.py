@@ -22,7 +22,7 @@ def get_farm_doc(farm_id: str) -> Optional[Dict[str, Any]]:
 def set_status(farm_id: str, **data):
     data.setdefault("status", "pending")
 
-    fields_to_clean = ["errorMessage", "imagePath", "imageURL"]
+    fields_to_clean = ["errorMessage"]
     for field in fields_to_clean:
         if data.get(field) is None:
             data[field] = firestore.DELETE_FIELD
