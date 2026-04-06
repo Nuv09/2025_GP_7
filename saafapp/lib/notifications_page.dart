@@ -294,12 +294,11 @@ void _showSnack(String msg) {
             final col = _colorForSeverity(severity);
             final icon = _iconForType(type, severity);
 
-            return InkWell(
-  borderRadius: BorderRadius.circular(25),
-  onTap: () => _openFarmDashboard(data, isRead: isRead, docId: doc.id),
+return Padding(
+  // نقلنا الـ margin هنا وصار Padding عشان الـ InkWell ما يشوفه مساحة ضغط
+  padding: const EdgeInsets.only(bottom: 18),
   child: Container(
-    margin: const EdgeInsets.only(bottom: 18),
-    padding: const EdgeInsets.all(16),
+    clipBehavior: Clip.antiAlias, // عشان نتأكد إن الهوفر ما يطلع برا الانحناء
     decoration: BoxDecoration(
       color: Colors.white.withValues(alpha: 0.05),
       borderRadius: BorderRadius.circular(25),
@@ -308,72 +307,79 @@ void _showSnack(String msg) {
         width: 1.2,
       ),
     ),
-    child: Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: col.withValues(alpha: 0.10),
-            shape: BoxShape.circle,
-            border: Border.all(color: col.withValues(alpha: 0.30)),
-          ),
-          child: Icon(icon, color: col, size: 24),
-        ),
-        const SizedBox(width: 15),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+    child: InkWell(
+      borderRadius: BorderRadius.circular(25), // نفس انحناء الكونتينر
+      onTap: () => _openFarmDashboard(data, isRead: isRead, docId: doc.id),
+      child: Padding(
+        padding: const EdgeInsets.all(16), // البادينق الداخلي للمحتوى
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: col.withValues(alpha: 0.10),
+                shape: BoxShape.circle,
+                border: Border.all(color: col.withValues(alpha: 0.30)),
+              ),
+              child: Icon(icon, color: col, size: 24),
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      farmName,
-                      style: GoogleFonts.almarai(
-                        color: goldColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          farmName,
+                          style: GoogleFonts.almarai(
+                            color: goldColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
+                      Text(
+                        _timeLabel(createdAt),
+                        style: GoogleFonts.almarai(
+                          color: Colors.white38,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    title,
+                    style: GoogleFonts.almarai(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
+                  const SizedBox(height: 6),
                   Text(
-                    _timeLabel(createdAt),
+                    message,
                     style: GoogleFonts.almarai(
-                      color: Colors.white38,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                      color: Colors.white60,
+                      fontSize: 12,
+                      height: 1.5,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                title,
-                style: GoogleFonts.almarai(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
+            ),
+            if (!isRead)
+              IconButton(
+                icon: Icon(Icons.done_all, color: col, size: 20),
+                onPressed: () => _markAsRead(doc.id),
+                tooltip: "وضع كمقروء",
               ),
-              const SizedBox(height: 6),
-              Text(
-                message,
-                style: GoogleFonts.almarai(
-                  color: Colors.white60,
-                  fontSize: 12,
-                  height: 1.5,
-                ),
-              ),
-            ],
-          ),
+          ],
         ),
-        if (!isRead)
-          IconButton(
-            icon: Icon(Icons.done_all, color: col, size: 20),
-            onPressed: () => _markAsRead(doc.id),
-            tooltip: "وضع كمقروء",
-          ),
-      ],
+      ),
     ),
   ),
 );
