@@ -106,12 +106,10 @@ class _ProfilePageState extends State<ProfilePage> {
       final doc = await _db.collection('users').doc(u.uid).get();
       final data = doc.data() ?? {};
 
-      final photo =
-          (data['photoURL'] ??
-                  data['photoUrl'] ??
-                  data['avatar'] ??
-                  u.photoURL ??
-                  '')
+final photo =
+  (data['photoURL'] ??
+   u.photoURL ??
+   '')
               .toString();
 
       if (!mounted) return;
@@ -452,8 +450,6 @@ Widget _clickableAvatar() {
     // تحديث Firestore
     await _db.collection('users').doc(u.uid).set({
       'photoURL': null,
-      'photoUrl': null,
-      'avatar': null,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
@@ -675,7 +671,7 @@ Widget _clickableAvatar() {
         'name': newName,
         'phone': newPhone,
         'region': newRegion,
-        if (newPhoto != null) ...{'photoURL': newPhoto, 'photoUrl': newPhoto},
+        if (newPhoto != null) ...{'photoURL': newPhoto},
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
