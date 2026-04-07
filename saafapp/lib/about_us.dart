@@ -73,7 +73,7 @@ class _AboutUsPageState extends State<AboutUsPage> {
   TextStyle _headlineStyle(bool narrow) => GoogleFonts.almarai(
         color: kLightBeige,
         fontSize: narrow ? 34 : 44,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w700,
         height: 1.15,
       );
 
@@ -376,7 +376,7 @@ class _AboutUsPageState extends State<AboutUsPage> {
                     style: GoogleFonts.almarai(
                       color: kLightBeige,
                       fontSize: 16,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -405,7 +405,7 @@ class _AboutUsPageState extends State<AboutUsPage> {
                 icon: const Icon(Icons.email_rounded),
                 label: Text(
                   "support@saafapp.com",
-                  style: GoogleFonts.almarai(fontWeight: FontWeight.w900),
+                  style: GoogleFonts.almarai(fontWeight: FontWeight.w700),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: kAccentColor,

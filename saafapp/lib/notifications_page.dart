@@ -107,14 +107,15 @@ class _NotificationsPageState extends State<NotificationsPage>
     if (!mounted) return;
 
     // ⚠️ يجب أن يكون لديك Route باسم /farm_dashboard
-    Navigator.pushNamed(
-      context,
-      '/farm_dashboard',
-      arguments: {
-        'farmId': farmId,
-        'farmData': farmData,
-      },
-    );
+Navigator.pushNamed(
+  context,
+  '/farm_dashboard',
+  arguments: {
+    'farmId': farmId,
+    'farmData': farmData,
+    'initialTab': 2, // 👈 هذا المهم
+  },
+);
   } catch (_) {
     _showSnack('تعذر فتح لوحة المزرعة.');
   }

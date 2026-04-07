@@ -34,6 +34,7 @@ class FarmDashboardPage extends StatefulWidget {
 class _FarmDashboardPageState extends State<FarmDashboardPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _tabControllerInitialized = false;
   bool _isForecastMode = false; // التحكم في وضع الخريطة (حالي / توقعات)
 
   // متغيرات الطقس
@@ -76,12 +77,28 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _fetchWeather();
-  }
+@override
+void initState() {
+  super.initState();
+  _fetchWeather();
+}
+@override
+void didChangeDependencies() {
+  super.didChangeDependencies();
+
+  if (_tabControllerInitialized) return;
+
+  final args = ModalRoute.of(context)?.settings.arguments as Map?;
+  final initialTab = (args?['initialTab'] as int?) ?? 0;
+
+  _tabController = TabController(
+    length: 3,
+    vsync: this,
+    initialIndex: initialTab,
+  );
+
+  _tabControllerInitialized = true;
+}
 
   Future<void> _fetchWeather() async {
     try {
@@ -507,10 +524,13 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
 
   void _toast(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg, style: GoogleFonts.almarai()),
-        backgroundColor: const Color(0xFF0A4D41),
-      ),
+SnackBar(
+  content: Text(
+    msg,
+    style: GoogleFonts.almarai(color: Colors.white), // 👈 هذا المهم
+  ),
+  backgroundColor: const Color(0xFF0A4D41),
+),
     );
   }
 

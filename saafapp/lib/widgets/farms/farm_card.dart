@@ -462,7 +462,7 @@ class _InfoPane extends StatelessWidget {
                         style: TextStyle(
                           color: darkGreenColor.withValues(alpha: 0.85),
                           fontWeight: FontWeight.w700,
-                          fontSize: 12,
+                          fontSize: 13,
                         ),
                       ),
                     ),
@@ -492,12 +492,12 @@ if (createdAt != null) ...[
 
       // 👇 عرض ثابت لليبل
       SizedBox(
-        width: 60,
+        width: 70,
         child: Text(
           'تاريخ الإضافة:',
           style: const TextStyle(
             color: darkGreenColor,
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -507,7 +507,7 @@ if (createdAt != null) ...[
 
       // 👇 التاريخ منفصل
      SizedBox(
-  width: 25,
+  width: 33,
   child: Directionality(
     textDirection: TextDirection.ltr,
     child: Text(
@@ -517,7 +517,7 @@ if (createdAt != null) ...[
       overflow: TextOverflow.ellipsis,
       style: const TextStyle(
         color: darkGreenColor,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: FontWeight.w800,
       ),
     ),
@@ -536,12 +536,12 @@ if (createdAt != null) ...[
 
       // 👇 عرض ثابت لليبل (نفس فكرة تاريخ الإضافة)
       const SizedBox(
-        width: 50,
+        width: 70,
         child: Text(
           'آخر تحليل:',
           style: TextStyle(
             color: darkGreenColor,
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -551,7 +551,7 @@ if (createdAt != null) ...[
 
       // 👇 التاريخ فقط
      SizedBox(
-  width: 35,
+  width: 33,
   child: Directionality(
     textDirection: TextDirection.ltr,
     child: Text(
@@ -561,7 +561,7 @@ if (createdAt != null) ...[
       overflow: TextOverflow.ellipsis,
       style: const TextStyle(
         color: darkGreenColor,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: FontWeight.w800,
       ),
     ),
