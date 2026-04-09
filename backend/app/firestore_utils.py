@@ -43,10 +43,16 @@ def set_alerts_and_recommendations(
     """
     db = _get_db()
 
+    clean_alerts = []
+    for a in alerts:
+      a = dict(a)
+      a.pop("actions", None)
+      clean_alerts.append(a)
+      
     # 1) حفظ نفس الشي داخل farms (زي قبل)
     db.collection("farms").document(farm_id).set(
         {
-            "alerts": alerts,
+            "alerts": clean_alerts,
             "recommendations": recommendations,
             "alertsUpdatedAt": firestore.SERVER_TIMESTAMP,
             "hasUnreadAlerts": True if alerts else False,
@@ -84,7 +90,7 @@ def set_alerts_and_recommendations(
             "severity": a.get("severity", ""),
             "title_ar": a.get("title_ar", ""),
             "message_ar": a.get("message_ar", ""),
-            "actions": a.get("actions", []),
+            # "actions": a.get("actions", []),
             "hotspots": a.get("hotspots", []),
 
             "createdAt": firestore.SERVER_TIMESTAMP,
@@ -104,7 +110,7 @@ def set_alerts_and_recommendations(
             "severity": a.get("severity", ""),
             "title_ar": a.get("title_ar", ""),
             "message_ar": a.get("message_ar", ""),
-            "actions": a.get("actions", []),
+            # "actions": a.get("actions", []),
             "hotspots": a.get("hotspots", []),
 
             "updatedAt": firestore.SERVER_TIMESTAMP,
