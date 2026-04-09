@@ -10,6 +10,8 @@ from PIL import Image
 
 from flask import Blueprint, jsonify, render_template
 from google.cloud import firestore
+from openpyxl.chart.label import DataLabelList
+from openpyxl.chart import PieChart
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -618,6 +620,36 @@ def _metric_verdict(code: str, value: float):
         return "منخفضة", "#fee2e2", "#b91c1c"
 
     return "—", "#f1f5f9", "#475569"
+
+def style_chart_axes(chart, *, y_title=None, x_title=None, show_values=False, is_percent=False):
+    try:
+        if y_title is not None:
+            chart.y_axis.title = y_title
+        if x_title is not None:
+            chart.x_axis.title = x_title
+
+        chart.y_axis.delete = False
+        chart.x_axis.delete = False
+
+        # إظهار أرقام المحاور بدل اختفائها
+        chart.y_axis.tickLblPos = "nextTo"
+        chart.x_axis.tickLblPos = "low"
+
+        # في الرسوم النسبية
+        if is_percent:
+            chart.y_axis.scaling.min = 0
+            chart.y_axis.scaling.max = 100
+            chart.y_axis.majorUnit = 20
+
+        if show_values:
+            chart.dLbls = DataLabelList()
+            chart.dLbls.showVal = True
+            chart.dLbls.showLegendKey = False
+            chart.dLbls.showCatName = False
+            chart.dLbls.showSerName = False
+            chart.dLbls.showPercent = False
+    except Exception:
+        pass
 # ─────────────────────────────────────────────
 # PDF Generation — weasyprint
 # ─────────────────────────────────────────────
@@ -1300,25 +1332,26 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     for r in range(data_row, data_row + 5):
         ws.row_dimensions[r].hidden = True
 
-    pie = PieChart()
-    pie.title = "التوزيع الحالي"
-    pie.height = 8
-    pie.width = 10
-    pie.add_data(Reference(ws, min_col=2, min_row=data_row, max_row=data_row + 3), titles_from_data=True)
-    pie.set_categories(Reference(ws, min_col=1, min_row=data_row + 1, max_row=data_row + 3))
-    pie.dataLabels = DataLabelList()
-    pie.dataLabels.showPercent = True
-    ws.add_chart(pie, "A37")
-
     bar = BarChart()
     bar.type = "col"
     bar.style = 10
     bar.title = "الحالي مقابل المتوقع"
-    bar.y_axis.title = "النسبة %"
     bar.height = 8
     bar.width = 12
-    bar.add_data(Reference(ws, min_col=2, max_col=3, min_row=data_row, max_row=data_row + 3), titles_from_data=True)
-    bar.set_categories(Reference(ws, min_col=1, min_row=data_row + 1, max_row=data_row + 3))
+    bar.add_data(
+        Reference(ws, min_col=2, max_col=3, min_row=data_row, max_row=data_row + 3),
+        titles_from_data=True
+    )
+    bar.set_categories(
+        Reference(ws, min_col=1, min_row=data_row + 1, max_row=data_row + 3)
+    )
+    style_chart_axes(
+        bar,
+        y_title="النسبة %",
+        x_title="الحالة",
+        show_values=True,
+        is_percent=True,
+    )
     ws.add_chart(bar, "E37")
 
     # ─────────────────────────────────────────────
@@ -1545,6 +1578,13 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     risk_chart.set_categories(
         Reference(ws3, min_col=1, min_row=chart_row3 + 1, max_row=chart_row3 + len(risk_rows))
     )
+    style_chart_axes(
+        risk_chart,
+        y_title="عدد الإشارات",
+        x_title="السبب",
+        show_values=True,
+        is_percent=False,
+    )
     ws3.add_chart(risk_chart, "A30")
 
     # ─────────────────────────────────────────────
@@ -1634,10 +1674,20 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
         lc.style = 10
         lc.height = 10
         lc.width = 16
-        lc.y_axis.title = "القيمة"
-        lc.x_axis.title = "التاريخ"
-        lc.add_data(Reference(ws5, min_col=2, max_col=4, min_row=3, max_row=3 + max_len), titles_from_data=True)
-        lc.set_categories(Reference(ws5, min_col=1, min_row=4, max_row=3 + max_len))
+        lc.add_data(
+            Reference(ws5, min_col=2, max_col=4, min_row=3, max_row=3 + max_len),
+            titles_from_data=True
+        )
+        lc.set_categories(
+            Reference(ws5, min_col=1, min_row=4, max_row=3 + max_len)
+        )
+        style_chart_axes(
+            lc,
+            y_title="القيمة",
+            x_title="التاريخ",
+            show_values=False,
+            is_percent=False,
+        )
         ws5.add_chart(lc, "F3")
 
     # ─────────────────────────────────────────────
@@ -1672,6 +1722,7 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     # إعادة ربط الرسوم بمصدر مستقل hidden
     # ─────────────────────────────────────────────
     # pie
+    pie = PieChart()
     pie.series = []
     pie.add_data(Reference(ws6, min_col=2, min_row=1, max_row=4), titles_from_data=True)
     pie.set_categories(Reference(ws6, min_col=1, min_row=2, max_row=4))
