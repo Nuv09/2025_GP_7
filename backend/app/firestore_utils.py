@@ -91,7 +91,7 @@ def set_alerts_and_recommendations(
             "title_ar": a.get("title_ar", ""),
             "message_ar": a.get("message_ar", ""),
             # "actions": a.get("actions", []),
-            "hotspots": a.get("hotspots", []),
+            # "hotspots": a.get("hotspots", []),
 
             "createdAt": firestore.SERVER_TIMESTAMP,
             "updatedAt": firestore.SERVER_TIMESTAMP,
@@ -111,7 +111,7 @@ def set_alerts_and_recommendations(
             "title_ar": a.get("title_ar", ""),
             "message_ar": a.get("message_ar", ""),
             # "actions": a.get("actions", []),
-            "hotspots": a.get("hotspots", []),
+            # ؤي
 
             "updatedAt": firestore.SERVER_TIMESTAMP,
         }
