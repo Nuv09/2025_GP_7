@@ -362,7 +362,7 @@ def _sector_distribution_rows(map_points: list) -> list[dict]:
         try:
             lat = float(p.get("lat"))
             lng = float(p.get("lng"))
-            s = int(p.get("s", 0))
+            s = int(p.get("currentStatus", 0))
             points.append((lat, lng, s))
         except Exception:
             continue
@@ -524,8 +524,8 @@ def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_pol
         try:
             lat = float(pt.get("lat"))
             lng = float(pt.get("lng"))
-            s = int(pt.get("s", 0))
-            ps = int(pt.get("ps", s))
+            s = int(pt.get("currentStatus", 0))
+            ps = int(pt.get("predictedStatus", s))
         except Exception:
             continue
 
@@ -1612,8 +1612,8 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
 
     r = 4
     for idx, pt in enumerate(map_points, start=1):
-        s_text = decode_status(pt.get("s"))
-        ps_text = decode_status(pt.get("ps"))
+        s_text = decode_status(pt.get("currentStatus"))
+        ps_text = decode_status(pt.get("predictedStatus"))
         row_bg = status_fill(s_text)
         values = [idx, pt.get("lat", "—"), pt.get("lng", "—"), s_text, ps_text]
         for c, val in enumerate(values, start=1):

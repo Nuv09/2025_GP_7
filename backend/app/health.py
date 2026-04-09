@@ -1274,14 +1274,14 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
                 fallback_points.append({
                     "lat": round(float(lat_val), 6),
                     "lng": round(float(lng_val), 6),
-                    "s": status_code,
+                    "currentStatus": status_code,
                 })
         health_map_data = fallback_points
 
     # دمج الحالة المتوقعة (ps) داخل نقاط الخريطة الحالية
     for pt in health_map_data:
         key = f"{pt['lat']}_{pt['lng']}"
-        pt["ps"] = lookup.get(key, 0)
+        pt["predictedStatus"] = lookup.get(key, 0)
     # 7. الإرجاع النهائي الموحد لـ Firestore
     return {
         "current_health": processed_health,
@@ -1434,7 +1434,7 @@ def get_health_map_points(df_all: pd.DataFrame) -> List[Dict[str, Any]]:
         map_points.append({
             'lat': round(float(row['lat']), 6),
             'lng': round(float(row['lng']), 6),
-            's': status_code
+            'currentStatus': status_code
         })
     return map_points 
 

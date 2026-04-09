@@ -810,8 +810,8 @@ SnackBar(
                   circles: healthMapPoints.map((point) {
                     // التبديل بين s (الحالي) و ps (المتوقع) بناءً على الزر فقط
                     final int status = _isForecastMode
-                        ? (point['ps'] ?? 0)
-                        : (point['s'] ?? 0);
+                        ? (point['predictedStatus'] ?? 0)
+                        : (point['currentStatus'] ?? 0);
 
                     final baseColor = _getHealthColor(status);
 
