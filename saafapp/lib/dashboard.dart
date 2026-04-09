@@ -592,7 +592,7 @@ SnackBar(
         try {
           Navigator.pop(context);
         } catch (_) {}
-        _toast("خطأ في الاتصال: تأكدي من جودة الإنترنت");
+        _toast("خطأ في الاتصال: تأكد من جودة الإنترنت");
         debugPrint("PDF Export Error: $e");
       }
     }

@@ -228,7 +228,7 @@ if (loggedInUser != null) {
       switch (e.code) {
         case 'user-not-found':
           msg =
-              'البريد الإلكتروني الذي أدخلته غير مسجّل. تأكدي من كتابته بشكل صحيح أو أنشئي حسابًا جديدًا.';
+              'البريد الإلكتروني الذي أدخلته غير مسجّل. تأكد من كتابته بشكل صحيح أو أنشئي حسابًا جديدًا.';
           break;
 
         case 'wrong-password':
@@ -239,7 +239,7 @@ if (loggedInUser != null) {
 
         case 'invalid-email':
           msg =
-              'صيغة البريد الإلكتروني غير صحيحة. تأكدي أن البريد مكتوب بهذا الشكل: example@email.com';
+              'صيغة البريد الإلكتروني غير صحيحة. تأكد أن البريد مكتوب بهذا الشكل: example@email.com';
           break;
 
         case 'too-many-requests': 

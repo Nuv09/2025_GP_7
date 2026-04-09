@@ -1,19 +1,17 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, debugPrint, kIsWeb;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 
-// Firebase
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'firebase_options.dart';
 
-// ثابت الألوان/القيم المشتركة
+
 import 'constant.dart';
 
-// شاشات التطبيق
 import 'saaf_landing_screen.dart';
 import 'login_screen.dart';
 import 'signup_screen.dart';
@@ -46,7 +44,6 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // تهيئة Firebase
   await _initializeFirebase();
   await _initializeFCM();
 
@@ -58,12 +55,12 @@ Future<void> main() async {
 
 Future<void> _initializeFirebase() async {
   try {
-    // لو Firebase جاهز مسبقاً
+
     try {
       Firebase.app();
       debugPrint('✅ Firebase already initialized');
     } catch (_) {
-      // لو مو جاهز → نهيئه
+
       debugPrint('🔄 Initializing Firebase...');
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
@@ -71,7 +68,6 @@ Future<void> _initializeFirebase() async {
       debugPrint('✅ Firebase initialized successfully');
     }
 
-    // تهيئة App Check في الخلفية
     _initializeAppCheckInBackground();
   } catch (e) {
     debugPrint('❌ Firebase initialization error: $e');
@@ -84,14 +80,14 @@ void _initializeAppCheckInBackground() {
   Future.delayed(Duration.zero, () async {
     try {
       if (kIsWeb) {
-        // الويب → نستعمل Recaptcha V3 بدون env
+
         await FirebaseAppCheck.instance.activate(
           webProvider: ReCaptchaV3Provider(
             "6LeCJgQsAAAAAItp5qD11GdE0wNEHNGLk22m74wO",
           ),
         );
       } else {
-        // الجوال
+
         await FirebaseAppCheck.instance.activate(
           androidProvider: kDebugMode
               ? AndroidProvider.debug
@@ -110,12 +106,10 @@ void _initializeAppCheckInBackground() {
 
 Future<void> _initializeFCM() async {
   try {
-    // ✅ تسجيل الهاندلر للخلفية (Android/iOS)
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
     final messaging = FirebaseMessaging.instance;
 
-    // ✅ طلب الإذن (مهم خصوصاً iOS)
     await messaging.requestPermission(
       alert: true,
       badge: true,
@@ -127,19 +121,16 @@ Future<void> _initializeFCM() async {
 
     
 
-    // ✅ لو تغير التوكن لاحقاً
     FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
       await _saveFcmTokenIfLoggedIn(forcedToken: newToken);
     });
 
-    // ✅ إذا المستخدم ضغط على الإشعار وفتح التطبيق
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       navigatorKey.currentState?.push(
         MaterialPageRoute(builder: (_) => const NotificationsPage()),
       );
     });
 
-    // ✅ لو التطبيق كان مقفّل بالكامل وانفتح من إشعار
     final initialMsg = await FirebaseMessaging.instance.getInitialMessage();
     if (initialMsg != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -274,13 +265,15 @@ items: [
 }
 Widget _navItem(IconData icon, String label, bool active) {
   return Padding(
-    padding: const EdgeInsets.only(top: 4), // 🔥 هنا نزلنا العناصر تحت
+    padding: EdgeInsets.only(
+  top: active ? 0 : 20,
+), 
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(
           icon,
-          size: active ? 33 : 29,
+          size: active ? 33 : 30,
           color: Color(0xFFBC914E),
         ),
 
@@ -288,11 +281,11 @@ Widget _navItem(IconData icon, String label, bool active) {
           duration: Duration(milliseconds: 200),
           opacity: active ? 1.0 : 0.0,
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Text(
               label,
-              style: GoogleFonts.cairo(
-                fontWeight: FontWeight.w900, // أثقل خط
+              style: GoogleFonts.almarai(
+                fontWeight: FontWeight.w800,
                 fontSize: 12,
                 color: Color(0xFFBC914E),
               ),
