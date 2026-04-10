@@ -144,17 +144,17 @@ _GROUP_BY_ACTION_KEY = {
 }
 
 # ✅ أيقونات بسيطة للـ UI (اختاري أسماء تناسب مكتبتكم)
-_ICON_BY_GROUP = {
-    "field_visit": {"whyIcon": "help_circle", "actionIcon": "map_pin"},
-    "irrigation": {"whyIcon": "help_circle", "actionIcon": "droplet"},
-    "field_inspection": {"whyIcon": "help_circle", "actionIcon": "search"},
-    "nutrition": {"whyIcon": "help_circle", "actionIcon": "leaf"},
-    "pest": {"whyIcon": "help_circle", "actionIcon": "bug"},
-    "heat": {"whyIcon": "help_circle", "actionIcon": "sun"},
-    "prepare": {"whyIcon": "help_circle", "actionIcon": "calendar"},
-    "notes": {"whyIcon": "help_circle", "actionIcon": "clipboard"},
-    "autofollow": {"whyIcon": "help_circle", "actionIcon": "refresh_cw"},
-}
+# _ICON_BY_GROUP = {
+#     "field_visit": {"whyIcon": "help_circle", "actionIcon": "map_pin"},
+#     "irrigation": {"whyIcon": "help_circle", "actionIcon": "droplet"},
+#     "field_inspection": {"whyIcon": "help_circle", "actionIcon": "search"},
+#     "nutrition": {"whyIcon": "help_circle", "actionIcon": "leaf"},
+#     "pest": {"whyIcon": "help_circle", "actionIcon": "bug"},
+#     "heat": {"whyIcon": "help_circle", "actionIcon": "sun"},
+#     "prepare": {"whyIcon": "help_circle", "actionIcon": "calendar"},
+#     "notes": {"whyIcon": "help_circle", "actionIcon": "clipboard"},
+#     "autofollow": {"whyIcon": "help_circle", "actionIcon": "refresh_cw"},
+# }
 
 def _priority_for_action(action_key: str) -> str:
     return _PRIORITY_BY_ACTION.get((action_key or "").strip(), "متوسطة")
@@ -195,7 +195,7 @@ def _add_reco(
 
     existing = recos_map.get(group_key)
     if existing is None:
-        icons = _ICON_BY_GROUP.get(group_key, {"whyIcon": "help_circle", "actionIcon": "sparkles"})
+        # icons = _ICON_BY_GROUP.get(group_key, {"whyIcon": "help_circle", "actionIcon": "sparkles"})
         recos_map[group_key] = {
             "id": _stable_id(farm_id, "reco", group_key),
             "group": group_key,
@@ -203,11 +203,11 @@ def _add_reco(
             "sources": [source],
             "priority_ar": priority_ar,
 
-            # ✅ UI-friendly
-            "whyTitle_ar": "لماذا؟",
-            "actionTitle_ar": "ماذا أفعل؟",
-            "whyIcon": icons["whyIcon"],
-            "actionIcon": icons["actionIcon"],
+            # # ✅ UI-friendly
+            # "whyTitle_ar": "لماذا؟",
+            # "actionTitle_ar": "ماذا أفعل؟",
+            # "whyIcon": icons["whyIcon"],
+            # "actionIcon": icons["actionIcon"],
 
             # ✅ content
             "title_ar": action.get("title_ar", ""),
