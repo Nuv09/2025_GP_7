@@ -560,7 +560,8 @@ SnackBar(
 
       final data = jsonDecode(res.body);
       final String b64 = data["pdfBase64"] ?? "";
-      final String fileName = data["fileName"] ?? "Saaf_Report_$farmDocId.pdf";
+      final farmName = widget.farmData['farmName'] ?? "Farm";
+      final String fileName = "${farmName}_farm_report.pdf";
 
       if (b64.isEmpty) {
         _toast("لم يتم استلام بيانات التقرير من السيرفر");
@@ -624,7 +625,8 @@ SnackBar(
 
       final data = jsonDecode(res.body);
       final String b64 = data["excelBase64"] ?? "";
-      final String fileName = data["fileName"] ?? "Saaf_Data_$farmDocId.xlsx";
+      final farmName = widget.farmData['farmName'] ?? "Farm";
+      final String fileName = "${farmName}_farm_report.xlsx";
 
       if (b64.isEmpty) {
         _toast("ملف البيانات فارغ");

@@ -771,83 +771,83 @@ class _FarmsListState extends State<_FarmsList> {
       arguments: {'farmId': doc.id, 'initialData': d},
     );
   },
-  onDelete: () async {
-    bool confirmDelete =
-        await showDialog<bool>(
-              context: context,
-              builder: (ctx) => BackdropFilter(
-  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-  child: AlertDialog(
-                backgroundColor: const Color(0xFF042C25),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                title: Text(
-                  'تأكيد الحذف',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.almarai(
-                    color: const Color(0xFFFFF6E0),
-                    fontWeight: FontWeight.w800,
-                    fontSize: 22,
-                  ),
-                ),
-                content: Text(
-                  'هل أنت متأكد من حذف مزرعة "$name"؟ لا يمكن التراجع عن هذا الإجراء.',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.almarai(
-                    color: const Color(0xFFFFF6E0),
-                    fontSize: 16,
-                    height: 1.5,
-                  ),
-                ),
-                actionsAlignment: MainAxisAlignment.center,
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    child: Text(
-                      'إلغاء',
-                      style: GoogleFonts.almarai(
-                        color: const Color(0xFFFFF6E0),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF44336),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () => Navigator.pop(ctx, true),
-                    child: Text(
-                      'حذف',
-                      style: GoogleFonts.almarai(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ],
+onDelete: () async {
+  bool confirmDelete = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+      child: AlertDialog(
+        backgroundColor: const Color(0xFF042C25),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        title: Text(
+          'تأكيد الحذف',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.almarai(
+            color: const Color(0xFFFFF6E0),
+            fontWeight: FontWeight.w800,
+            fontSize: 22,
+          ),
+        ),
+        content: Text(
+          'هل أنت متأكد من حذف مزرعة "$name"؟ لا يمكن التراجع عن هذا الإجراء.',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.almarai(
+            color: const Color(0xFFFFF6E0),
+            fontSize: 16,
+            height: 1.5,
+          ),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          // تم تبديل الأماكن هنا: الحذف يميناً والإلغاء يساراً
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF44336),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'حذف',
+              style: GoogleFonts.almarai(
+                fontWeight: FontWeight.w800,
               ),
-            ) ??
-            false;
+            ),
+          ),
+          const SizedBox(width: 12), // مسافة بسيطة بين الزرين
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'إلغاء',
+              style: GoogleFonts.almarai(
+                color: const Color(0xFFFFF6E0),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  ) ?? false;
 
-    if (confirmDelete) {
-      try {
-        if (imageURL.isNotEmpty) {
-          try {
-            await FirebaseStorage.instance.refFromURL(imageURL).delete();
-          } catch (_) {}
-        }
-        await FirebaseFirestore.instance
-            .collection('farms')
-            .doc(doc.id)
-            .delete();
-      } catch (_) {}
-    }
-  },
+  if (confirmDelete) {
+    try {
+      if (imageURL.isNotEmpty) {
+        try {
+          await FirebaseStorage.instance.refFromURL(imageURL).delete();
+        } catch (_) {}
+      }
+      await FirebaseFirestore.instance
+          .collection('farms')
+          .doc(doc.id)
+          .delete();
+    } catch (_) {}
+  }
+},
 ),
     
 

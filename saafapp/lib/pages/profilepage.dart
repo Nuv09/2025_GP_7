@@ -770,10 +770,12 @@ Widget _clickableAvatar() {
 
 
   // 2. نافذة طلب كلمة المرور )
+// 2. نافذة طلب كلمة المرور مع ميزة إظهار/إخفاء الباسوورد
 Future<String?> _askForPassword() async {
   final ctrl = TextEditingController();
   final userEmail = _auth.currentUser?.email ?? "";
   String? localError;
+  bool obscurePassword = true; // متغير للتحكم في ظهور النص
 
   return await showDialog<String>(
     context: context,
@@ -781,7 +783,7 @@ Future<String?> _askForPassword() async {
       builder: (context, setDialogState) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: AlertDialog(
-          backgroundColor: const Color(0xFF0D2B24).withValues(alpha: 0.2),
+          backgroundColor: const Color(0xFF0D2B24).withValues(alpha: 0.9), // زيادة التعتيم قليلاً للوضوح
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25),
             side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
@@ -804,7 +806,7 @@ Future<String?> _askForPassword() async {
               const SizedBox(height: 20),
               TextField(
                 controller: ctrl,
-                obscureText: true,
+                obscureText: obscurePassword, // الربط بالمتغير
                 textAlign: TextAlign.right,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
@@ -813,6 +815,21 @@ Future<String?> _askForPassword() async {
                   filled: true,
                   fillColor: Colors.black.withValues(alpha: 0.2),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+                  
+                  // --- إضافة أيقونة العين هنا ---
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      color: kGold.withValues(alpha: 0.7),
+                    ),
+                    onPressed: () {
+                      setDialogState(() {
+                        obscurePassword = !obscurePassword;
+                      });
+                    },
+                  ),
+                  // ---------------------------
+
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
                     borderSide: const BorderSide(color: kAccent, width: 1.5),
@@ -820,7 +837,6 @@ Future<String?> _askForPassword() async {
                 ),
               ),
 
-              // 🔴 رسالة الخطأ داخل النافذة
               if (localError != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 15),
@@ -841,33 +857,31 @@ Future<String?> _askForPassword() async {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: kAccent, foregroundColor: kDeepGreen),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kAccent, 
+                    foregroundColor: kDeepGreen,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                   onPressed: () async {
                     final password = ctrl.text.trim();
-
                     if (password.isEmpty) {
                       setDialogState(() => localError = "الرجاء إدخال كلمة المرور");
                       return;
                     }
-
                     try {
                       AuthCredential credential = EmailAuthProvider.credential(
                         email: userEmail,
                         password: password,
                       );
-
                       await _auth.currentUser!.reauthenticateWithCredential(credential);
                       if (!ctx.mounted) return;
-
-                      Navigator.pop(ctx, password); // نجاح
+                      Navigator.pop(ctx, password);
                     } on FirebaseAuthException catch (e) {
                       setDialogState(() {
                         if (e.code == 'wrong-password') {
                           localError = "كلمة المرور غير صحيحة";
-                        } else if (e.code == 'network-request-failed') {
-                          localError = "تأكد من اتصالك بالإنترنت";
                         } else {
-                          localError = "حدث خطأ أمني، حاول مجدداً";
+                          localError = "حدث خطأ، تأكد من البيانات";
                         }
                       });
                     }
@@ -877,7 +891,7 @@ Future<String?> _askForPassword() async {
                 const SizedBox(width: 20),
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, null),
-                  child: const Text('إلغاء', style: TextStyle(color: Colors.white70)),
+                  child: Text('إلغاء', style: GoogleFonts.almarai(color: Colors.white70)),
                 ),
               ],
             ),
