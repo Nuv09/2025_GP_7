@@ -36,29 +36,35 @@ def set_alerts_and_recommendations(
     alerts: List[Dict[str, Any]],
     recommendations: List[Dict[str, Any]],
 ) -> int:
-    """
-    ✅ نفس السكيمة الحالية (بدون أي تغيير على DB)
-    ✅ يمنع "إعادة" createdAt و isRead للتنبيه إذا كان موجود
-    ✅ يرجّع عدد التنبيهات الجديدة اللي تم إنشاؤها فعلياً (new_count)
-    """
     db = _get_db()
 
+    # 1) تنظيف التنبيهات (موجود مسبقاً في كودك)
     clean_alerts = []
     for a in alerts:
-      a = dict(a)
-      a.pop("actions", None)
-      clean_alerts.append(a)
+        a = dict(a)
+        a.pop("actions", None)
+        clean_alerts.append(a)
       
-    # 1) حفظ نفس الشي داخل farms (زي قبل)
+    # 2) ✅ تنظيف التوصيات (إضافة هذا الجزء لحذف الحقول التقنية)
+    clean_recos = []
+    for r in recommendations:
+        r = dict(r) # نأخذ نسخة لكي لا نعدل على الأصل
+        r.pop("group", None) # حذف حقل group
+        r.pop("key", None)   # حذف حقل key
+        r.pop("score", None) # حذف حقل score
+        clean_recos.append(r)
+
+    # 3) حفظ البيانات المنظفة داخل كولكشن المزارع (farms)
     db.collection("farms").document(farm_id).set(
         {
             "alerts": clean_alerts,
-            "recommendations": recommendations,
+            "recommendations": clean_recos, # 👈 نمرر القائمة النظيفة هنا
             "alertsUpdatedAt": firestore.SERVER_TIMESTAMP,
             "hasUnreadAlerts": True if alerts else False,
         },
         merge=True,
     )
+    # ... بقية الدالة كما هي لإرسال الإشعارات
 
     # 2) اكتب alerts داخل collection('notifications') عشان notifications_page.dart يقدر يقرأها
     if not alerts:
