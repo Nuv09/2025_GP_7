@@ -540,7 +540,7 @@ SnackBar(
       _showLoading("جاري تجهيز PDF...");
 
       final uri = Uri.parse("${Secrets.apiBaseUrl}/api/reports/$farmDocId/pdf");
-      final res = await http.get(uri).timeout(const Duration(seconds: 45));
+      final res = await http.get(uri).timeout(const Duration(seconds: 120));
 
       if (!mounted) return;
       Navigator.pop(context);
@@ -606,7 +606,7 @@ SnackBar(
       final uri = Uri.parse(
         "${Secrets.apiBaseUrl}/api/reports/$farmDocId/excel",
       );
-      final res = await http.get(uri).timeout(const Duration(seconds: 45));
+      final res = await http.get(uri).timeout(const Duration(seconds: 120));
 
       if (!mounted) return;
       Navigator.pop(context);

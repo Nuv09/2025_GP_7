@@ -273,7 +273,7 @@ Widget _navItem(IconData icon, String label, bool active) {
       children: [
         Icon(
           icon,
-          size: active ? 33 : 30,
+          size: active ? 30 : 27,
           color: Color(0xFFBC914E),
         ),
 

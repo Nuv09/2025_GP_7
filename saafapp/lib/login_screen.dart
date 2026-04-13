@@ -23,7 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   final _auth = FirebaseAuth.instance;
   final _db = FirebaseFirestore.instance;
-
+ 
   // الحد الأقصى للمحاولات الفاشلة قبل الحظر الإجباري
   static const int _maxFailedAttempts = 10;
 
