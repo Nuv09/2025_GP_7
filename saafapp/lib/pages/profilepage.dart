@@ -88,14 +88,90 @@ class _ProfilePageState extends State<ProfilePage> {
     super.dispose();
   }
 
-  // 🔔 Toast آمن
-  void _safeToast(String msg) {
+// 🔔 الدالة المطورة: تدعم الألوان حسب الحالة (نجاح، خطأ، معلومات)
+  void _safeToast(String msg, {IconData? icon, String type = 'info'}) {
     if (!mounted) return;
+    
+    // 🎨 تحديد اللون والأيقونة بناءً على النوع
+    Color bgColor;
+    Color contentColor = kDeepGreen; // اللون الافتراضي للنص والأيقونة
+    IconData toastIcon;
+
+    switch (type) {
+      case 'success':
+        bgColor = const Color(0xFF1E8D5F).withValues(alpha: 0.7); // أخضر فخم للنجاح
+        contentColor = Colors.white; // نص أبيض للوضوح فوق الأخضر
+        toastIcon = icon ?? Icons.check_circle_rounded;
+        break;
+      case 'error':
+        bgColor = const Color.fromARGB(255, 153, 30, 30).withValues(alpha: 0.7); // العنابي اللي اخترتيه
+        contentColor = Colors.white;
+        toastIcon = icon ?? Icons.error_rounded;
+        break;
+      default: // 'info' أو 'loading'
+        bgColor = kBeige.withValues(alpha: 0.9); // اللون البيج الحالي
+        contentColor = kDeepGreen;
+        toastIcon = icon ?? Icons.info_rounded;
+    }
+
     final m = ScaffoldMessenger.maybeOf(context);
-    m?.showSnackBar(SnackBar(content: Text(msg, style: GoogleFonts.almarai())));
+    m?.removeCurrentSnackBar(); 
+
+    m?.showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        margin: const EdgeInsets.fromLTRB(30, 0, 30, 45),
+        animation: CurvedAnimation(
+          parent: AnimationController(
+            vsync: ScaffoldMessenger.of(context),
+            duration: const Duration(seconds: 3),
+          )..forward(),
+          curve: Curves.easeOutBack,
+        ),
+        content: ClipRRect(
+          borderRadius: BorderRadius.circular(25),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: contentColor.withValues(alpha: 0.2),
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                textDirection: TextDirection.rtl, 
+                children: [
+                  Icon(toastIcon, color: contentColor, size: 22),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      msg,
+                      textAlign: TextAlign.right,
+                      style: GoogleFonts.almarai(
+                        color: contentColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
-  Future<void> _loadUser() async {
+Future<void> _loadUser() async {
     try {
       final u = _auth.currentUser;
       if (u == null) {
@@ -106,18 +182,20 @@ class _ProfilePageState extends State<ProfilePage> {
       final doc = await _db.collection('users').doc(u.uid).get();
       final data = doc.data() ?? {};
 
-final photo =
-  (data['photoURL'] ??
-   u.photoURL ??
-   '')
-              .toString();
+      // ✅ التعديل هنا: نعتمد فقط على Firestore
+      // حذفنا u.photoURL لكي لا يظهر الرابط القديم المخزن في الجلسة
+      final photo = (data['photoURL'] ?? '').toString(); 
 
       if (!mounted) return;
       setState(() {
         name = (data['name'] ?? '').toString();
         phone = (data['phone'] ?? '').toString();
         region = (data['region'] ?? '').toString();
-        avatarPath = photo.isNotEmpty ? photo : null;
+        
+        // إذا كان الحقل فارغاً في Firestore، سيكون avatarPath قيمته null 
+        // وبالتالي سيختفي زر الحذف ويظهر لوغو سعف تلقائياً
+        avatarPath = photo.isNotEmpty ? photo : null; 
+        
         email = u.email;
 
         _nameCtrl.text = name ?? '';
@@ -128,7 +206,7 @@ final photo =
         _loading = false;
       });
     } catch (e) {
-      _safeToast('تعذر تحميل البيانات: $e');
+      _safeToast("تعذر تحميل البيانات: $e", type: 'error');
       if (mounted) setState(() => _loading = false);
     }
   }
@@ -310,70 +388,74 @@ Widget _glassCard({
       );
     }
 
-    return const ClipOval(
-      child: SizedBox(
-        width: 120,
-        height: 120,
-        child: Image(
-          image: AssetImage('assets/images/saaf_logo.png'),
-          fit: BoxFit.cover,
-        ),
-      ),
-    );
+// في نهاية دالة _avatarWidget
+return const ClipOval(
+  child: SizedBox(
+    width: 120,
+    height: 120,
+    child: Image(
+      image: AssetImage('assets/images/saaf_logo.png'), // ✅ تأكدي من المسار الصحيح لشعارك
+      fit: BoxFit.cover,
+    ),
+  ),
+);
   }
 
 Widget _clickableAvatar() {
-  final avatar = _avatarWidget();
+  // فحص هل توجد أي صورة حالياً
+final bool hasImage = (avatarPath != null && avatarPath!.isNotEmpty) || 
+                       _pickedBytes != null || 
+                       _pickedFilePath != null;
 
   return Stack(
     alignment: Alignment.center,
     children: [
-      // الهالة الذهبية
+      // 1. الإطار (الهالة) - يظهر دائماً كما طلبتِ
       Container(
         width: 128,
         height: 128,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(
-            color: kGold.withValues(alpha: 0.30),
-            width: 3,
+            color: kGold.withValues(alpha: 0.50), // ✅ الإطار الذهبي/البيج
+            width: 2.5, // سماكة الإطار
           ),
         ),
       ),
 
-      // الصورة
-      avatar,
+      // 2. ويدجت الصورة (يعرض الصورة الشخصية أو شعار سعف)
+      _avatarWidget(),
 
-      // زر استبدال الصورة (الكاميرا)
+      // 3. زر الكاميرا (دائماً موجود)
       Positioned(
-        bottom: 4,
-        right: 4,
+        bottom: 2,
+        right: 2,
         child: GestureDetector(
           onTap: _pickFromGallery,
           child: Container(
-            width: 36,
-            height: 36,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
               color: kGold,
               shape: BoxShape.circle,
+              border: Border.all(color: kDeepGreen, width: 2), // إطار صغير للزر
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 6,
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 4,
                 ),
               ],
             ),
-            child: const Icon(Icons.camera_alt_rounded,
-                color: Colors.white, size: 20),
+            child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 20),
           ),
         ),
       ),
 
-      // زر الحذف ❌ يظهر فقط لو فيه صورة مرفوعة
-      if (avatarPath != null || _pickedBytes != null || _pickedFilePath != null)
+      // 4. زر الحذف - يظهر فقط في حالة وجود صورة شخصية مرفوعة
+      if (hasImage)
         Positioned(
-          top: 4,
-          left: 4,
+          top: 2,
+          left: 2,
           child: GestureDetector(
             onTap: _removeAvatar,
             child: Container(
@@ -382,10 +464,11 @@ Widget _clickableAvatar() {
               decoration: BoxDecoration(
                 color: Colors.redAccent,
                 shape: BoxShape.circle,
+                border: Border.all(color: kDeepGreen, width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.25),
-                    blurRadius: 6,
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 4,
                   ),
                 ],
               ),
@@ -407,67 +490,91 @@ Widget _clickableAvatar() {
     child: const Icon(Icons.person, color: Colors.white70, size: 40),
   );
 
-  Future<void> _pickFromGallery() async {
-    try {
-      final x = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 1024,
-      );
-      if (x == null) return;
+Future<void> _pickFromGallery() async {
+  try {
+    final x = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
+    if (x == null) return;
 
-      if (kIsWeb) {
-        final bytes = await x.readAsBytes();
-        if (!mounted) return;
-        setState(() {
-          _pickedBytes = bytes;
-          _pickedFilePath = null;
-        });
-      } else {
-        if (!mounted) return;
-        setState(() {
-          _pickedFilePath = x.path;
-          _pickedBytes = null;
-        });
-      }
-    } catch (e) {
-      _safeToast('خطأ أثناء اختيار الصورة: $e');
+    // 1. تحديث المعاينة فوراً للمستخدم
+    if (kIsWeb) {
+      _pickedBytes = await x.readAsBytes();
+      _pickedFilePath = null;
+    } else {
+      _pickedFilePath = x.path;
+      _pickedBytes = null;
     }
-  }
+    setState(() {}); // لتحديث شكل الأفتار فوراً
 
-  Future<void> _removeAvatar() async {
+    // 2. البدء بالرفع التلقائي وتحديث الداتا بيس
+    final u = _auth.currentUser;
+    if (u == null) return;
+
+    _safeToast("جاري تحديث الصورة...", icon: Icons.sync_rounded, type: 'info');
+    
+    // استدعاء دالة الرفع التي عدلناها أعلاه
+    final String? newUrl = await _uploadAvatar(u.uid);
+
+    if (newUrl != null) {
+      // ✅ تحديث Firestore فوراً دون انتظار زر الحفظ
+      await _db.collection('users').doc(u.uid).update({
+        'photoURL': newUrl,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // ✅ تحديث Firebase Auth لضمان ظهورها عند إعادة التشغيل
+      await u.updatePhotoURL(newUrl);
+
+      if (!mounted) return;
+      setState(() {
+        avatarPath = newUrl; // تأكيد الرابط الجديد
+        _avatarRev++;        // كسر الكاش
+      });
+      
+      _safeToast('تم حفظ الصورة بنجاح', type: 'success');
+    }
+  } catch (e) {
+    _safeToast("خطأ أثناء اختيار أو رفع الصورة: $e", type: 'error');
+  }
+}
+
+Future<void> _removeAvatar() async {
   final u = _auth.currentUser;
   if (u == null) return;
 
   try {
-    // لو في صورة قديمة من Firebase نحذفها
+    // 1. حذف الملف من Storage إذا كان موجوداً
     if (avatarPath != null && avatarPath!.startsWith('http')) {
       try {
         await _storage.refFromURL(avatarPath!).delete();
-      } catch (_) {}
+      } catch (e) {
+        debugPrint("Storage delete error: $e");
+      }
     }
 
-    // تحديث Firestore
-    await _db.collection('users').doc(u.uid).set({
-      'photoURL': null,
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    // 2. تحديث Firestore (إزالة الحقل تماماً لضمان عدم تحميله مجدداً)
+    await _db.collection('users').doc(u.uid).update({
+      'photoURL': FieldValue.delete(), // ✅ يضمن حذف الحقل من المستند
+    });
 
-    // تحديث Firebase Auth
-    await u.updatePhotoURL(null);
+    // 3. تحديث Firebase Auth (هذا يمنع ظهور الصورة المكسورة عند إعادة التشغيل)
+    await u.updatePhotoURL(null); // ✅ يصفر الرابط في سجل الجلسة
+    await u.reload();            // ✅ إجبار تحديث بيانات المستخدم الحالية
 
     if (!mounted) return;
 
     setState(() {
-      avatarPath = null;
-      _pickedBytes = null;
-      _pickedFilePath = null;
-      _avatarRev++;
+      avatarPath = null;      // يختفي الرابط فتختفي أيقونة الزبالة
+      _pickedBytes = null;    // يصفر أي اختيار محلي
+      _pickedFilePath = null; // يصفر أي مسار محلي
+      _avatarRev++;           // كسر الكاش لضمان تحديث الواجهة
     });
 
-    _safeToast("تمت إزالة الصورة بنجاح");
+    _safeToast("تمت إزالة الصورة بنجاح", type: 'success');
   } catch (e) {
-    _safeToast("تعذر حذف الصورة: $e");
+    _safeToast("تعذر حذف الصورة: $e", type: 'error');
   }
 }
 
@@ -503,7 +610,7 @@ Widget _clickableAvatar() {
 
       return url;
     } catch (e) {
-      _safeToast('تعذر رفع الصورة: $e');
+      _safeToast("تعذر رفع الصورة: $e", type: 'error');
       return null;
     }
   }
@@ -592,10 +699,10 @@ Widget _clickableAvatar() {
       await u.reauthenticateWithCredential(cred);
       return true;
     } on FirebaseAuthException catch (e) {
-      _safeToast('فشل تأكيد الهوية: ${e.message}');
+      _safeToast("فشل تأكيد الهوية: ${e.message}", type: 'error');
       return false;
     } catch (e) {
-      _safeToast('فشل تأكيد الهوية: $e');
+      _safeToast("فشل تأكيد الهوية: $e", type: 'error');
       return false;
     }
   }
@@ -609,9 +716,7 @@ Widget _clickableAvatar() {
         final ok = await _reauthWithPassword(pwd);
         if (!ok) return false;
       } else {
-        _safeToast(
-          'حسابك ليس Email/Password. أعِد تسجيل الدخول بمزوّدك ثم حاول مجددًا.',
-        );
+        _safeToast("حسابك ليس Email/Password. أعِد تسجيل الدخول بمزوّدك ثم حاول مجددًا", type: 'info');
         return false;
       }
 
@@ -622,7 +727,7 @@ Widget _clickableAvatar() {
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      _safeToast('تم إرسال رابط تأكيد إلى البريد الجديد.');
+      _safeToast("تم إرسال رابط تأكيد إلى البريد الجديد", type: 'success');
       return true;
     } on FirebaseAuthException catch (e) {
       String msg = e.message ?? e.code;
@@ -631,10 +736,10 @@ Widget _clickableAvatar() {
       if (e.code == 'requires-recent-login') {
         msg = 'يلزم تأكيد الهوية. أعِد تسجيل الدخول وحاول مجددًا.';
       }
-      _safeToast(msg);
+      _safeToast(msg, type: 'error');
       return false;
     } catch (e) {
-      _safeToast('تعذر بدء تغيير البريد: $e');
+      _safeToast("تعذر بدء تغيير البريد: $e", type: 'error');
       return false;
     }
   }
@@ -664,32 +769,30 @@ Widget _clickableAvatar() {
           return;
         }
       }
+// داخل دالة _saveProfile
+final newPhoto = await _uploadAvatar(u.uid);
 
-      final newPhoto = await _uploadAvatar(u.uid);
+await _db.collection('users').doc(u.uid).set({
+  'name': newName,
+  'phone': newPhone,
+  'region': newRegion,
+  'photoURL': newPhoto, // ✅ سيقوم بالتحديث دائماً حتى لو كانت القيمة null (عند الحذف)
+  'updatedAt': FieldValue.serverTimestamp(),
+}, SetOptions(merge: true));
 
-      await _db.collection('users').doc(u.uid).set({
-        'name': newName,
-        'phone': newPhone,
-        'region': newRegion,
-        if (newPhoto != null) ...{'photoURL': newPhoto},
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-
-      if (u.displayName != newName) await u.updateDisplayName(newName);
-      if (newPhoto != null) await u.updatePhotoURL(newPhoto);
+// تحديث الصورة في سجل Firebase Auth مباشرة
+await u.updatePhotoURL(newPhoto); // ✅ تحديث مباشر بدون شرط
 
       if (!mounted) return;
       setState(() {
         name = newName;
         phone = newPhone;
         region = newRegion;
-        if (newPhoto != null) {
-          avatarPath = newPhoto;
-          _avatarRev++;
-        }
+        avatarPath = newPhoto; // ✅ سيتحدث ليصبح null إذا حذفتِ الصورة
+        _avatarRev++;
       });
 
-      _safeToast('تم حفظ التعديلات ✅');
+      _safeToast("تم حفظ التعديلات", type: 'success');
 
       if (emailChanged) {
         await _auth.signOut();
@@ -697,7 +800,7 @@ Widget _clickableAvatar() {
         return;
       }
     } catch (e) {
-      _safeToast('خطأ أثناء الحفظ: $e');
+      _safeToast("خطأ أثناء الحفظ: $e", type: 'error');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -938,14 +1041,14 @@ Future<void> _deleteAccountLogic() async {
     // حذف الحساب نهائي
     await u.delete();
 
-    _safeToast('تم حذف الحساب وكافة البيانات بنجاح');
+   _safeToast("تم حذف الحساب وكافة البيانات بنجاح", type: 'success');
 
     if (mounted) {
       navigator.pushNamedAndRemoveUntil('/login', (route) => false);
 
     }
   } catch (e) {
-    _safeToast('حدث خطأ غير متوقع أثناء الحذف النهائي');
+    _safeToast("حدث خطأ غير متوقع أثناء الحذف النهائي", type: 'error');
   } finally {
     if (mounted) setState(() => _saving = false);
   }
@@ -1207,6 +1310,7 @@ Future<void> _deleteAccountLogic() async {
       // ✅ بدل TextField
       controller: controller,
       readOnly: !editing,
+      cursorColor: kGold,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
       validator: validator,
@@ -1214,7 +1318,7 @@ Future<void> _deleteAccountLogic() async {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: GoogleFonts.almarai(color: Colors.white70),
-        prefixIcon: Icon(icon, color: kAccent),
+        prefixIcon: Icon(icon, color: kGold),
         suffixIcon: IconButton(
           tooltip: editing ? 'إقفال الحقل' : 'تعديل',
           onPressed: onToggle,

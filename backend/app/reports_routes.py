@@ -2150,7 +2150,7 @@ def export_pdf(farm_id):
         return jsonify({
             "ok": True,
             "pdfBase64": encoded,
-            "fileName": f"Saaf_Report_{farm_id}.pdf"
+            "fileName": f"{farm_data.get('farmName', 'Farm')}_farm_report.pdf"
         }), 200
 
     except Exception as e:
@@ -2184,7 +2184,7 @@ def export_excel(farm_id):
         return jsonify({
             "ok": True,
             "excelBase64": encoded,
-            "fileName": f"Saaf_Report_{farm_id}.xlsx"
+            "fileName": f"{farm_data.get('farmName', 'Farm')}_farm_report.xlsx"
         }), 200
 
     except Exception as e:

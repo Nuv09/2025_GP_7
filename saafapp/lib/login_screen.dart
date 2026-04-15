@@ -43,37 +43,17 @@ class _LoginScreenState extends State<LoginScreen> {
         final message = args['message'] as String;
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          _showSnack(ScaffoldMessenger.of(context), message);
+          // ✅ استبدال الاستدعاء القديم بالجديد
+          _safeToast(message, icon: Icons.history_toggle_off_rounded);
         });
       }
     }
   }
-
   @override
   void dispose() {
     _emailCtrl.dispose();
     _passCtrl.dispose();
     super.dispose();
-  }
-
-void _showSnack(
-    ScaffoldMessengerState messenger,
-    String msg, {
-    bool isError = true,
-  }) {
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          msg, 
-          style: GoogleFonts.almarai(
-            color: Colors.white, 
-
-          ),
-        ),
-        backgroundColor: isError ? Colors.red.shade700 : kDeepGreen,
-        duration: const Duration(seconds: 4),
-      ),
-    );
   }
 
   //  دالة لإعادة تعيين عداد المحاولات الفاشلة في Firestore
@@ -147,9 +127,9 @@ void _showSnack(
     final messenger = ScaffoldMessenger.of(context);
 
     if (email.isEmpty || pass.isEmpty) {
-      _showSnack(messenger, 'رجاءً اكتب البريد وكلمة المرور');
-      return;
-    }
+  _safeToast('رجاءً اكتب البريد وكلمة المرور', icon: Icons.edit_note_rounded);
+  return;
+}
 
     setState(() => _loading = true);
 
@@ -161,13 +141,10 @@ void _showSnack(
           .get();
       if (docSnapshot.exists && (docSnapshot.data()?['isLocked'] ?? false)) {
         // إذا كان الحساب محظورًا، نمنع محاولة الدخول
-        _showSnack(
-          messenger,
-          'لقد تجاوزت الحد المسموح لمحاولات تسجيل الدخول.\n'
-          'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.\n'
-          'يرجى تغيير كلمة المرور ثم إعادة المحاولة.',
-          isError: true,
-        );
+        _safeToast(
+  'تجاوزت الحد المسموح للمحاولات. تم إرسال رابط استعادة البريد.', 
+  icon: Icons.lock_person_rounded
+);
         if (mounted) setState(() => _loading = false);
         return;
       }
@@ -253,34 +230,112 @@ if (loggedInUser != null) {
       }
 
 
-      _showSnack(messenger, msg, isError: true);
+      _safeToast(msg, icon: Icons.warning_amber_rounded, isError: true);
     } catch (_) {
-      _showSnack(messenger, 'حدث خطأ غير متوقع');
+      _safeToast('حدث خطأ غير متوقع', icon: Icons.error_outline_rounded, isError: true);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   // دالة لإعادة إرسال بريد التحقق
-  Future<void> _resendVerificationEmail(
-    ScaffoldMessengerState messenger,
-  ) async {
+Future<void> _resendVerificationEmail(ScaffoldMessengerState messenger) async {
     final user = _auth.currentUser;
     if (user == null || user.email == null || _loading) return;
 
     setState(() => _loading = true);
     try {
       await user.sendEmailVerification();
-      _showSnack(
-        messenger,
-        'تم إرسال رابط تحقق جديد إلى بريدك.',
-        isError: false,
+      // ✅ إشعار النجاح بالكبسولة الجديدة
+      _safeToast(
+        'تم إرسال رابط تحقق جديد إلى بريدك', 
+        icon: Icons.mark_email_read_rounded
       );
     } catch (_) {
-      _showSnack(messenger, 'تعذر إرسال رابط التحقق، يرجى المحاولة لاحقاً.');
+      // ❌ إشعار الفشل بالكبسولة الجديدة
+      _safeToast(
+        'تعذر إرسال رابط التحقق، يرجى المحاولة لاحقاً', 
+        icon: Icons.mail_lock_rounded,
+        isError: true
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+// 🔔 الدالة الموحدة للإشعارات بلون عنابي فخم وتصميم زجاجي
+  void _safeToast(String msg, {IconData? icon, bool isError = true}) {
+    if (!mounted) return;
+    final m = ScaffoldMessenger.maybeOf(context);
+    
+    m?.removeCurrentSnackBar(); 
+
+    m?.showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        margin: const EdgeInsets.fromLTRB(30, 0, 30, 45), 
+        
+        animation: CurvedAnimation(
+          parent: AnimationController(
+            vsync: ScaffoldMessenger.of(context),
+            duration: const Duration(seconds: 3),
+          )..forward(),
+          curve: Curves.easeOutBack,
+        ),
+
+        content: ClipRRect(
+          borderRadius: BorderRadius.circular(25),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+              decoration: BoxDecoration(
+                // ✅ استخدام اللون العنابي الشفاف ليعطي مظهر زجاجي فخم
+                color: const Color.fromARGB(255, 153, 30, 30).withValues(alpha: 0.7), 
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: const Color(0xFFEBB974).withValues(alpha: 0.4), // حدود ذهبية خفيفة
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 15,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                textDirection: TextDirection.rtl, 
+                children: [
+                  Icon(
+                    icon ?? Icons.error_outline_rounded,
+                    color: const Color(0xFFFFF6E0), // أيقونة بلون بيج فاتح لتبرز فوق العنابي
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      msg,
+                      textAlign: TextAlign.right,
+                      style: GoogleFonts.almarai(
+                        color: const Color(0xFFFFF6E0), // نص بيج فاتح
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   // دالة لعرض النافذة المنبثقة للخطأ
@@ -333,29 +388,32 @@ if (loggedInUser != null) {
     );
   }
 
-  Future<void> _sendResetEmail() async {
+Future<void> _sendResetEmail() async {
     final email = _emailCtrl.text.trim();
-    final messenger = ScaffoldMessenger.of(context);
+    // لم نعد بحاجة لمتغير messenger هنا لأن _safeToast تستخدم context الداخلي
 
     if (email.isEmpty) {
-      _showSnack(messenger, 'اكتب بريدك أولاً');
+      _safeToast('اكتب بريدك أولاً', icon: Icons.mail_outline_rounded);
       return;
     }
     try {
       await _auth.sendPasswordResetEmail(email: email);
-
       await _resetFailedAttempts(email);
 
-      _showSnack(
-        messenger,
-        'تم إرسال رابط إعادة التعيين إلى بريدك',
-        isError: false,
+      // ✅ التعديل هنا: رسالة النجاح مع أيقونة الإيميل المرسل
+      _safeToast(
+        'تم إرسال رابط إعادة التعيين إلى بريدك', 
+        icon: Icons.mark_email_read_rounded
       );
+
     } catch (_) {
-      _showSnack(messenger, 'تعذر إرسال الرابط، تحقق من البريد');
+      // ❌ التعديل هنا: رسالة الخطأ مع أيقونة التنبيه
+      _safeToast(
+        'تعذر إرسال الرابط، تحقق من البريد', 
+        icon: Icons.mail_lock_rounded
+      );
     }
   }
-
   // دالة لتصميم الدائرة الخلفية
   Widget _softCircle(double size, {double opacity = 0.18}) {
     return Container(

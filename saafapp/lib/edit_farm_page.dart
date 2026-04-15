@@ -886,6 +886,7 @@ body: Stack(
   }) {
     return TextFormField(
       controller: c,
+      cursorColor: secondaryColor,
       keyboardType: keyboardType,
       textAlign: TextAlign.right,
       maxLines: maxLines,

@@ -9,11 +9,14 @@ import 'package:flutter_map/flutter_map.dart'; // سنترك هذه كما هي 
 import 'package:latlong2/latlong.dart'; // سنتركها أيضاً
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import 'dart:ui';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:share_plus/share_plus.dart';
 
 import 'package:universal_html/html.dart' as html;
+
+const Color kBeige = Color(0xFFFFF6E0);
 
 // خريطة جوجل نعطيها اسماً مستعاراً (gmaps) لكي لا تتدخل في هذه الصفحة
 
@@ -77,28 +80,29 @@ class _FarmDashboardPageState extends State<FarmDashboardPage>
     }
   }
 
-@override
-void initState() {
-  super.initState();
-  _fetchWeather();
-}
-@override
-void didChangeDependencies() {
-  super.didChangeDependencies();
+  @override
+  void initState() {
+    super.initState();
+    _fetchWeather();
+  }
 
-  if (_tabControllerInitialized) return;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
 
-  final args = ModalRoute.of(context)?.settings.arguments as Map?;
-  final initialTab = (args?['initialTab'] as int?) ?? 0;
+    if (_tabControllerInitialized) return;
 
-  _tabController = TabController(
-    length: 3,
-    vsync: this,
-    initialIndex: initialTab,
-  );
+    final args = ModalRoute.of(context)?.settings.arguments as Map?;
+    final initialTab = (args?['initialTab'] as int?) ?? 0;
 
-  _tabControllerInitialized = true;
-}
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: initialTab,
+    );
+
+    _tabControllerInitialized = true;
+  }
 
   Future<void> _fetchWeather() async {
     try {
@@ -495,6 +499,88 @@ void didChangeDependencies() {
     );
   }
 
+void _safeToast(String msg, {IconData? icon, String type = 'info'}) {
+    if (!mounted) return;
+    
+    // 🎨 تحديد الألوان بناءً على نوع الإشعار
+    Color bgColor;
+    Color contentColor = const Color(0xFF042C25); // اللون الداكن الافتراضي
+    IconData toastIcon;
+
+    switch (type) {
+      case 'success':
+        bgColor = const Color(0xFF1E8D5F).withValues(alpha: 0.7); // الأخضر المعتمد
+        contentColor = Colors.white;
+        toastIcon = icon ?? Icons.check_circle_rounded;
+        break;
+      case 'error':
+        bgColor = const Color.fromARGB(255, 153, 30, 30).withValues(alpha: 0.7); // العنابي المعتمد
+        contentColor = Colors.white;
+        toastIcon = icon ?? Icons.error_rounded;
+        break;
+      default: // 'info'
+        bgColor = const Color(0xFFFFF6E0); // البيج (kLightBeige)
+        contentColor = const Color(0xFF042C25);
+        toastIcon = icon ?? Icons.info_rounded;
+    }
+
+    final m = ScaffoldMessenger.maybeOf(context);
+    m?.removeCurrentSnackBar(); 
+
+    m?.showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        margin: const EdgeInsets.fromLTRB(30, 0, 30, 45), 
+        animation: CurvedAnimation(
+          parent: AnimationController(
+            vsync: ScaffoldMessenger.of(context),
+            duration: const Duration(seconds: 3),
+          )..forward(),
+          curve: Curves.easeOutBack,
+        ),
+        content: ClipRRect(
+          borderRadius: BorderRadius.circular(25),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: contentColor.withValues(alpha: 0.2),
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                textDirection: TextDirection.rtl, 
+                children: [
+                  Icon(toastIcon, color: contentColor, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      msg,
+                      textAlign: TextAlign.right,
+                      style: GoogleFonts.almarai(
+                        color: contentColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showLoading(String msg) {
     showDialog(
       context: context,
@@ -522,17 +608,6 @@ void didChangeDependencies() {
     );
   }
 
-  void _toast(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-SnackBar(
-  content: Text(
-    msg,
-    style: GoogleFonts.almarai(color: Colors.white), // 👈 هذا المهم
-  ),
-  backgroundColor: const Color(0xFF0A4D41),
-),
-    );
-  }
 
   Future<void> _exportPdf() async {
     try {
@@ -545,27 +620,29 @@ SnackBar(
       if (!mounted) return;
       Navigator.pop(context);
 
-      if (res.statusCode == 404) {
-        _toast("عذراً: المزرعة غير موجودة بالسيرفر");
+if (res.statusCode == 404) {
+        _safeToast("عذراً: المزرعة غير موجودة بالسيرفر", type: 'error');
         return;
       }
       if (res.statusCode == 400) {
-        _toast("البيانات غير جاهزة: يرجى الضغط على زر التحليل أولاً");
+       _safeToast("البيانات غير جاهزة: يرجى التحليل أولاً", icon: Icons.warning_rounded, type: 'error');
         return;
       }
-      if (res.statusCode != 200) {
-        _toast("فشل السيرفر في إنشاء التقرير (خطأ ${res.statusCode})");
-        return;
+      // ... عند النجاح
+      if (kIsWeb) {
+        // ... كود التحميل
+        _safeToast("تم تحميل ملف PDF بنجاح", type: 'success');
       }
 
       final data = jsonDecode(res.body);
       final String b64 = data["pdfBase64"] ?? "";
-      final String fileName = data["fileName"] ?? "Saaf_Report_$farmDocId.pdf";
+      final farmName = widget.farmData['farmName'] ?? "Farm";
+      final String fileName = "${farmName}_farm_report.pdf";
 
       if (b64.isEmpty) {
-        _toast("لم يتم استلام بيانات التقرير من السيرفر");
-        return;
-      }
+  _safeToast("لم يتم استلام بيانات التقرير من السيرفر", icon: Icons.warning_rounded, type: 'error');
+  return;
+}
 
       final bytes = base64Decode(b64);
 
@@ -577,7 +654,7 @@ SnackBar(
           ..setAttribute('download', fileName)
           ..click();
         html.Url.revokeObjectUrl(url);
-        _toast("✅ تم تحميل PDF");
+        _safeToast("تم تحميل ملف PDF بنجاح", type: 'success');
       } else {
         // ✅ موبايل: share sheet
         final dir = await getTemporaryDirectory();
@@ -592,7 +669,7 @@ SnackBar(
         try {
           Navigator.pop(context);
         } catch (_) {}
-        _toast("خطأ في الاتصال: تأكد من جودة الإنترنت");
+       _safeToast("خطأ في الاتصال: تأكد من جودة الإنترنت", icon: Icons.signal_wifi_connected_no_internet_4_rounded, type: 'error');
         debugPrint("PDF Export Error: $e");
       }
     }
@@ -613,23 +690,24 @@ SnackBar(
 
       if (res.statusCode == 404) {
         // ✅ مؤقت: نعرض الـ farm_id عشان نتحقق
-        final errData = jsonDecode(res.body);
-        _toast("404 | farmId: $farmDocId | ${errData['error'] ?? ''}");
+        // final errData = jsonDecode(res.body);
+       _safeToast("المزرعة غير موجودة أو الرابط غير صحيح", icon: Icons.fmd_bad_rounded, type: 'error');
         return;
       }
       if (res.statusCode != 200) {
-        _toast("تعذر إنشاء ملف البيانات: تأكد من اكتمال التحليل");
+        _safeToast("تعذر إنشاء ملف البيانات: تأكد من اكتمال التحليل", type: 'error');
         return;
       }
 
       final data = jsonDecode(res.body);
       final String b64 = data["excelBase64"] ?? "";
-      final String fileName = data["fileName"] ?? "Saaf_Data_$farmDocId.xlsx";
+      final farmName = widget.farmData['farmName'] ?? "Farm";
+      final String fileName = "${farmName}_farm_report.xlsx";
 
       if (b64.isEmpty) {
-        _toast("ملف البيانات فارغ");
-        return;
-      }
+  _safeToast("ملف البيانات فارغ", icon: Icons.insert_drive_file_outlined, type: 'info');
+  return;
+}
 
       final bytes = base64Decode(b64);
 
@@ -642,7 +720,7 @@ SnackBar(
           ..setAttribute('download', fileName)
           ..click();
         html.Url.revokeObjectUrl(url);
-        _toast("✅ تم تحميل Excel");
+        _safeToast("تم تحميل ملف Excel بنجاح", type: 'success');
       } else {
         final dir = await getTemporaryDirectory();
         final file = File("${dir.path}/$fileName");
@@ -656,7 +734,7 @@ SnackBar(
         try {
           Navigator.pop(context);
         } catch (_) {}
-        _toast("حدث خطأ أثناء تصدير الإكسل: $e");
+        _safeToast("حدث خطأ أثناء تصدير الإكسل", type: 'error');
         debugPrint("Excel Export Error: $e");
       }
     }

@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:zxcvbn/zxcvbn.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'dart:ui';
 
 // الثوابت
 const Color kDeepGreen = Color(0xFF042C25);
@@ -61,25 +62,88 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  void _showSnack(String msg, {bool isError = true}) {
-    ScaffoldMessenger.of(context).showSnackBar(
+  void _safeToast(String msg, {IconData? icon, String type = 'info'}) {
+    if (!mounted) return;
+    
+    Color bgColor;
+    Color contentColor = const Color(0xFF042C25); // kDeepGreen
+    IconData toastIcon;
+
+    switch (type) {
+      case 'success':
+        bgColor = const Color(0xFF1E8D5F).withValues(alpha: 0.7); // الأخضر
+        contentColor = Colors.white;
+        toastIcon = icon ?? Icons.check_circle_rounded;
+        break;
+      case 'error':
+        bgColor = const Color.fromARGB(255, 153, 30, 30).withValues(alpha: 0.7); // العنابي
+        contentColor = Colors.white;
+        toastIcon = icon ?? Icons.error_rounded;
+        break;
+      default:
+        bgColor = const Color(0xFFFFF6E0); // kLightBeige
+        contentColor = const Color(0xFF042C25);
+        toastIcon = icon ?? Icons.info_rounded;
+    }
+
+    final m = ScaffoldMessenger.maybeOf(context);
+    m?.removeCurrentSnackBar(); 
+
+    m?.showSnackBar(
       SnackBar(
-        content: Text(
-          msg,
-          style: GoogleFonts.almarai(
-            color: Colors.white, // ← هنا الصح
-            fontWeight: FontWeight.bold,
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        margin: const EdgeInsets.fromLTRB(30, 0, 30, 45), 
+        animation: CurvedAnimation(
+          parent: AnimationController(
+            vsync: ScaffoldMessenger.of(context),
+            duration: const Duration(seconds: 3),
+          )..forward(),
+          curve: Curves.easeOutBack,
+        ),
+        content: ClipRRect(
+          borderRadius: BorderRadius.circular(25),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: contentColor.withValues(alpha: 0.2),
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                textDirection: TextDirection.rtl, 
+                children: [
+                  Icon(toastIcon, color: contentColor, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      msg,
+                      textAlign: TextAlign.right,
+                      style: GoogleFonts.almarai(
+                        color: contentColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-        backgroundColor: isError ? Colors.red.shade700 : kDeepGreen,
-        duration: const Duration(seconds: 4),
       ),
     );
   }
 
-  // ⭐️ التعديل 2: دالة عرض الشروط والسياسة بالنص الجديد
   void _showTermsDialog() {
-    // النص الذي حدده المستخدم
     const String termsContent =
         'يقتصر استخدامك لسعف على إدارة مزارع النخيل الخاصة بك ومتابعة حالتها، ويُمنع استخدامه لأي أغراض أخرى غير مصرح بها.\n\n'
         'يتم استخدام بياناتك الشخصية، مثل البريد الإلكتروني، فقط لغرض التسجيل والتواصل المتعلق بخدمات النظام.\n\n'
@@ -122,8 +186,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  // 💡 دالة لتقييم قوة كلمة المرور وتحديث الحالة (تم التصحيح هنا)
-  // 💡 دالة لتقييم قوة كلمة المرور وتحديث الحالة (النسخة المصححة)
+  // دالة لتقييم قوة كلمة المرور وتحديث الحالة
   void _updatePasswordStrength() {
     final password = _passCtrl.text;
     if (password.isEmpty) {
@@ -138,9 +201,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final result = _zxcvbn.evaluate(password, userInputs: userInputs);
 
     setState(() {
-      // ✅ التصحيح: ضمان أن القيمة المحصلة هي عدد صحيح
       _passwordScore = (result.score ?? 0)
-          .toInt(); // استخدم النتيجة مباشرةً أو 0 كقيمة احتياطية
+          .toInt(); 
       _passwordWarning = result.feedback.warning;
     });
   }
@@ -152,39 +214,27 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final p2 = _confirmCtrl.text;
 
     if (name.isEmpty || email.isEmpty || p1.isEmpty || p2.isEmpty) {
-      _showSnack('فضلاً أكمل جميع الحقول');
+      _safeToast("يرجى ملء جميع الحقول", type: 'error');
       return;
     }
-
-    // ⛔️ التحقق من شرط الموافقة الجديد
     if (!_agreeTerms) {
-      _showSnack(
-        'يجب الموافقة على شروط الخدمة وسياسة الخصوصية للمتابعة.',
-        isError: true,
-      );
+      _safeToast("يرجى الموافقة على الشروط والأحكام", type: 'error');
       return;
     }
-
-    // التحقق من قوة كلمة المرور
     _updatePasswordStrength();
 
     if (_passwordScore < _minAcceptableScore) {
-      _showSnack(
-        _passwordWarning ??
-            'كلمة المرور ضعيفة جداً. فضلاً اختر كلمة مرور متوسطة القوة أو أعلى (Score 2+).',
-        isError: true,
-      );
+      _safeToast("كلمة المرور ضعيفة جداً، يرجى اختيار كلمة أقوى", type: 'error');
       return;
     }
 
     if (p1 != p2) {
-      _showSnack('تأكيد كلمة المرور غير متطابق');
+      _safeToast("كلمتا المرور غير متطابقتين", type: 'error');
       return;
     }
 
     setState(() => _loading = true);
     try {
-      // 1️⃣ إنشاء المستخدم في Auth
       final cred = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: p1,
@@ -196,12 +246,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
       // ignore: avoid_print
       print("📧 تم إرسال بريد تحقق إلى ${cred.user?.email}");
 
-      // 2️⃣ تحديث displayName في Auth
       await cred.user?.updateDisplayName(name);
 
       if (!mounted) return;
 
-      // 3️⃣ إنشاء/تحديث وثيقة المستخدم في Firestore
       final uid = cred.user!.uid;
       final userDoc = _db.collection('users').doc(uid);
 
@@ -214,10 +262,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
         'photoURL': null,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
-        'termsAccepted': true, // ⭐️ تسجيل الموافقة في Firestore
+        'termsAccepted': true,
       }, SetOptions(merge: true));
 
-      // ✅ احفظ FCM Token بعد إنشاء حساب المستخدم
 try {
   
   final token = await FirebaseMessaging.instance.getToken();
@@ -233,10 +280,7 @@ try {
 
       if (!mounted) return;
 
-      _showSnack(
-        'تم إنشاء الحساب ✅فضلاً تحقق من بريدك الإلكتروني لإكمال التفعيل',
-        isError: false,
-      );
+      _safeToast("تم إنشاء الحساب بنجاح! ضلاً تحقق من بريدك الإلكتروني لإكمال التفعيل", type: 'success');
 
       Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
@@ -258,16 +302,15 @@ try {
           break;
       }
 
-      _showSnack(msg, isError: true);
+      _safeToast(msg, type: 'error');
     } catch (e) {
       if (!mounted) return;
-      _showSnack('حدث خطأ غير متوقع: $e', isError: true);
+      _safeToast("حدث خطأ غير متوقع، حاول مجدداً", type: 'error');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  // 💡 دالة مساعدة لتحديد لون مؤشر القوة
   Color _getScoreColor(int score) {
     switch (score) {
       case 0:
@@ -285,7 +328,6 @@ try {
     }
   }
 
-  // 💡 دالة مساعدة لتحديد نص مؤشر القوة
   String _getScoreText(int score) {
     switch (score) {
       case 0:
@@ -303,7 +345,6 @@ try {
     }
   }
 
-  // 💡 دالة _softCircle
   Widget _softCircle(double size, {double opacity = 0.18}) {
     return Container(
       width: size,

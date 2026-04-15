@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart'; // <<< ADD
 
+const Color kGold = Color(0xFFEBB974);
+
 class ProfileField extends StatelessWidget {
   final TextEditingController controller;
   final String hint;
@@ -31,6 +33,7 @@ class ProfileField extends StatelessWidget {
       controller: controller,
       focusNode: focusNode,
       readOnly: !isEditing,
+      cursorColor: kGold,
       keyboardType: keyboardType,
       textAlign: TextAlign.right,
       onChanged: onChanged,

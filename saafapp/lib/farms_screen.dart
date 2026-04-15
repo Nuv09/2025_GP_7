@@ -10,6 +10,10 @@ import 'package:saafapp/notifications_page.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui';
 
+const Color kDeepGreen = Color(0xFF042C25);
+const Color kGold = Color(0xFFEBB974);
+const Color kBeige = Color(0xFFFFF6E0);
+
 class FarmsScreen extends StatelessWidget {
   const FarmsScreen({super.key});
 
@@ -399,6 +403,90 @@ class _FarmsListState extends State<_FarmsList> {
         ],
       ),
      ), 
+    );
+  }
+
+void _safeToast(String msg, {IconData? icon, String type = 'info'}) {
+    if (!mounted) return;
+    
+    // 🎨 تحديد الألوان بناءً على طلبك
+    Color bgColor;
+    Color contentColor = const Color(0xFF042C25); // kDeepGreen
+    IconData toastIcon;
+
+    switch (type) {
+      case 'success':
+        // الأخضر اللي طلبتيه
+        bgColor = const Color(0xFF1E8D5F).withValues(alpha: 0.7); 
+        contentColor = Colors.white;
+        toastIcon = icon ?? Icons.check_circle_rounded;
+        break;
+      case 'error':
+        // العنابي المتناسق
+        bgColor = const Color.fromARGB(255, 153, 30, 30).withValues(alpha: 0.7);
+        contentColor = Colors.white;
+        toastIcon = icon ?? Icons.error_rounded;
+        break;
+      default:
+        bgColor = const Color(0xFFFFF6E0); // kBeige
+        contentColor = const Color(0xFF042C25);
+        toastIcon = icon ?? Icons.info_rounded;
+    }
+
+    final m = ScaffoldMessenger.maybeOf(context);
+    m?.removeCurrentSnackBar(); 
+
+    m?.showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        margin: const EdgeInsets.fromLTRB(30, 0, 30, 45), 
+        animation: CurvedAnimation(
+          parent: AnimationController(
+            vsync: ScaffoldMessenger.of(context),
+            duration: const Duration(seconds: 3),
+          )..forward(),
+          curve: Curves.easeOutBack,
+        ),
+        content: ClipRRect(
+          borderRadius: BorderRadius.circular(25),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: contentColor.withValues(alpha: 0.2),
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                textDirection: TextDirection.rtl, 
+                children: [
+                  Icon(toastIcon, color: contentColor, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      msg,
+                      textAlign: TextAlign.right,
+                      style: GoogleFonts.almarai(
+                        color: contentColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -801,7 +889,6 @@ onDelete: () async {
         ),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
-          // تم تبديل الأماكن هنا: الحذف يميناً والإلغاء يساراً
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFF44336),
@@ -834,7 +921,7 @@ onDelete: () async {
     ),
   ) ?? false;
 
-  if (confirmDelete) {
+if (confirmDelete) {
     try {
       if (imageURL.isNotEmpty) {
         try {
@@ -845,7 +932,14 @@ onDelete: () async {
           .collection('farms')
           .doc(doc.id)
           .delete();
-    } catch (_) {}
+
+      // ✅ الإشعار الجديد عند النجاح بالتصميم الإبداعي
+      _safeToast("تم حذف المزرعة بنجاح", type: 'success');
+
+    } catch (e) {
+      // ❌ الإشعار الجديد عند حدوث خطأ
+      _safeToast("حدث خطأ أثناء الحذف: $e", type: 'error');
+    }
   }
 },
 ),

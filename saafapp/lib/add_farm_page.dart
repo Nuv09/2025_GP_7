@@ -992,6 +992,7 @@ const SizedBox(height: 20),
   }) {
     return TextFormField(
       controller: controller,
+      cursorColor: secondaryColor,
       keyboardType: keyboardType,
       textAlign: TextAlign.right,
       maxLines: maxLines,
