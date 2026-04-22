@@ -44,6 +44,7 @@ def set_alerts_and_recommendations(
         a = dict(a)
         a.pop("actions", None)
         clean_alerts.append(a)
+        a.pop("hotspots", None)
       
     # 2) ✅ تنظيف التوصيات (إضافة هذا الجزء لحذف الحقول التقنية)
     clean_recos = []
