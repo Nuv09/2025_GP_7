@@ -355,7 +355,7 @@ def _compute_drivers(
 ) -> Dict[str, Any]:
     alert_signals = health_result.get("alert_signals", {}) or {}
     rule_counts = alert_signals.get("rule_counts_latest", {}) or {}
-    flag_counts = alert_signals.get("flag_counts_latest", {}) or {}
+    flag_counts = alert_signals.get("flag_occurrences", {}) or {}
 
     # ✅ “رطوبة/ري” (counts)
     water_flags = (

@@ -1308,7 +1308,7 @@ def build_alert_signals(df_all: pd.DataFrame) -> Dict[str, Any]:
             "total_pixels_latest": 0,
             "risk_counts_latest": {"Healthy": 0, "Monitor": 0, "Critical": 0},
             "rule_counts_latest": {},
-            "flag_counts_latest": {},
+            "flag_occurrences": {},
             "hotspots": {"critical": [], "monitor": [], "stress": []},
         }
 
@@ -1397,7 +1397,7 @@ def build_alert_signals(df_all: pd.DataFrame) -> Dict[str, Any]:
         "pixels_with_any_flag_latest": pixels_with_any_flag,
         "risk_counts_latest": risk_counts,
         "rule_counts_latest": rule_counts,
-        "flag_counts_latest": flag_counts,
+        "flag_occurrences": flag_counts,
         "hotspots": {
             "critical": _top_points(crit_mask, topn=12),
             "monitor":  _top_points(mon_mask,  topn=12),
@@ -1441,7 +1441,7 @@ def get_health_map_points(df_all: pd.DataFrame) -> List[Dict[str, Any]]:
 def _build_top_action(health_result: Dict[str, Any]) -> Dict[str, Any]:
     dist    = health_result.get("current_health", {})
     alerts  = health_result.get("alert_signals", {})
-    flags   = alerts.get("flag_counts_latest", {})
+    flags   = alerts.get("flag_occurrences", {})
 
     critical_pct = float(dist.get("Critical_Pct", 0))
     monitor_pct  = float(dist.get("Monitor_Pct",  0))
@@ -1569,7 +1569,7 @@ def _build_key_findings(
         "لا توجد نقاط حرجة بارزة في أعلى المناطق المتأثرة."
     )
 
-    flags = alert_signals.get("flag_counts_latest", {}) or {}
+    flags = alert_signals.get("flag_occurrences", {}) or {}
     water_flags = int(flags.get("flag_NDWI_low", 0) or 0) + int(flags.get("flag_NDWI_below_025", 0) or 0)
     nutrition_flags = int(flags.get("flag_NDRE_low", 0) or 0) + int(flags.get("flag_NDRE_below_035", 0) or 0)
 
@@ -1590,7 +1590,7 @@ def _build_key_findings(
 
 
 def _build_extra_indices(history: list, current_health: Dict[str, Any], alert_signals: Dict[str, Any]) -> list[dict]:
-    flags = alert_signals.get("flag_counts_latest", {}) or {}
+    flags = alert_signals.get("flag_occurrences", {}) or {}
 
     water_flags = int(flags.get("flag_NDWI_low", 0) or 0) + int(flags.get("flag_NDWI_below_025", 0) or 0)
     nutrition_flags = int(flags.get("flag_NDRE_low", 0) or 0) + int(flags.get("flag_NDRE_below_035", 0) or 0)
@@ -1624,7 +1624,7 @@ def _build_extra_indices(history: list, current_health: Dict[str, Any], alert_si
 
 
 def _build_risk_drivers(alert_signals: Dict[str, Any]) -> list[dict]:
-    flags = alert_signals.get("flag_counts_latest", {}) or {}
+    flags = alert_signals.get("flag_occurrences", {}) or {}
 
     water_count = int(flags.get("flag_NDWI_low", 0) or 0) + int(flags.get("flag_NDWI_below_025", 0) or 0)
     ndre_count = int(flags.get("flag_NDRE_low", 0) or 0) + int(flags.get("flag_NDRE_below_035", 0) or 0)
@@ -1836,7 +1836,7 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
 
     # ── سياق التنبيهات: تفصيل قواعد التصنيف والعلامات الفردية ──
     rule_counts = alert_signals.get("rule_counts_latest", {}) or {}
-    flag_counts = alert_signals.get("flag_counts_latest", {}) or {}
+    flag_counts = alert_signals.get("flag_occurrences", {}) or {}
     pixels_with_any_flag = int(alert_signals.get("pixels_with_any_flag_latest", 0) or 0)
 
     alert_context = {
