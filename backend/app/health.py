@@ -1242,17 +1242,16 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
     #    # 5. حساب الإحصائيات الحالية (Stats)
     stats = site_summary(df_all)
     processed_health = {
-    "Total_Pixels_Count": int(stats.get("Total_Pixels_Count", 0) or 0),
-    "total_pixels": int(stats.get("Total_Pixels_Count", 0) or 0),
-    "Healthy_Pct": float(stats.get("Healthy_Pct", 0.0) or 0.0),
-    "Monitor_Pct": float(stats.get("Monitor_Pct", 0.0) or 0.0),
-    "Critical_Pct": float(stats.get("Critical_Pct", 0.0) or 0.0),
-    "RPW_score_med": float(stats.get("RPW_score_med", 0.0) or 0.0),
-    "rpw_score": float(stats.get("RPW_score_med", 0.0) or 0.0),  # fallback موحد
-    "rain_mm": direct_rain_mm if direct_rain_mm is not None else float(stats.get("rain_mm", 0.0) or 0.0),
-    "t_mean":  direct_t_mean  if direct_t_mean  is not None else float(stats.get("t_mean",  0.0) or 0.0),
-    "pixels_with_any_flag": int(alert_signals.get("pixels_with_any_flag_latest", 0) or 0),
- }
+        "total_pixels": int(stats.get("total_pixels", 0) or 0),
+        "Healthy_Pct": float(stats.get("Healthy_Pct", 0.0) or 0.0),
+        "Monitor_Pct": float(stats.get("Monitor_Pct", 0.0) or 0.0),
+        "Critical_Pct": float(stats.get("Critical_Pct", 0.0) or 0.0),
+        "RPW_score_med": float(stats.get("RPW_score_med", 0.0) or 0.0),
+        "rpw_score": float(stats.get("RPW_score_med", 0.0) or 0.0),
+        "rain_mm": direct_rain_mm if direct_rain_mm is not None else float(stats.get("rain_mm", 0.0) or 0.0),
+        "t_mean": direct_t_mean if direct_t_mean is not None else float(stats.get("t_mean", 0.0) or 0.0),
+        "pixels_with_any_flag": int(alert_signals.get("pixels_with_any_flag_latest", 0) or 0),
+    }
     history_last_month = indices_history_last_weeks(df_all, weeks=5, agg="mean")
     indices_table = build_indices_table(df_all)
 
