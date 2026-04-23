@@ -1823,10 +1823,10 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
     total_pixels_current = int(current_health.get("total_pixels", 0) or 0)
 
     climate = {
-    "rain_mm": round(_safe_float(report_weather.get("rain_mm", 0), 0), 1),
-    "t_mean": round(_safe_float(report_weather.get("t_mean", 0), 0), 1),
-    "total_pixels": int(total_pixels_current or 0),
-    "rpw_score": round(_safe_float(current_health.get("rpw_score", 0), 0), 2),
+        "rain_mm": round(_safe_float(report_weather.get("rain_mm", 0), 0), 1),
+        "t_mean": round(_safe_float(report_weather.get("t_mean", 0), 0), 1),
+        "rpw_score": round(_safe_float(current_health.get("RPW_score_med", 0), 0), 3),
+        "total_pixels": int(total_pixels_current or 0),
     }
 
     # ── سياق التنبيهات: تفصيل قواعد التصنيف والعلامات الفردية ──
