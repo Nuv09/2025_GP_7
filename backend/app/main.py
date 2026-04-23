@@ -329,7 +329,7 @@ def analyze():
             finalQuality=count_summary["quality"],
             health=health_result,
             healthMap=h_map,
-            export_data=export_payload,
+            # export_data=export_payload,
             lastAnalysisAt=firestore.SERVER_TIMESTAMP,
         )
 
@@ -395,11 +395,11 @@ def scheduled_update():
 
             # ✅ 2) Health
             health_result = health_mod.analyze_farm_health(farm_id, farm)
-            export_payload = health_mod.prepare_export_data(
-    farm,
-    health_result,
-    detected_count=int(picked["count"])
-)
+#             export_payload = health_mod.prepare_export_data(
+#     farm,
+#     health_result,
+#     detected_count=int(picked["count"])
+# )
             h_map = list(health_result.pop("health_map", []))
 
             # ✅ 3) Alerts + Recommendations (هذا اللي كان ناقص!)
@@ -424,7 +424,7 @@ def scheduled_update():
                 finalQuality=float(picked["score"]),
                 health=health_result,
                 healthMap=h_map,
-                export_data=export_payload,
+                # export_data=export_payload,
                 lastAnalysisAt=firestore.SERVER_TIMESTAMP,
             )
 

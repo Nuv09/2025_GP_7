@@ -12,6 +12,7 @@ from flask import Blueprint, jsonify, render_template
 from google.cloud import firestore
 from openpyxl.chart.label import DataLabelList
 from openpyxl.chart import PieChart
+from app.health import prepare_export_data
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -2127,12 +2128,22 @@ def export_pdf(farm_id):
             return jsonify({"ok": False, "error": "المزرعة غير موجودة"}), 404
 
         farm_data = doc.to_dict() or {}
-        export_data = farm_data.get('export_data') or {}
 
-        if not export_data and not farm_data.get("health"):
+        if not farm_data.get("health"):
             return jsonify({"ok": False, "error": "بيانات التحليل ناقصة. شغّل التحليل أولاً."}), 400
 
-        export_data = _merge_export_with_live_farm_data(export_data, farm_data)
+        # إذا كان فيه export_data قديم استخدميه مؤقتًا، وإلا ابنِ واحد جديد وقت الطلب
+        stored_export = farm_data.get("export_data") or {}
+
+        if stored_export:
+            export_data = _merge_export_with_live_farm_data(stored_export, farm_data)
+        else:
+            export_data = prepare_export_data(
+                farm_data,
+                farm_data["health"],
+                detected_count=int(farm_data.get("finalCount", 0) or 0),
+            )
+            export_data = _merge_export_with_live_farm_data(export_data, farm_data)
 
         logger.info(
             "PDF export debug | farm_id=%s | healthMap=%s | export health_map_points=%s | total_pixels=%s | rain_mm=%s | t_mean=%s",
@@ -2143,6 +2154,7 @@ def export_pdf(farm_id):
             ((export_data.get("climate", {}) or {}).get("rain_mm")),
             ((export_data.get("climate", {}) or {}).get("t_mean")),
         )
+
         pdf_path = generate_pdf_report(export_data, farm_id, farm_doc=farm_data)
         with open(pdf_path, "rb") as f:
             encoded = base64.b64encode(f.read()).decode('utf-8')
@@ -2170,12 +2182,21 @@ def export_excel(farm_id):
             return jsonify({"ok": False, "error": "المزرعة غير موجودة"}), 404
 
         farm_data = doc.to_dict() or {}
-        export_data = farm_data.get('export_data') or {}
 
-        if not export_data and not farm_data.get("health"):
+        if not farm_data.get("health"):
             return jsonify({"ok": False, "error": "بيانات التحليل ناقصة. شغّل التحليل أولاً."}), 400
 
-        export_data = _merge_export_with_live_farm_data(export_data, farm_data)
+        stored_export = farm_data.get("export_data") or {}
+
+        if stored_export:
+            export_data = _merge_export_with_live_farm_data(stored_export, farm_data)
+        else:
+            export_data = prepare_export_data(
+                farm_data,
+                farm_data["health"],
+                detected_count=int(farm_data.get("finalCount", 0) or 0),
+            )
+            export_data = _merge_export_with_live_farm_data(export_data, farm_data)
 
         excel_path = generate_excel_report(export_data, farm_id)
         with open(excel_path, "rb") as f:
