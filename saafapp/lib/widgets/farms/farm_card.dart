@@ -434,7 +434,7 @@ class _InfoPane extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 Text(
                   safeTitle,
@@ -447,7 +447,7 @@ class _InfoPane extends StatelessWidget {
                     letterSpacing: 0.2,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 3),
 
                 Row(
                   children: [
@@ -571,7 +571,7 @@ if (createdAt != null) ...[
   ),
 ],
 
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
                Builder(
   builder: (context) {
     final s = (analysisStatus ?? '').toLowerCase().trim();
@@ -638,7 +638,6 @@ class _ActionButtons extends StatelessWidget {
           constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
           padding: EdgeInsets.zero,
           visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-          splashRadius: 20,
         ),
         const SizedBox(width: 2),
         IconButton(
@@ -648,7 +647,6 @@ class _ActionButtons extends StatelessWidget {
           constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
           padding: EdgeInsets.zero,
           visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-          splashRadius: 20,
         ),
       ],
     );

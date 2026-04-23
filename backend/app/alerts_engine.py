@@ -540,7 +540,7 @@ def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]
     severity_now = _severity_from_health(crit_now, mon_now)
 
     alert_signals = health_result.get("alert_signals", {}) or {}
-    total_pixels_latest = _safe_int(alert_signals.get("total_pixels_latest", 0))
+    total_pixels = _safe_int(health.get("total_pixels", 0))
 
     hotspots = (
         alert_signals.get("hotspots", {})
@@ -548,7 +548,7 @@ def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]
         or {}
     )
 
-    drivers = _compute_drivers(health_result, total_pixels_latest=total_pixels_latest)
+    drivers = _compute_drivers(health_result, total_pixels_latest=total_pixels)
     top_drivers = _pick_top_drivers(drivers, topk=3)
 
     driver_titles = {
@@ -805,7 +805,7 @@ def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]
         "evidence_counts": drivers.get("evidence_counts", {}),
         "rates": drivers.get("rates", {}),
         "forecast": drivers.get("forecast", {}),
-        "total_pixels_latest": total_pixels_latest,
+        "total_pixels": total_pixels,
         "has_forecast_alert": bool(forecast and forecast_needed),
 
         # helpful for debugging dedupe

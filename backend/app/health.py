@@ -916,7 +916,7 @@ def site_summary(dfx: pd.DataFrame) -> Dict[str, Any]:
     dfx = dfx.copy()
     if dfx.empty:
         return {
-            "Total_Pixels_Count": 0,
+            "total_pixels": 0,
             "Healthy_Pct": 0.0,
             "Monitor_Pct": 0.0,
             "Critical_Pct": 0.0,
@@ -944,14 +944,14 @@ def site_summary(dfx: pd.DataFrame) -> Dict[str, Any]:
     temp_s = dfx_last4["t2m_mean"].dropna()  if "t2m_mean"  in dfx_last4.columns else pd.Series(dtype=float)
 
     return {
-    "Total_Pixels_Count": int(total_pixels),
-    "Healthy_Pct": float(class_counts.get("Healthy", 0.0)),
-    "Monitor_Pct": float(class_counts.get("Monitor", 0.0)),
-    "Critical_Pct": float(class_counts.get("Critical", 0.0)),
-    "RPW_score_med": float(dfx_last4.get("RPW_score", pd.Series([np.nan])).median()),
-    "rain_mm": float(rain_s.sum())  if not rain_s.empty else 0.0,
-    "t_mean":  float(temp_s.mean()) if not temp_s.empty else 0.0,
-     } 
+        "total_pixels": int(total_pixels),
+        "Healthy_Pct": float(class_counts.get("Healthy", 0.0)),
+        "Monitor_Pct": float(class_counts.get("Monitor", 0.0)),
+        "Critical_Pct": float(class_counts.get("Critical", 0.0)),
+        "RPW_score_med": float(dfx_last4.get("RPW_score", pd.Series([np.nan])).median()),
+        "rain_mm": float(rain_s.sum()) if not rain_s.empty else 0.0,
+        "t_mean": float(temp_s.mean()) if not temp_s.empty else 0.0,
+    }
 
 def indices_history_last_weeks(
     df_all: pd.DataFrame,
@@ -1305,7 +1305,6 @@ def build_alert_signals(df_all: pd.DataFrame) -> Dict[str, Any]:
     if df_all is None or df_all.empty:
         return {
             "latest_date": None,
-            "total_pixels_latest": 0,
             "risk_counts_latest": {"Healthy": 0, "Monitor": 0, "Critical": 0},
             "rule_counts_latest": {},
             "flag_occurrences": {},
@@ -1317,7 +1316,6 @@ def build_alert_signals(df_all: pd.DataFrame) -> Dict[str, Any]:
     latest = df["date"].max()
 
     d = df[df["date"] == latest].copy()
-    total = int(len(d))
 
     # --- Risk counts (from pixel_risk_class) ---
     risk_counts = {"Healthy": 0, "Monitor": 0, "Critical": 0}
@@ -1393,7 +1391,6 @@ def build_alert_signals(df_all: pd.DataFrame) -> Dict[str, Any]:
 
     return {
         "latest_date": str(latest.date()) if pd.notna(latest) else None,
-        "total_pixels_latest": total,
         "pixels_with_any_flag_latest": pixels_with_any_flag,
         "risk_counts_latest": risk_counts,
         "rule_counts_latest": rule_counts,
@@ -1823,16 +1820,14 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
     total_palms = _safe_int(total_palms, 0)
 
     # ── بيانات المناخ من site_summary (موجودة في current_health) ──
-        # ── بيانات المناخ والسياق العام ──
-    total_pixels_current = int(current_health.get("Total_Pixels_Count", 0) or 0)
-    total_pixels_alerts = int(alert_signals.get("total_pixels_latest", 0) or 0)
+    total_pixels_current = int(current_health.get("total_pixels", 0) or 0)
 
     climate = {
     "rain_mm": round(_safe_float(report_weather.get("rain_mm", 0), 0), 1),
     "t_mean": round(_safe_float(report_weather.get("t_mean", 0), 0), 1),
-    "rpw_score": round(_safe_float(current_health.get("RPW_score_med", 0), 0), 3),
-    "total_pixels": int(total_pixels_current or total_pixels_alerts or 0),
-     }
+    "total_pixels": int(total_pixels_current or 0),
+    "rpw_score": round(_safe_float(current_health.get("rpw_score", 0), 0), 2),
+    }
 
     # ── سياق التنبيهات: تفصيل قواعد التصنيف والعلامات الفردية ──
     rule_counts = alert_signals.get("rule_counts_latest", {}) or {}
@@ -1840,7 +1835,7 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
     pixels_with_any_flag = int(alert_signals.get("pixels_with_any_flag_latest", 0) or 0)
 
     alert_context = {
-        "total_pixels": int(total_pixels_alerts or total_pixels_current or 0),
+        "total_pixels": int(total_pixels_current or 0),
         "pixels_with_any_flag": pixels_with_any_flag,
         "signal_note": "قد تُسجَّل أكثر من إشارة للبكسل الواحد، لذلك قد يتجاوز مجموع الإشارات عدد البكسلات المتأثرة.",
         "rule_counts": {
