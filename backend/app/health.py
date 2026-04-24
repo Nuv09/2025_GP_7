@@ -1246,11 +1246,9 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
         "Healthy_Pct": float(stats.get("Healthy_Pct", 0.0) or 0.0),
         "Monitor_Pct": float(stats.get("Monitor_Pct", 0.0) or 0.0),
         "Critical_Pct": float(stats.get("Critical_Pct", 0.0) or 0.0),
-        "RPW_score_med": float(stats.get("RPW_score_med", 0.0) or 0.0),
         "rpw_score": float(stats.get("RPW_score_med", 0.0) or 0.0),
         "rain_mm": direct_rain_mm if direct_rain_mm is not None else float(stats.get("rain_mm", 0.0) or 0.0),
         "t_mean": direct_t_mean if direct_t_mean is not None else float(stats.get("t_mean", 0.0) or 0.0),
-        "pixels_with_any_flag": int(alert_signals.get("pixels_with_any_flag_latest", 0) or 0),
     }
     history_last_month = indices_history_last_weeks(df_all, weeks=5, agg="mean")
     indices_table = build_indices_table(df_all)
@@ -1823,7 +1821,7 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
     climate = {
         "rain_mm": round(_safe_float(report_weather.get("rain_mm", 0), 0), 1),
         "t_mean": round(_safe_float(report_weather.get("t_mean", 0), 0), 1),
-        "rpw_score": round(_safe_float(current_health.get("RPW_score_med", 0), 0), 3),
+        "rpw_score": round(_safe_float(current_health.get("rpw_score", 0), 0), 3),
         "total_pixels": int(total_pixels_current or 0),
     }
 
