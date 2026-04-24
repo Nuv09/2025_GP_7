@@ -19,6 +19,9 @@ from app.common import polygon_centroid
 
 from datetime import datetime
 
+import logging
+logger = logging.getLogger(__name__)
+
 PROJECT_ID = os.environ.get("GEE_PROJECT_ID", "saaf-97251")
 OUT_ROOT = os.environ.get("HEALTH_OUT_ROOT", "/tmp/saaf_health")
 os.makedirs(OUT_ROOT, exist_ok=True)
@@ -1208,10 +1211,9 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
     df_th["date"] = pd.to_datetime(df_th["date"]).dt.normalize()
 
     wx = weekly_weather(site)
-    print("\n[WX DEBUG] weekly_weather rows:", len(wx))
-    print("[WX DEBUG] wx_source values:", wx["wx_source"].dropna().unique().tolist() if "wx_source" in wx.columns else "NO wx_source")
-    print("[WX DEBUG] non-null precip_mm / t2m_mean:", wx["precip_mm"].notna().sum() if "precip_mm" in wx.columns else "NO precip_mm", "/", wx["t2m_mean"].notna().sum() if "t2m_mean" in wx.columns else "NO t2m_mean")
-    print("[WX DEBUG] sample weather rows:\n", wx[["date", "precip_mm", "t2m_mean", "wx_source"]].head(10) if set(["date", "precip_mm", "t2m_mean", "wx_source"]).issubset(wx.columns) else wx.head(10))
+    logger.warning(f"[WX DEBUG] weekly_weather rows: {len(wx)}")
+    logger.warning(f"[WX DEBUG] wx_source values: {wx['wx_source'].dropna().unique().tolist() if 'wx_source' in wx.columns else 'NO wx_source'}")
+    logger.warning(f"[WX DEBUG] non-null precip_mm / t2m_mean: {wx['precip_mm'].notna().sum() if 'precip_mm' in wx.columns else 'NO precip_mm'} / {wx['t2m_mean'].notna().sum() if 't2m_mean' in wx.columns else 'NO t2m_mean'}")
     wx["site"] = farm_id
 
     _wx_recent = wx.copy()
@@ -1223,8 +1225,8 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
     direct_rain_mm = float(_rain_s.sum())  if not _rain_s.empty else None
     direct_t_mean  = float(_temp_s.mean()) if not _temp_s.empty else None
 
-    print("[WX DEBUG] direct_rain_mm:", direct_rain_mm)
-    print("[WX DEBUG] direct_t_mean:", direct_t_mean)
+    logger.warning(f"[WX DEBUG] direct_rain_mm: {direct_rain_mm}")
+    logger.warning(f"[WX DEBUG] direct_t_mean: {direct_t_mean}")
 
     df_all = (
         df_s2.merge(wx, on=["site", "date"], how="left")
