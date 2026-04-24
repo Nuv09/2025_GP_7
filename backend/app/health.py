@@ -1289,7 +1289,6 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
         "indices_history_last_month": history_last_month,
         "indices_table": indices_table,
         "alert_signals": alert_signals,
-        "farm_polygon": poly,
     }
 
 
@@ -1790,7 +1789,7 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
     forecast_next = health_result.get("forecast_next_week", {})
     alert_signals = health_result.get("alert_signals", {})
     health_map = health_result.get("health_map", []) or []
-    farm_polygon = health_result.get("farm_polygon", farm_doc.get("polygon", [])) or []
+    farm_polygon = farm_doc.get("polygon", []) or []
     indices_table = health_result.get("indices_table", []) or []
 
     critical_points = alert_signals.get("hotspots", {}).get("critical", [])[:6]
