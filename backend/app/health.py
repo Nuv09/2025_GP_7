@@ -19,9 +19,6 @@ from app.common import polygon_centroid
 
 from datetime import datetime
 
-import logging
-logger = logging.getLogger(__name__)
-
 PROJECT_ID = os.environ.get("GEE_PROJECT_ID", "saaf-97251")
 OUT_ROOT = os.environ.get("HEALTH_OUT_ROOT", "/tmp/saaf_health")
 os.makedirs(OUT_ROOT, exist_ok=True)
@@ -1211,9 +1208,6 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
     df_th["date"] = pd.to_datetime(df_th["date"]).dt.normalize()
 
     wx = weekly_weather(site)
-    logger.warning(f"[WX DEBUG] weekly_weather rows: {len(wx)}")
-    logger.warning(f"[WX DEBUG] wx_source values: {wx['wx_source'].dropna().unique().tolist() if 'wx_source' in wx.columns else 'NO wx_source'}")
-    logger.warning(f"[WX DEBUG] non-null precip_mm / t2m_mean: {wx['precip_mm'].notna().sum() if 'precip_mm' in wx.columns else 'NO precip_mm'} / {wx['t2m_mean'].notna().sum() if 't2m_mean' in wx.columns else 'NO t2m_mean'}")
     wx["site"] = farm_id
 
     _wx_recent = wx.copy()
@@ -1224,9 +1218,6 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
     _temp_s = _wx_recent["t2m_mean"].dropna()  if "t2m_mean"  in _wx_recent.columns else pd.Series(dtype=float)
     direct_rain_mm = float(_rain_s.sum())  if not _rain_s.empty else None
     direct_t_mean  = float(_temp_s.mean()) if not _temp_s.empty else None
-
-    logger.warning(f"[WX DEBUG] direct_rain_mm: {direct_rain_mm}")
-    logger.warning(f"[WX DEBUG] direct_t_mean: {direct_t_mean}")
 
     df_all = (
         df_s2.merge(wx, on=["site", "date"], how="left")
@@ -1256,8 +1247,6 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
         "Monitor_Pct": float(stats.get("Monitor_Pct", 0.0) or 0.0),
         "Critical_Pct": float(stats.get("Critical_Pct", 0.0) or 0.0),
         "rpw_score": float(stats.get("RPW_score_med", 0.0) or 0.0),
-        "rain_mm": direct_rain_mm if direct_rain_mm is not None else float(stats.get("rain_mm", 0.0) or 0.0),
-        "t_mean": direct_t_mean if direct_t_mean is not None else float(stats.get("t_mean", 0.0) or 0.0),
     }
     history_last_month = indices_history_last_weeks(df_all, weeks=5, agg="mean")
     indices_table = build_indices_table(df_all)
