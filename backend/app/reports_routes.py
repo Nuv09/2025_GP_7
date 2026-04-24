@@ -66,6 +66,65 @@ def _safe_int(v, default=0):
         return int(v)
     except Exception:
         return default
+    
+INDEX_META = {
+    "NDVI": ("الخضرة", "يقيس كثافة الغطاء النباتي وحيوية النمو بشكل عام."),
+    "GNDVI": ("الخضرة الخضراء", "يركز أكثر على حساسية الكلوروفيل والنمو النشط."),
+    "NDRE": ("حيوية الأوراق", "يفيد في كشف التغيرات المبكرة في نشاط الأوراق والتغذية."),
+    "NDRE740": ("الحافة الحمراء 740", "مؤشر حساس للتغيرات الدقيقة في الكلوروفيل والنشاط الحيوي."),
+    "MTCI": ("دليل الكلوروفيل", "يستخدم لتقدير الكلوروفيل وقد يساعد في قراءة الحالة التغذوية."),
+    "NDMI": ("الرطوبة", "يعكس مستوى الرطوبة في المجموع الخضري واحتمال الإجهاد المائي."),
+    "NDWI_Gao": ("مؤشر الماء", "يعكس محتوى الماء في النبات ويستخدم لدعم قراءة الإجهاد المائي."),
+    "SIWSI1": ("إجهاد الماء 1", "يساعد في رصد الإجهاد المائي داخل الغطاء النباتي."),
+    "SIWSI2": ("إجهاد الماء 2", "يعطي قراءة إضافية لحالة الماء والنشاط الحيوي."),
+    "SRWI": ("نسبة الماء الطيفية", "مؤشر إضافي لدعم تقييم رطوبة النبات."),
+    "NMDI": ("فرق الرطوبة الطبيعي", "يفيد في تقييم توازن الرطوبة والإجهاد المرتبط بها."),
+}
+
+
+def _enrich_indices_table(indices_table, ndvi=None, ndmi=None, ndre=None):
+    """
+    يضيف label و note للتقرير فقط بناءً على code.
+    لا يغير التخزين في Firestore.
+    """
+    enriched = []
+
+    for item in indices_table or []:
+        code = str(item.get("code", "") or "").strip()
+        if not code:
+            continue
+
+        label, note = INDEX_META.get(code, (code, "—"))
+
+        enriched.append({
+            "label": item.get("label") or label,
+            "code": code,
+            "value": item.get("value", 0),
+            "note": item.get("note") or note,
+        })
+
+    # fallback إذا indices_table فاضية بالكامل
+    if enriched:
+        return enriched
+
+    fallback_items = [
+        ("NDVI", ndvi),
+        ("NDMI", ndmi),
+        ("NDRE", ndre),
+    ]
+
+    for code, metric in fallback_items:
+        label, note = INDEX_META.get(code, (code, "—"))
+        metric = metric or {}
+
+        enriched.append({
+            "label": label,
+            "code": code,
+            "value": f"{_safe_float(metric.get('val', 0), 0):.2f}",
+            "note": note,
+        })
+
+    return enriched
 
 def _load_local_image_as_data_uri(*relative_parts) -> str | None:
     try:
@@ -798,27 +857,12 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
     }
     forecast_change_text = _delta_badge_html(_safe_float(forecast_next.get("ndvi_delta_next_mean"), 0) * 100.0)
 
-    if not indices_table:
-        indices_table = [
-            {
-                "label": "الخضرة",
-                "code": "NDVI",
-                "value": f"{_safe_float(ndvi.get('val', 0), 0):.2f}",
-                "note": "يقيس كثافة الغطاء النباتي وحيوية النمو بشكل عام.",
-            },
-            {
-                "label": "الرطوبة",
-                "code": "NDMI",
-                "value": f"{_safe_float(ndmi.get('val', 0), 0):.2f}",
-                "note": "يعكس مستوى الرطوبة في المجموع الخضري واحتمال الإجهاد المائي.",
-            },
-            {
-                "label": "حيوية الأوراق",
-                "code": "NDRE",
-                "value": f"{_safe_float(ndre.get('val', 0), 0):.2f}",
-                "note": "يفيد في قراءة نشاط الأوراق والحالة التغذوية بشكل مبكر.",
-            },
-        ]
+    indices_table = _enrich_indices_table(
+        indices_table,
+        ndvi=ndvi,
+        ndmi=ndmi,
+        ndre=ndre,
+    )
 
 
     logo_data_uri = _load_local_image_as_data_uri("static", "images", "saaf_logo.png")
@@ -1382,6 +1426,13 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     draw_kpi_box(
         ws2, 7, 4, "RPW Score", num(rpw_score, 2),
         "قراءة إجهاد", "red" if rpw_score >= 0.66 else "orange" if rpw_score >= 0.40 else "green"
+    )
+
+    indices_table = _enrich_indices_table(
+        indices_table,
+        ndvi=ndvi,
+        ndmi=ndmi,
+        ndre=ndre,
     )
 
     index_rows = []

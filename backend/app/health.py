@@ -1004,20 +1004,6 @@ def build_indices_table(df_all: pd.DataFrame) -> List[Dict[str, Any]]:
     if latest_df.empty:
         return []
 
-    index_meta = {
-        "NDVI": ("الخضرة", "يقيس كثافة الغطاء النباتي وحيوية النمو بشكل عام."),
-        "GNDVI": ("الخضرة الخضراء", "يركز أكثر على حساسية الكلوروفيل والنمو النشط."),
-        "NDRE": ("حيوية الأوراق", "يفيد في كشف التغيرات المبكرة في نشاط الأوراق والتغذية."),
-        "NDRE740": ("الحافة الحمراء 740", "مؤشر حساس للتغيرات الدقيقة في الكلوروفيل والنشاط الحيوي."),
-        "MTCI": ("دليل الكلوروفيل", "يستخدم لتقدير الكلوروفيل وقد يساعد في قراءة الحالة التغذوية."),
-        "NDMI": ("الرطوبة", "يعكس مستوى الرطوبة في المجموع الخضري واحتمال الإجهاد المائي."),
-        "NDWI_Gao": ("مؤشر الماء", "يعكس محتوى الماء في النبات ويستخدم لدعم قراءة الإجهاد المائي."),
-        "SIWSI1": ("إجهاد الماء 1", "يساعد في رصد الإجهاد المائي داخل الغطاء النباتي."),
-        "SIWSI2": ("إجهاد الماء 2", "يعطي قراءة إضافية لحالة الماء والنشاط الحيوي."),
-        "SRWI": ("نسبة الماء الطيفية", "مؤشر إضافي لدعم تقييم رطوبة النبات."),
-        "NMDI": ("فرق الرطوبة الطبيعي", "يفيد في تقييم توازن الرطوبة والإجهاد المرتبط بها."),
-    }
-
     rows = []
     for code in INDEX_COLS_ALL:
         if code not in latest_df.columns:
@@ -1028,13 +1014,10 @@ def build_indices_table(df_all: pd.DataFrame) -> List[Dict[str, Any]]:
             continue
 
         value = float(series.mean())
-        label, note = index_meta.get(code, (code, "—"))
 
         rows.append({
-            "label": label,
             "code": code,
             "value": round(value, 2),
-            "note": note,
         })
 
     return rows
@@ -1723,7 +1706,7 @@ def get_report_weather_from_weatherapi(farm_doc: Dict[str, Any]) -> Dict[str, fl
         lat, lon = polygon_centroid(poly_for_centroid)
 
         end_dt = pd.Timestamp.utcnow().normalize()
-        start_dt = end_dt - pd.Timedelta(days=29)
+        start_dt = end_dt - pd.Timedelta(days=7)  # used to be 29 but the report says it's last 7 days
 
         rows = []
         current = start_dt
