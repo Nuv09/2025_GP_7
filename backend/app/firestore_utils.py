@@ -22,7 +22,7 @@ def get_farm_doc(farm_id: str) -> Optional[Dict[str, Any]]:
 def set_status(farm_id: str, **data):
     data.setdefault("status", "pending")
 
-    data["id"] = farm_id
+    data["farmId"] = farm_id
 
     fields_to_clean = ["errorMessage", "imagePath"]
     for field in fields_to_clean:
