@@ -1208,6 +1208,10 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
     df_th["date"] = pd.to_datetime(df_th["date"]).dt.normalize()
 
     wx = weekly_weather(site)
+    print("\n[WX DEBUG] weekly_weather rows:", len(wx))
+    print("[WX DEBUG] wx_source values:", wx["wx_source"].dropna().unique().tolist() if "wx_source" in wx.columns else "NO wx_source")
+    print("[WX DEBUG] non-null precip_mm / t2m_mean:", wx["precip_mm"].notna().sum() if "precip_mm" in wx.columns else "NO precip_mm", "/", wx["t2m_mean"].notna().sum() if "t2m_mean" in wx.columns else "NO t2m_mean")
+    print("[WX DEBUG] sample weather rows:\n", wx[["date", "precip_mm", "t2m_mean", "wx_source"]].head(10) if set(["date", "precip_mm", "t2m_mean", "wx_source"]).issubset(wx.columns) else wx.head(10))
     wx["site"] = farm_id
 
     _wx_recent = wx.copy()
@@ -1218,6 +1222,9 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
     _temp_s = _wx_recent["t2m_mean"].dropna()  if "t2m_mean"  in _wx_recent.columns else pd.Series(dtype=float)
     direct_rain_mm = float(_rain_s.sum())  if not _rain_s.empty else None
     direct_t_mean  = float(_temp_s.mean()) if not _temp_s.empty else None
+
+    print("[WX DEBUG] direct_rain_mm:", direct_rain_mm)
+    print("[WX DEBUG] direct_t_mean:", direct_t_mean)
 
     df_all = (
         df_s2.merge(wx, on=["site", "date"], how="left")
