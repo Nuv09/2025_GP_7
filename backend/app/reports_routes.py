@@ -2041,15 +2041,25 @@ def _merge_export_with_live_farm_data(export_data: dict, farm_data: dict) -> dic
         "rpw_score": _prefer_live_number(climate.get("rpw_score"), current_health.get("rpw_score"), 0),
     }
 
+    risk_diagnostics = (
+        health_root.get("risk_diagnostics")
+        or health_root.get("alert_signals")
+        or {}
+    )
+
     alert_context = dict(export_data.get("alert_context", {}) or {})
     export_data["alert_context"] = {
         **alert_context,
-        "total_pixels": _prefer_live_number(alert_context.get("total_pixels"), current_health.get("total_pixels"), 0),
+        "total_pixels": _prefer_live_number(
+            alert_context.get("total_pixels"),
+            current_health.get("total_pixels"),
+            0,
+        ),
         "pixels_with_any_flag": _prefer_live_number(
-        alert_context.get("pixels_with_any_flag"),
-        (health_root.get("alert_signals", {}) or {}).get("pixels_with_any_flag_latest"),
-        0,
-    ),
+            alert_context.get("pixels_with_any_flag"),
+            risk_diagnostics.get("pixels_with_any_flag_latest"),
+            0,
+        ),
         "flag_counts": _first_non_empty(alert_context.get("flag_counts"), {}),
     }
 

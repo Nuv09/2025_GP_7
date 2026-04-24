@@ -353,9 +353,14 @@ def _compute_drivers(
     *,
     total_pixels_latest: int,
 ) -> Dict[str, Any]:
-    alert_signals = health_result.get("alert_signals", {}) or {}
-    rule_counts = alert_signals.get("rule_counts_latest", {}) or {}
-    flag_counts = alert_signals.get("flag_occurrences", {}) or {}
+    risk_diagnostics = (
+        health_result.get("risk_diagnostics")
+        or health_result.get("alert_signals")
+        or {}
+    )
+
+    rule_counts = risk_diagnostics.get("rule_counts_latest", {}) or {}
+    flag_counts = risk_diagnostics.get("flag_occurrences", {}) or {}
 
     # ✅ “رطوبة/ري” (counts)
     water_flags = (
@@ -539,11 +544,16 @@ def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]
     mon_now = _pct(health.get("Monitor_Pct"))
     severity_now = _severity_from_health(crit_now, mon_now)
 
-    alert_signals = health_result.get("alert_signals", {}) or {}
     total_pixels = _safe_int(health.get("total_pixels", 0))
 
+    risk_diagnostics = (
+        health_result.get("risk_diagnostics")
+        or health_result.get("alert_signals")
+        or {}
+    )
+
     hotspots = (
-        alert_signals.get("hotspots", {})
+        risk_diagnostics.get("hotspots", {})
         or health_result.get("hotspots", {})
         or {}
     )

@@ -1220,7 +1220,7 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
 
     df_all = compute_if_risk_inference(df_all)
     df_all = add_rpw_flags_and_score(df_all)
-    alert_signals = build_alert_signals(df_all)
+    risk_diagnostics = build_alert_signals(df_all)
 
     #    # 5. حساب الإحصائيات الحالية (Stats)
     stats = site_summary(df_all)
@@ -1244,7 +1244,7 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
     if not health_map_data:
         fallback_points = []
         for section_name, status_code in [("critical", 2), ("monitor", 1)]:
-            for pt in (alert_signals.get("hotspots", {}).get(section_name, []) or [])[:80]:
+            for pt in (risk_diagnostics.get("hotspots", {}).get(section_name, []) or [])[:80]:
                 lat_val = pt.get("lat")
                 lng_val = pt.get("lng")
                 if lat_val is None or lng_val is None:
@@ -1267,7 +1267,7 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
         "health_map": health_map_data,
         "indices_history_last_month": history_last_month,
         "indices_table": indices_table,
-        "alert_signals": alert_signals,
+        "risk_diagnostics": risk_diagnostics,
     }
 
 
@@ -1414,7 +1414,11 @@ def get_health_map_points(df_all: pd.DataFrame) -> List[Dict[str, Any]]:
 
 def _build_top_action(health_result: Dict[str, Any]) -> Dict[str, Any]:
     dist    = health_result.get("current_health", {})
-    alerts  = health_result.get("alert_signals", {})
+    alerts = (
+    health_result.get("risk_diagnostics")
+    or health_result.get("alert_signals")
+    or {}
+    )
     flags   = alerts.get("flag_occurrences", {})
 
     critical_pct = float(dist.get("Critical_Pct", 0))
@@ -1766,12 +1770,16 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
     current_health = health_result.get("current_health", {})
     report_weather = get_report_weather_from_weatherapi(farm_doc)
     forecast_next = health_result.get("forecast_next_week", {})
-    alert_signals = health_result.get("alert_signals", {})
+    risk_diagnostics = (
+    health_result.get("risk_diagnostics")
+    or health_result.get("alert_signals")
+    or {}
+    )
     health_map = health_result.get("health_map", []) or []
     farm_polygon = farm_doc.get("polygon", []) or []
     indices_table = health_result.get("indices_table", []) or []
 
-    critical_points = alert_signals.get("hotspots", {}).get("critical", [])[:6]
+    critical_points = risk_diagnostics.get("hotspots", {}).get("critical", [])[:6]
 
     forecast_delta = _safe_float(forecast_next.get("ndvi_delta_next_mean"), 0)
     direction = "تحسنًا" if forecast_delta >= 0 else "تراجعًا"
@@ -1783,8 +1791,8 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
     )
 
     
-    risk_drivers = _build_risk_drivers(alert_signals)
-    hotspots_table = _build_hotspots_table(alert_signals)
+    risk_drivers = _build_risk_drivers(risk_diagnostics)
+    hotspots_table = _build_hotspots_table(risk_diagnostics)
 
     # لا نعتمد فقط على finalCount هنا لأنه قد لا يكون محدثًا لحظة بناء export_data
     total_palms = (
@@ -1807,9 +1815,9 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
     }
 
     # ── سياق التنبيهات: تفصيل قواعد التصنيف والعلامات الفردية ──
-    rule_counts = alert_signals.get("rule_counts_latest", {}) or {}
-    flag_counts = alert_signals.get("flag_occurrences", {}) or {}
-    pixels_with_any_flag = int(alert_signals.get("pixels_with_any_flag_latest", 0) or 0)
+    rule_counts = risk_diagnostics.get("rule_counts_latest", {}) or {}
+    flag_counts = risk_diagnostics.get("flag_occurrences", {}) or {}
+    pixels_with_any_flag = int(risk_diagnostics.get("pixels_with_any_flag_latest", 0) or 0)
 
     alert_context = {
         "total_pixels": int(total_pixels_current or 0),
@@ -1847,7 +1855,7 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
         "header": {
             "name": farm_doc.get("farmName") or farm_doc.get("name") or "مزرعة سعف",
             "area": farm_doc.get("farmSize") or farm_doc.get("area") or "غير محدد",
-            "date": alert_signals.get("latest_date") or datetime.now().strftime("%Y-%m-%d"),
+            "date": risk_diagnostics.get("latest_date") or datetime.now().strftime("%Y-%m-%d"),
             "total_palms": total_palms,
             "contract_number": farm_doc.get("contractNumber", "—"),
             "city": farm_doc.get("region") or farm_doc.get("city") or "—",
