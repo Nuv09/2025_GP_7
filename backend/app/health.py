@@ -1177,8 +1177,6 @@ def forecast_next_week_summary(df_all: pd.DataFrame) -> Dict[str, Any]:
 
 
 def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any]:
-
-    raise RuntimeError("LOCAL HEALTH.PY IS RUNNING")
     # 1. التحقق من المضلع (Polygon)
     poly = farm_doc.get("polygon") or []
     if len(poly) < 3:
