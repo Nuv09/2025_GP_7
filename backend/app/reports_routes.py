@@ -1250,7 +1250,12 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     region = header.get("city") or "—"
     owner_name = export_data.get("owner_name") or header.get("owner_name") or "—"
     farm_area = str(header.get("area") or export_data.get("farmSize") or "—")
-    total_palms = _safe_int(header.get("total_palms") or export_data.get("finalCount") or 0)
+    total_palms = _safe_int(
+        header.get("total_palms")
+        or export_data.get("palm_count")
+        or export_data.get("finalCount")
+        or 0
+    )
     report_date = header.get("date") or datetime.now().strftime("%Y-%m-%d")
 
     healthy_pct = _safe_float(dist.get("Healthy_Pct", 0))
@@ -2202,8 +2207,12 @@ def export_pdf(farm_id):
             export_data = prepare_export_data(
                 farm_data,
                 farm_data["health"],
-                detected_count=int(farm_data.get("finalCount", 0) or 0),
-            )
+                detected_count=int(
+                    farm_data.get("palm_count")
+                    or farm_data.get("finalCount")
+                    or 0
+                ),
+                        )
             export_data = _merge_export_with_live_farm_data(export_data, farm_data)
 
         logger.info(
@@ -2255,7 +2264,11 @@ def export_excel(farm_id):
             export_data = prepare_export_data(
                 farm_data,
                 farm_data["health"],
-                detected_count=int(farm_data.get("finalCount", 0) or 0),
+                detected_count=int(
+                    farm_data.get("palm_count")
+                    or farm_data.get("finalCount")
+                    or 0
+                ),
             )
             export_data = _merge_export_with_live_farm_data(export_data, farm_data)
 

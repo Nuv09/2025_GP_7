@@ -49,14 +49,17 @@ class AnalysisStatusPage extends StatelessWidget {
             }
             final data = snap.data!.data() as Map<String, dynamic>? ?? {};
             final status = (data['status'] ?? 'pending') as String;
-            final finalCount = (data['finalCount'] ?? 0) as int;
+            final palmCountRaw = data['palm_count'] ?? data['finalCount'] ?? 0;
+            final palmCount = palmCountRaw is int
+                ? palmCountRaw
+                : int.tryParse(palmCountRaw.toString()) ?? 0;
             final err = (data['errorMessage'] ?? '') as String?;
 
             if (status == 'done') {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 _scheduleAutoNav(context);
               });
-              return _DoneView(count: finalCount);
+              return _DoneView(count: palmCount);
             }
 
             if (status == 'failed' || status == 'error') {

@@ -325,8 +325,8 @@ def analyze():
         set_status(
             farm_id,
             status="done",
-            finalCount=count_summary["count"],
-            finalQuality=count_summary["quality"],
+            palm_count=count_summary["count"],
+            detection_quality=count_summary["quality"],
             health=health_result,
             healthMap=h_map,
             # export_data=export_payload,
@@ -420,8 +420,8 @@ def scheduled_update():
             set_status(
                 farm_id,
                 status="done",
-                finalCount=int(picked["count"]),
-                finalQuality=float(picked["score"]),
+                palm_count=int(picked["count"]),
+                detection_quality=float(picked["score"]),
                 health=health_result,
                 healthMap=h_map,
                 # export_data=export_payload,

@@ -1130,9 +1130,12 @@ if (res.statusCode == 404) {
         (current['Critical_Pct'] as num?)?.toDouble() ??
         0.0;
 
-    final int totalPalms = widget.farmData['finalCount'] is int
-        ? widget.farmData['finalCount']
-        : int.tryParse(widget.farmData['finalCount']?.toString() ?? '0') ?? 0;
+    final palmCountRaw =
+    widget.farmData['palm_count'] ?? widget.farmData['finalCount'];
+
+final int totalPalms = palmCountRaw is int
+    ? palmCountRaw
+    : int.tryParse(palmCountRaw?.toString() ?? '0') ?? 0;
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),

@@ -621,8 +621,8 @@ try {
 
           // حالة التحليل والنتيجة الابتدائية
           'status': 'pending',
-          'finalCount': 0,
-          'finalQuality': 0.0,
+          'palm_count': 0,
+          'detection_quality': 0.0,
           'errorMessage': null,
         });
 

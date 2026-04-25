@@ -1281,7 +1281,7 @@ def build_alert_signals(df_all: pd.DataFrame) -> Dict[str, Any]:
     """
     if df_all is None or df_all.empty:
         return {
-            "latest_date": None,
+            "satellite_image_date": None,
             "risk_counts_latest": {"Healthy": 0, "Monitor": 0, "Critical": 0},
             "rule_counts_latest": {},
             "flag_occurrences": {},
@@ -1367,7 +1367,7 @@ def build_alert_signals(df_all: pd.DataFrame) -> Dict[str, Any]:
         stress_mask = d["RPW_label_rule"].astype(str).isin(["Monitor_RPW_tail", "Critical_RPW_tail"])
 
     return {
-        "latest_date": str(latest.date()) if pd.notna(latest) else None,
+        "satellite_image_date": str(latest.date()) if pd.notna(latest) else None,
         "pixels_with_any_flag_latest": pixels_with_any_flag,
         "risk_counts_latest": risk_counts,
         "rule_counts_latest": rule_counts,
@@ -1797,6 +1797,7 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
     # لا نعتمد فقط على finalCount هنا لأنه قد لا يكون محدثًا لحظة بناء export_data
     total_palms = (
         detected_count
+        or farm_doc.get("palm_count")
         or farm_doc.get("finalCount")
         or farm_doc.get("palmCount")
         or farm_doc.get("totalPalms")
@@ -1855,7 +1856,11 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
         "header": {
             "name": farm_doc.get("farmName") or farm_doc.get("name") or "مزرعة سعف",
             "area": farm_doc.get("farmSize") or farm_doc.get("area") or "غير محدد",
-            "date": risk_diagnostics.get("latest_date") or datetime.now().strftime("%Y-%m-%d"),
+            "date": (
+                risk_diagnostics.get("satellite_image_date")
+                or risk_diagnostics.get("latest_date")
+                or datetime.now().strftime("%Y-%m-%d")
+            ),
             "total_palms": total_palms,
             "contract_number": farm_doc.get("contractNumber", "—"),
             "city": farm_doc.get("region") or farm_doc.get("city") or "—",
@@ -1866,7 +1871,8 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
 
         "farmName": farm_doc.get("farmName") or farm_doc.get("name") or "مزرعة سعف",
         "farmSize": farm_doc.get("farmSize") or farm_doc.get("area") or "غير محدد",
-        "finalCount": total_palms,
+        "finalCount": total_palms,  # مؤقتًا للتوافق
+        "palm_count": total_palms,
         "total_palms": total_palms,
 
         "wellness_score": current_health.get("Healthy_Pct", 0),
