@@ -1522,12 +1522,17 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     for r in range(chart_row2, chart_row2 + len(flags_rows) + 2):
         ws2.row_dimensions[r].hidden = True
 
+    flags_rows = sorted(flags_rows, key=lambda x: x[1], reverse=True)
+
     flags_chart = BarChart()
     flags_chart.type = "bar"
     flags_chart.style = 11
     flags_chart.title = "أكثر إشارات الإجهاد تكرارًا"
-    flags_chart.height = 8
-    flags_chart.width = 14
+    flags_chart.height = 7
+    flags_chart.width = 11
+    flags_chart.legend = None          
+    flags_chart.gapWidth = 35
+
     flags_chart.add_data(
         Reference(ws2, min_col=2, min_row=chart_row2, max_row=chart_row2 + len(flags_rows)),
         titles_from_data=True
@@ -1535,7 +1540,25 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     flags_chart.set_categories(
         Reference(ws2, min_col=1, min_row=chart_row2 + 1, max_row=chart_row2 + len(flags_rows))
     )
-    ws2.add_chart(flags_chart, "A34")
+
+    style_chart_axes(
+        flags_chart,
+        y_title="الإشارة",
+        x_title="العدد",
+        show_values=True,
+        is_percent=False,
+    )
+
+    try:
+        flags_chart.dLbls.dLblPos = "outEnd"
+    except Exception:
+        pass
+
+    max_count = max([item[1] for item in flags_rows] + [1])
+    flags_chart.x_axis.scaling.min = 0
+    flags_chart.x_axis.scaling.max = max_count * 1.15
+
+    ws2.add_chart(flags_chart, f"A{end_flags + 3}")
 
     # ─────────────────────────────────────────────
     # Sheet 3: المخاطر والمناطق
