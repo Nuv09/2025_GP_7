@@ -977,6 +977,8 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     from openpyxl.chart import BarChart, PieChart, LineChart, Reference
     from openpyxl.chart.label import DataLabelList
     from openpyxl.drawing.image import Image as XLImage
+    from openpyxl.chart.label import DataLabelList
+    from openpyxl.chart.series import DataPoint
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -1500,7 +1502,20 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
         except Exception:
             pass
 
+    FLAG_LABELS = {
+        "water_low": "انخفاض الماء",
+        "water_below_025": "ماء منخفض",
+        "water_drop": "هبوط الماء",
+        "siwsi_drop": "هبوط SIWSI",
+        "ndre_low": "ضعف NDRE",
+        "ndre_below_035": "NDRE منخفض",
+        "ndvi_below_030": "NDVI منخفض",
+        "ndvi_drop": "هبوط NDVI",
+    }
+
     flags_rows = [[k, _safe_int(v)] for k, v in flag_counts.items()]
+    flags_rows = sorted(flags_rows, key=lambda x: x[1], reverse=True)
+
     if not flags_rows:
         flags_rows = [["—", 0]]
 
@@ -1512,53 +1527,68 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
         title_color=ORANGE
     )
 
-    # chart source
-    chart_row2 = end_flags + 3
+    # بيانات القراف: نعرض أعلى 6 إشارات فقط عشان ما تتزاحم الأسماء
+    chart_flags_rows = [
+        [FLAG_LABELS.get(k, k), v]
+        for k, v in flags_rows
+        if v > 0
+    ][:6]
+
+    if not chart_flags_rows:
+        chart_flags_rows = [["لا توجد إشارات", 0]]
+
+    # مصدر القراف نخليه بعيد ومخفي، مو تحت الجدول مباشرة
+    chart_row2 = max(end_flags + 25, 80)
     ws2.cell(chart_row2, 1, "الإشارة")
     ws2.cell(chart_row2, 2, "العدد")
-    for i, item in enumerate(flags_rows, start=1):
+
+    for i, item in enumerate(chart_flags_rows, start=1):
         ws2.cell(chart_row2 + i, 1, item[0])
         ws2.cell(chart_row2 + i, 2, item[1])
-    for r in range(chart_row2, chart_row2 + len(flags_rows) + 2):
-        ws2.row_dimensions[r].hidden = True
 
-    flags_rows = sorted(flags_rows, key=lambda x: x[1], reverse=True)
+    for r in range(chart_row2, chart_row2 + len(chart_flags_rows) + 2):
+        ws2.row_dimensions[r].hidden = True
 
     flags_chart = BarChart()
     flags_chart.type = "bar"
     flags_chart.style = 11
     flags_chart.title = "أكثر إشارات الإجهاد تكرارًا"
-    flags_chart.height = 7
-    flags_chart.width = 11
-    flags_chart.legend = None          
-    flags_chart.gapWidth = 35
+    flags_chart.height = 7.5
+    flags_chart.width = 10.5
+    flags_chart.legend = None
+    flags_chart.gapWidth = 45
 
     flags_chart.add_data(
-        Reference(ws2, min_col=2, min_row=chart_row2, max_row=chart_row2 + len(flags_rows)),
+        Reference(ws2, min_col=2, min_row=chart_row2, max_row=chart_row2 + len(chart_flags_rows)),
         titles_from_data=True
     )
     flags_chart.set_categories(
-        Reference(ws2, min_col=1, min_row=chart_row2 + 1, max_row=chart_row2 + len(flags_rows))
+        Reference(ws2, min_col=1, min_row=chart_row2 + 1, max_row=chart_row2 + len(chart_flags_rows))
     )
 
-    style_chart_axes(
-        flags_chart,
-        y_title="الإشارة",
-        x_title="العدد",
-        show_values=True,
-        is_percent=False,
-    )
+    flags_chart.dLbls = DataLabelList()
+    flags_chart.dLbls.showVal = True
+    flags_chart.dLbls.showLegendKey = False
+    flags_chart.dLbls.showCatName = False
+    flags_chart.dLbls.showSerName = False
+    flags_chart.dLbls.showPercent = False
 
     try:
         flags_chart.dLbls.dLblPos = "outEnd"
     except Exception:
         pass
 
-    max_count = max([item[1] for item in flags_rows] + [1])
+    flags_chart.x_axis.delete = False
+    flags_chart.y_axis.delete = False
+    flags_chart.x_axis.title = None
+    flags_chart.y_axis.title = None
     flags_chart.x_axis.scaling.min = 0
-    flags_chart.x_axis.scaling.max = max_count * 1.15
 
-    ws2.add_chart(flags_chart, f"A{end_flags + 3}")
+    max_count = max([item[1] for item in chart_flags_rows] + [1])
+    flags_chart.x_axis.scaling.max = max_count * 1.25
+
+    # رفعناه فوق: مباشرة بعد الجدول بسطر واحد
+    ws2.add_chart(flags_chart, f"A{end_flags + 1}")
 
     # ─────────────────────────────────────────────
     # Sheet 3: المخاطر والمناطق
@@ -1787,7 +1817,7 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     # page2
     ws6["E1"] = "الإشارة"
     ws6["F1"] = "العدد"
-    for i, item in enumerate(flags_rows, start=2):
+    for i, item in enumerate(chart_flags_rows, start=2):
         ws6.cell(i, 5, item[0])
         ws6.cell(i, 6, item[1])
 
@@ -1799,13 +1829,14 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
         ws6.cell(i, 9, item[1])
 
     # ─────────────────────────────────────────────
-    # إعادة ربط الرسوم بمصدر مستقل hidden
+    #  الرسوم
     # ─────────────────────────────────────────────
     # pie
     pie = PieChart()
     pie.title = "التوزيع الحالي"
-    pie.height = 8
-    pie.width = 12
+    pie.height = 7.8
+    pie.width = 10.2
+
     pie.add_data(
         Reference(ws6, min_col=2, min_row=1, max_row=4),
         titles_from_data=True
@@ -1813,6 +1844,19 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     pie.set_categories(
         Reference(ws6, min_col=1, min_row=2, max_row=4)
     )
+
+    # الألوان حسب ترتيب البيانات:
+    # سليم = أخضر، متابعة = أزرق، حرج = أحمر
+    pie_colors = ["22C55E", "2563EB", "EF4444"]
+
+    try:
+        pie.series[0].data_points = []
+        for idx, color in enumerate(pie_colors):
+            dp = DataPoint(idx=idx)
+            dp.graphicalProperties.solidFill = color
+            pie.series[0].data_points.append(dp)
+    except Exception:
+        pass
 
     pie.dLbls = DataLabelList()
     pie.dLbls.showVal = True
@@ -1835,12 +1879,30 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     # flags chart
     flags_chart.series = []
     flags_chart.add_data(
-        Reference(ws6, min_col=6, min_row=1, max_row=1 + len(flags_rows)),
+        Reference(ws6, min_col=6, min_row=1, max_row=1 + len(chart_flags_rows)),
         titles_from_data=True
     )
     flags_chart.set_categories(
-        Reference(ws6, min_col=5, min_row=2, max_row=1 + len(flags_rows))
+        Reference(ws6, min_col=5, min_row=2, max_row=1 + len(chart_flags_rows))
     )
+
+    flags_chart.dLbls = DataLabelList()
+    flags_chart.dLbls.showVal = True
+    flags_chart.dLbls.showLegendKey = False
+    flags_chart.dLbls.showCatName = False
+    flags_chart.dLbls.showSerName = False
+    flags_chart.dLbls.showPercent = False
+
+    try:
+        flags_chart.dLbls.dLblPos = "outEnd"
+    except Exception:
+        pass
+
+    flags_chart.legend = None
+    flags_chart.x_axis.title = None
+    flags_chart.y_axis.title = None
+    flags_chart.x_axis.scaling.min = 0
+    flags_chart.x_axis.scaling.max = max_count * 1.25
 
     # risk chart
     risk_chart.series = []
