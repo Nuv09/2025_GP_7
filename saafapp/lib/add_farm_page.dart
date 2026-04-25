@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:typed_data';
 import 'package:saafapp/constant.dart';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -16,18 +15,14 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'package:image_picker/image_picker.dart';
-// import 'package:uuid/uuid.dart'; // ✅ لِـ session token
 
-// Firebase
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:saafapp/secrets.dart';
 import 'dart:ui';
+import 'package:flutter/services.dart';
 
-
-
-// ألوان
 const Color primaryColor = Color(0xFF1E8D5F);
 const Color secondaryColor = Color(0xFFEBB974); 
 const Color darkBackground = Color(0xFF042C25);
@@ -54,9 +49,8 @@ class _AddFarmPageState extends State<AddFarmPage> {
 
   String? _selectedRegion;
 
-  // صورة (ويب/موبايل)
   File? _farmImage; 
-  Uint8List? _imageBytes; // للويب
+  Uint8List? _imageBytes; 
 
 final MapController _mapController = MapController();
 LatLng _currentCenter = const LatLng(24.774265, 46.738586);
@@ -87,21 +81,11 @@ List<Marker> _markers = [];
 
   bool _isSaving = false;
 
-  // === Google Places (Autocomplete + Details) ===
-  // ⚠️ ملاحظة أمنية: يفضّل تمرير المفتاح عبر dart-define وليس هاردكود.
-  // مثال تشغيل: flutter run --dart-define=PLACES_KEY=AIza... (وشيّكي قيود المفتاح في Google Cloud)
-// final String _placesKey = Secrets.placesKey;
-
-//   final _uuid = const Uuid();
-//   String _sessionToken = '';
   Timer? _debounce;
   List<Map<String, dynamic>> _suggestions = [];
   bool _loadingSuggest = false;
 
 
-
-
-  // === أداة تنظيف روابط الصور (إزالة فراغات/أسطر + فك %252F) ===
   String _cleanUrl(String? raw) {
     if (raw == null) return '';
     var u = raw.replaceAll(RegExp(r'\s+'), '');
@@ -124,8 +108,89 @@ List<Marker> _markers = [];
     _notesController.dispose();
     _searchCtrl.dispose();
     _contractNumberController.dispose();
-    _debounce?.cancel(); // ✅ ألغِ الـ debounce
+    _debounce?.cancel(); 
     super.dispose();
+  }
+
+  void _safeToast(String msg, {IconData? icon, String type = 'info'}) {
+    if (!mounted) return;
+    
+    Color bgColor;
+    Color contentColor = const Color(0xFF042C25); // kDeepGreen
+    IconData toastIcon;
+
+    switch (type) {
+      case 'success':
+        bgColor = const Color(0xFF1E8D5F).withValues(alpha: 0.7); 
+        contentColor = Colors.white;
+        toastIcon = icon ?? Icons.check_circle_rounded;
+        break;
+      case 'error':
+        bgColor = const Color.fromARGB(255, 153, 30, 30).withValues(alpha: 0.7);
+        contentColor = Colors.white;
+        toastIcon = icon ?? Icons.error_rounded;
+        break;
+      default:
+        bgColor = const Color(0xFFFFF6E0); // kLightBeige
+        contentColor = const Color(0xFF042C25);
+        toastIcon = icon ?? Icons.info_rounded;
+    }
+
+    final m = ScaffoldMessenger.maybeOf(context);
+    m?.removeCurrentSnackBar(); 
+
+    m?.showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        margin: const EdgeInsets.fromLTRB(30, 0, 30, 45), 
+        animation: CurvedAnimation(
+          parent: AnimationController(
+            vsync: ScaffoldMessenger.of(context),
+            duration: const Duration(milliseconds: 800),
+          )..forward(),
+          curve: Curves.easeOutBack,
+        ),
+        content: ClipRRect(
+          borderRadius: BorderRadius.circular(25),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: contentColor.withValues(alpha: 0.2),
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                textDirection: TextDirection.rtl, 
+                children: [
+                  Icon(toastIcon, color: contentColor, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      msg,
+                      textAlign: TextAlign.right,
+                      style: GoogleFonts.almarai(
+                        color: contentColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   // =================== الموقع الحالي ===================
@@ -135,11 +200,9 @@ List<Marker> _markers = [];
     final pos = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
-    // تحديث الإحداثيات المركزية
     setState(() {
       _currentCenter = LatLng(pos.latitude, pos.longitude);
     });
-    // تحريك خريطة MapTiler للموقع الجديد
     _mapController.move(_currentCenter, 15); 
     
     if (mounted) setState(() {});
@@ -154,13 +217,12 @@ Future<void> _searchAndGo() async {
   if (text.isEmpty) return;
 
   try {
-    // نطلب الإحداثيات من MapTiler بناءً على النص المدخل
     final url = 'https://api.maptiler.com/geocoding/$text.json?key=${Secrets.mapTilerKey}&country=sa&language=ar';
     final res = await http.get(Uri.parse(url));
     final data = jsonDecode(res.body);
     
     if (data['features'] != null && data['features'].isNotEmpty) {
-      final coords = data['features'][0]['center']; // [longitude, latitude]
+      final coords = data['features'][0]['center']; 
       final newLatLng = LatLng(coords[1], coords[0]);
       
       _mapController.move(newLatLng, 15);
@@ -174,6 +236,7 @@ Future<void> _searchAndGo() async {
 }
 
   // =================== Helpers للبحث ===================
+
   // ignore: unused_element
   LatLng? _tryParseLatLng(String s) {
     final m = RegExp(r'^\s*([+-]?\d+(\.\d+)?)[\s,]+([+-]?\d+(\.\d+)?)\s*$')
@@ -186,7 +249,8 @@ Future<void> _searchAndGo() async {
     return LatLng(lat, lng);
   }
   
-// ignore: unused_element
+
+  // ignore: unused_element
   double _dist2(LatLng a, LatLng b) {
     final dx = a.latitude - b.latitude;
     final dy = a.longitude - b.longitude;
@@ -491,17 +555,20 @@ Future<String?> _reverseRegionFromCentroid() async {
       final url = _cleanUrl(await ref.getDownloadURL());
       return url;
     } on FirebaseException catch (e) {
-      _showSnackBar('تعذر رفع الصورة: ${e.code}', isError: true);
+      // ✅ تحديث هنا
+      _safeToast('تعذر رفع الصورة: ${e.code}', type: 'error');
       debugPrint('FirebaseException during upload: ${e.code} ${e.message}');
       return null;
     } on TimeoutException catch (_) {
-      _showSnackBar(
+      // ✅ تحديث هنا
+      _safeToast(
         'مهلة رفع الصورة انتهت. تحقق من الشبكة أو من إعدادات Storage.',
-        isError: true,
+        type: 'error',
       );
       return null;
     } catch (e) {
-      _showSnackBar('خطأ غير متوقع أثناء رفع الصورة: $e', isError: true);
+      // ✅ تحديث هنا
+      _safeToast('خطأ غير متوقع أثناء رفع الصورة: $e', type: 'error');
       return null;
     }
   }
@@ -552,22 +619,25 @@ Future<String?> _reverseRegionFromCentroid() async {
       DocumentReference<Map<String, dynamic>>? contractRef;
 
       try {
-        final user = _auth.currentUser;
+final user = _auth.currentUser;
         if (user == null) {
-          _showSnackBar('يجب تسجيل الدخول أولاً.', isError: true);
+          // ✅ تحديث هنا
+          _safeToast('يجب تسجيل الدخول أولاً.', type: 'error');
           if (mounted) setState(() => _isSaving = false);
           return;
         }
-        final contract = _contractNumberController.text
-    .replaceAll(RegExp(r'\s+'), '') // removes ALL spaces/newlines, not just ends
-    .trim();
 
-final isValidContract = RegExp(r'^\d{10}$').hasMatch(contract); // matches rules expectations
-if (!isValidContract) {
-  _showSnackBar('Contract must be 10–12 digits (0-9).', isError: true);
-  if (mounted) setState(() => _isSaving = false);
-  return;
-}
+        final contract = _contractNumberController.text
+            .replaceAll(RegExp(r'\s+'), '')
+            .trim();
+
+        final isValidContract = RegExp(r'^\d{10}$').hasMatch(contract); 
+        if (!isValidContract) {
+          // ✅ تحديث هنا
+          _safeToast('يجب أن يتكون رقم الصك من 10 خانات', type: 'error');
+          if (mounted) setState(() => _isSaving = false);
+          return;
+        }
 
 contractRef = _db.collection('contracts').doc(contract);
 
@@ -584,13 +654,16 @@ try {
   });
 }  catch (e) {
   if (e == 'contract-taken') {
-    _showSnackBar('هذه المزرعة مضافة مسبقًا', isError: true);
+    // ✅ تحديث هنا
+    _safeToast('هذه المزرعة مضافة مسبقًا', type: 'error');
   } else if (e is FirebaseException) {
     debugPrint('🔥 FirebaseException code=${e.code} message=${e.message}');
-    _showSnackBar('Firestore error: ${e.code}', isError: true);
+    // ✅ تحديث هنا
+    _safeToast('خطأ في قاعدة البيانات: ${e.code}', type: 'error');
   } else {
     debugPrint('🔥 Unknown error: $e');
-    _showSnackBar('Unexpected error.', isError: true);
+    // ✅ تحديث هنا
+    _safeToast('حدث خطأ غير متوقع', type: 'error');
   }
   if (mounted) setState(() => _isSaving = false);
   return;
@@ -681,49 +754,25 @@ try {
         });
 
         // لا مزيد من setState هنا لأننا غادرنا الصفحة
-      } catch (e) {
-        
-
-        _showSnackBar('حدث خطأ أثناء حفظ البيانات: $e', isError: true);
+} catch (e) {
+        // ✅ تحديث هنا
+        _safeToast('حدث خطأ أثناء حفظ البيانات: $e', type: 'error');
         if (mounted) setState(() => _isSaving = false);
       } finally {
-        // لو ما تنقلنا لأي سبب، أعد الحالة
         if (mounted && Navigator.canPop(context) == false) {
           setState(() => _isSaving = false);
         }
       }
     } else {
+      // ✅ تحديث التنبيهات للشروط الناقصة
       if (_polygonPoints.length < 3) {
-        _showSnackBar('حدد 3 نقاط على الأقل لحدود المزرعة.', isError: true);
+        _safeToast('حدد 3 نقاط على الأقل لحدود المزرعة.', type: 'error');
       } else if (_selectedRegion == null) {
-        _showSnackBar('اختر المنطقة.', isError: true);
+        _safeToast('يرجى اختيار المنطقة.', type: 'error');
       }
     }
   }
 
-  void _showSnackBar(String msg, {bool isSuccess = false, bool isError = false}) {
-    if (!mounted) return;
-
-    final Color bg = isError
-        ? const Color(0xFFB00020)
-        : (isSuccess ? const Color(0xFF1E8D5F) : const Color(0xFF333333));
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: bg,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-        content: Text(
-          msg,
-          textAlign: TextAlign.center,
-          style: GoogleFonts.almarai(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
 
   // =================== Autocomplete & Details ===================
 
@@ -948,12 +997,15 @@ return Directionality(
 ),
 const SizedBox(height: 20),
 
-            _textField(
-              controller: _farmSizeController,
-              label: 'مساحة المزرعة (م²)',
-              icon: Icons.straighten,
-              keyboardType: TextInputType.number,
-            ),
+_textField(
+  controller: _farmSizeController,
+  label: 'مساحة المزرعة (م²)',
+  icon: Icons.straighten,
+  keyboardType: TextInputType.number,
+  inputFormatters: [
+    FilteringTextInputFormatter.digitsOnly, // ✅ هذا السطر يمنع الحروف تماماً
+  ],
+),
             const SizedBox(height: 20),
             _regionDropdown(),
             const SizedBox(height: 20),
@@ -991,16 +1043,18 @@ const SizedBox(height: 20),
     );
   }
 
-  Widget _textField({
+Widget _textField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
     bool optional = false,
     int maxLines = 1,
+    List<TextInputFormatter>? inputFormatters, // 1️⃣ أضيفي هذا السطر
   }) {
     return TextFormField(
       controller: controller,
+      inputFormatters: inputFormatters, // 2️⃣ وأضيفي هذا السطر
       cursorColor: secondaryColor,
       keyboardType: keyboardType,
       textAlign: TextAlign.right,
@@ -1038,56 +1092,85 @@ focusedBorder: OutlineInputBorder(
     );
   }
 
-  Widget _regionDropdown() {
-    return DropdownButtonFormField<String>(
-decoration: InputDecoration(
-  labelText: 'المنطقة',
-  labelStyle: GoogleFonts.almarai(color: Colors.white70),
-  prefixIcon: const Icon(Icons.location_on, color: secondaryColor),
-  filled: true,
-  fillColor: Colors.white.withValues(alpha: 0.06),
+Widget _regionDropdown() {
+  final errorColor = Theme.of(context).colorScheme.error;
 
-  enabledBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(15.0),
-    borderSide: BorderSide(
-      color: secondaryColor.withValues(alpha: 0.25),
-      width: 1,
-    ),
-  ),
+  return DropdownButtonFormField<String>(
+    decoration: InputDecoration(
+      labelText: 'المنطقة',
+      labelStyle: GoogleFonts.almarai(color: Colors.white70),
+      prefixIcon: const Icon(Icons.location_on, color: secondaryColor),
+      filled: true,
+      fillColor: Colors.white.withValues(alpha: 0.06),
 
-  focusedBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(15.0),
-    borderSide: BorderSide(
-      color: secondaryColor.withValues(alpha: 0.55),
-      width: 2,
-    ),
-  ),
-
-  errorBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(15.0),
-    borderSide: const BorderSide(color: Colors.redAccent),
-  ),
-
-  focusedErrorBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(15.0),
-    borderSide: const BorderSide(color: Colors.redAccent, width: 2),
-  ),
-),
-      dropdownColor: darkBackground,
-      style: GoogleFonts.almarai(color: Colors.white),
-      initialValue: _selectedRegion,
-      isExpanded: true,
-      hint: Text(
-        'اختر منطقة',
-        style: GoogleFonts.almarai(color: Colors.white54),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(15.0),
+        borderSide: BorderSide(
+          color: secondaryColor.withValues(alpha: 0.25),
+        ),
       ),
-      onChanged: (val) => setState(() => _selectedRegion = val),
-      items: _saudiRegions
-          .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-          .toList(),
-      validator: (v) => v == null ? 'الرجاء اختيار منطقة' : null,
-    );
-  }
+
+      focusedBorder: OutlineInputBorder(
+        borderRadius: const BorderRadius.all(Radius.circular(15.0)),
+        borderSide: BorderSide(
+          color: secondaryColor.withValues(alpha: 0.55),
+          width: 2,
+        ),
+      ),
+
+      // نفس درجة الأحمر المستخدمة في باقي الحقول
+      errorBorder: UnderlineInputBorder(
+        borderSide: BorderSide(
+          color: errorColor,
+          width: 1,
+        ),
+      ),
+
+      focusedErrorBorder: UnderlineInputBorder(
+        borderSide: BorderSide(
+          color: errorColor,
+          width: 1,
+        ),
+      ),
+
+      errorStyle: GoogleFonts.almarai(
+        color: errorColor,
+        fontSize: 12,
+      ),
+    ),
+
+    dropdownColor: darkBackground,
+    style: GoogleFonts.almarai(color: Colors.white),
+    initialValue: _selectedRegion,
+    isExpanded: true,
+
+    hint: Text(
+      'اختر منطقة',
+      style: GoogleFonts.almarai(color: Colors.white70),
+    ),
+
+    icon: const Icon(
+      Icons.keyboard_arrow_down_rounded,
+      color: Colors.white70,
+    ),
+
+    onChanged: (val) => setState(() => _selectedRegion = val),
+
+    items: _saudiRegions
+        .map(
+          (r) => DropdownMenuItem(
+            value: r,
+            child: Text(
+              r,
+              style: GoogleFonts.almarai(color: Colors.white),
+            ),
+          ),
+        )
+        .toList(),
+
+    validator: (v) => v == null ? 'الرجاء اختيار منطقة' : null,
+  );
+}
 
   Widget _imagePicker() {
     return SizedBox(

@@ -137,6 +137,64 @@ void didChangeDependencies() {
     super.dispose();
   }
 
+void _safeToast(String msg, {IconData? icon, String type = 'info'}) {
+    if (!mounted) return;
+    Color bgColor;
+    Color contentColor = const Color(0xFF042C25);
+    IconData toastIcon;
+
+    switch (type) {
+      case 'success':
+        bgColor = const Color(0xFF1E8D5F).withValues(alpha: 0.7); 
+        contentColor = Colors.white;
+        toastIcon = icon ?? Icons.check_circle_rounded;
+        break;
+      case 'error':
+        bgColor = const Color.fromARGB(255, 153, 30, 30).withValues(alpha: 0.7);
+        contentColor = Colors.white;
+        toastIcon = icon ?? Icons.error_rounded;
+        break;
+      default:
+        bgColor = const Color(0xFFFFF6E0);
+        contentColor = const Color(0xFF042C25);
+        toastIcon = icon ?? Icons.info_rounded;
+    }
+
+    final m = ScaffoldMessenger.maybeOf(context);
+    m?.removeCurrentSnackBar(); 
+    m?.showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        margin: const EdgeInsets.fromLTRB(30, 0, 30, 45), 
+        animation: CurvedAnimation(
+          parent: AnimationController(vsync: ScaffoldMessenger.of(context), duration: const Duration(milliseconds: 800))..forward(),
+          curve: Curves.easeOutBack,
+        ),
+        content: ClipRRect(
+          borderRadius: BorderRadius.circular(25),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+              decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(25), border: Border.all(color: contentColor.withValues(alpha: 0.2), width: 1.5)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                textDirection: TextDirection.rtl, 
+                children: [
+                  Icon(toastIcon, color: contentColor, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(msg, textAlign: TextAlign.right, style: GoogleFonts.almarai(color: contentColor, fontWeight: FontWeight.w700, fontSize: 13))),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
   // ========= Helpers =========
 
   
@@ -340,7 +398,7 @@ try {
       }
     } catch (e) {
       debugPrint('MapTiler Search error: $e');
-      _snack('تعذر العثور على الموقع المطلوب', error: true);
+      _safeToast('تعذر العثور على الموقع المطلوب', type: 'error');
     }
   }
   
@@ -356,22 +414,11 @@ try {
         body: jsonEncode({'farmId': farmId}),
       );
       if (res.statusCode != 200) {
-        _snack('تم إرسال التحديث والتحليل سيبدأ، لكن وردت استجابة غير متوقعة.', warn: true);
+       _safeToast('تم إرسال التحديث والتحليل سيبدأ، لكن وردت استجابة غير متوقعة', type: 'info', icon: Icons.sync_problem_rounded);
       }
     } catch (e) {
       debugPrint('startAnalysis error: $e');
     }
-  }
-
-  void _snack(String msg, {bool error = false, bool warn = false}) {
-    if (!mounted) return;
-    final bg = error ? const Color(0xFFB00020) : (warn ? const Color(0xFF5E5E5E) : primaryColor);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: bg,
-        content: Text(msg, style: GoogleFonts.almarai(color: Colors.white)),
-      ),
-    );
   }
 
   // ======== Helpers للتحقق من المنطقة ========
@@ -514,7 +561,7 @@ Future<bool> _confirmDialog(String title, String message) async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_polygonPoints.length < 3) {
-      _snack('حدد 3 نقاط على الأقل لحدود المزرعة.', error: true);
+      _safeToast('حدد 3 نقاط على الأقل لحدود المزرعة', type: 'error');
       return;
     }
 
@@ -625,12 +672,12 @@ Future<bool> _confirmDialog(String title, String message) async {
         });
 
         if (!mounted) return;
-        _snack('تم حفظ التعديلات.');
+        _safeToast('تم حفظ التعديلات بنجاح', type: 'success'); // ✅ الإشعار الأخضر
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (!mounted) return;
-      _snack('تعذر التعديل: $e', error: true);
+      _safeToast('تعذر التعديل: $e', type: 'error'); // ❌ الإشعار العنابي
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -840,7 +887,10 @@ body: Stack(
             _buildReadonlyContract(),   // ← أضيفي هذا السطر هنا بالضبط
 
             const SizedBox(height: 16),
-            _tf(_farmSizeController, 'مساحة المزرعة (م²)', Icons.straighten, keyboardType: TextInputType.number),
+            _tf(_farmSizeController, 'مساحة المزرعة (م²)', Icons.straighten, 
+    keyboardType: TextInputType.number,
+    inputFormatters: [FilteringTextInputFormatter.digitsOnly], // ✅ منع الحروف
+),
             const SizedBox(height: 16),
             _region(),
             const SizedBox(height: 16),
@@ -884,16 +934,18 @@ body: Stack(
     return ClipRRect(borderRadius: BorderRadius.circular(15), child: img);
   }
 
-  Widget _tf(
+Widget _tf(
     TextEditingController c,
     String label,
     IconData icon, {
     TextInputType keyboardType = TextInputType.text,
     bool optional = false,
     int maxLines = 1,
+    List<TextInputFormatter>? inputFormatters, // ✅ أضيفي هذا السطر
   }) {
     return TextFormField(
       controller: c,
+      inputFormatters: inputFormatters, // ✅ وأضيفي هذا السطر
       cursorColor: secondaryColor,
       keyboardType: keyboardType,
       textAlign: TextAlign.right,
@@ -1188,9 +1240,9 @@ onTap: () {
         ElevatedButton.icon(
           onPressed: _clearPolygon,
           icon: const Icon(Icons.clear_all, color: Colors.white),
-          label: Text('مسح النقاط', style: GoogleFonts.almarai(color: Colors.white)),
+          label: Text('مسح الكل', style: GoogleFonts.almarai(color: Colors.white)),
           style: ElevatedButton.styleFrom(
-            backgroundColor: primaryColor,
+            backgroundColor: Colors.redAccent,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),

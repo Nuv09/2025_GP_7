@@ -1129,7 +1129,7 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
 
                 # تكبير اللوقو نفسه
                 img.width = 170
-                img.height = 58
+                img.height = 90
 
                 # مكانه داخل الهيدر
                 target_ws.add_image(img, "A1")
