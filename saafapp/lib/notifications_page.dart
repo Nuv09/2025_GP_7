@@ -159,7 +159,7 @@ void _showSnack(String msg) {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 25),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -206,7 +206,7 @@ void _showSnack(String msg) {
 
   Widget _buildTabBar() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
+      margin: const EdgeInsets.fromLTRB(24, 0, 24, 14),
       padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.2),

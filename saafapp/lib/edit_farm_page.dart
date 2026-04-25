@@ -716,9 +716,17 @@ Widget _buildLuxBackground() {
 }
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
+return Directionality(
+  textDirection: TextDirection.rtl,
+  child: Theme(
+    data: Theme.of(context).copyWith(
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: secondaryColor,
+        selectionColor: secondaryColor.withValues(alpha: 0.35),
+        selectionHandleColor: secondaryColor,
+      ),
+    ),
+    child: Scaffold(
         extendBodyBehindAppBar: true,
         backgroundColor: darkBackground,
 
@@ -797,7 +805,7 @@ body: Stack(
   ],
 ),
     ),
-  
+  ),
 );
       
     
@@ -917,17 +925,39 @@ focusedBorder: OutlineInputBorder(
 
   Widget _region() {
     return DropdownButtonFormField<String>(
-      decoration: InputDecoration(
-        labelText: 'المنطقة',
-        labelStyle: GoogleFonts.almarai(color: Colors.white70),
-        prefixIcon: const Icon(Icons.location_on, color: secondaryColor),
-        filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.06),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15.0),
-          borderSide: BorderSide.none,
-        ),
-      ),
+decoration: InputDecoration(
+  labelText: 'المنطقة',
+  labelStyle: GoogleFonts.almarai(color: Colors.white70),
+  prefixIcon: const Icon(Icons.location_on, color: secondaryColor),
+  filled: true,
+  fillColor: Colors.white.withValues(alpha: 0.06),
+
+  enabledBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(15.0),
+    borderSide: BorderSide(
+      color: secondaryColor.withValues(alpha: 0.25),
+      width: 1,
+    ),
+  ),
+
+  focusedBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(15.0),
+    borderSide: BorderSide(
+      color: secondaryColor.withValues(alpha: 0.55),
+      width: 2,
+    ),
+  ),
+
+  errorBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(15.0),
+    borderSide: const BorderSide(color: Colors.redAccent),
+  ),
+
+  focusedErrorBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(15.0),
+    borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+  ),
+),
       dropdownColor: darkBackground,
       style: GoogleFonts.almarai(color: Colors.white),
       initialValue: _selectedRegion,

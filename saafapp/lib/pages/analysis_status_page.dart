@@ -10,7 +10,11 @@ const Color kOrange = Color(0xFFEBB974);
 
 class AnalysisStatusPage extends StatelessWidget {
   final String farmId;
-  const AnalysisStatusPage({super.key, required this.farmId});
+
+  const AnalysisStatusPage({
+    super.key,
+    required this.farmId,
+  });
 
   void _goHome(BuildContext context) {
     Navigator.pushNamedAndRemoveUntil(context, '/main', (_) => false);
@@ -22,6 +26,82 @@ class AnalysisStatusPage extends StatelessWidget {
     });
   }
 
+  Widget _buildLuxBackground() {
+    return Positioned.fill(
+      child: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: [
+                  Color(0xFF05352D),
+                  kDeepGreen,
+                  Color(0xFF031E1A),
+                ],
+                stops: [0.0, 0.55, 1.0],
+              ),
+            ),
+          ),
+
+          Positioned(
+            top: -120,
+            right: -80,
+            child: Container(
+              width: 320,
+              height: 320,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    kOrange.withValues(alpha: 0.25),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 1.0],
+                ),
+              ),
+            ),
+          ),
+
+          Positioned(
+            bottom: -140,
+            left: -120,
+            child: Container(
+              width: 360,
+              height: 360,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF0C6B5C).withValues(alpha: 0.18),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 1.0],
+                ),
+              ),
+            ),
+          ),
+
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.18),
+                  Colors.transparent,
+                  Colors.black.withValues(alpha: 0.25),
+                ],
+                stops: const [0.0, 0.45, 1.0],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final docRef = FirebaseFirestore.instance.collection('farms').doc(farmId);
@@ -29,48 +109,66 @@ class AnalysisStatusPage extends StatelessWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: kDeepGreen,
+        extendBodyBehindAppBar: true,
+        backgroundColor: Colors.transparent,
         appBar: AppBar(
-          backgroundColor: kDeepGreen,
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
           elevation: 0,
+          scrolledUnderElevation: 0,
           centerTitle: true,
           title: Text('تحليل المزرعة', style: saafPageTitle),
-
           leading: IconButton(
             icon: const Icon(Icons.close, color: Colors.white),
             onPressed: () => _goHome(context),
           ),
         ),
-        body: StreamBuilder<DocumentSnapshot>(
-          stream: docRef.snapshots(),
-          builder: (context, snap) {
-            if (!snap.hasData) {
-              return const _LoadingView();
-            }
-            final data = snap.data!.data() as Map<String, dynamic>? ?? {};
-            final status = (data['status'] ?? 'pending') as String;
-            final palmCountRaw = data['palm_count'] ?? data['finalCount'] ?? 0;
-            final palmCount = palmCountRaw is int
-                ? palmCountRaw
-                : int.tryParse(palmCountRaw.toString()) ?? 0;
-            final err = (data['errorMessage'] ?? '') as String?;
+        body: Stack(
+          children: [
+            _buildLuxBackground(),
+            SafeArea(
+              child: StreamBuilder<DocumentSnapshot>(
+                stream: docRef.snapshots(),
+                builder: (context, snap) {
+                  if (!snap.hasData) {
+                    return const _LoadingView();
+                  }
 
-            if (status == 'done') {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _scheduleAutoNav(context);
-              });
-              return _DoneView(count: palmCount);
-            }
+                  final data =
+                      snap.data!.data() as Map<String, dynamic>? ?? {};
 
-            if (status == 'failed' || status == 'error') {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _scheduleAutoNav(context);
-              });
-              return _ErrorView(message: err ?? 'تعذّر التحليل');
-            }
+                  final status = (data['status'] ?? 'pending') as String;
 
-            return const _LoadingView();
-          },
+                  final palmCountRaw =
+                      data['palm_count'] ?? data['finalCount'] ?? 0;
+
+                  final palmCount = palmCountRaw is int
+                      ? palmCountRaw
+                      : int.tryParse(palmCountRaw.toString()) ?? 0;
+
+                  final err = (data['errorMessage'] ?? '') as String?;
+
+                  if (status == 'done') {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _scheduleAutoNav(context);
+                    });
+
+                    return _DoneView(count: palmCount);
+                  }
+
+                  if (status == 'failed' || status == 'error') {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _scheduleAutoNav(context);
+                    });
+
+                    return _ErrorView(message: err ?? 'تعذّر التحليل');
+                  }
+
+                  return const _LoadingView();
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -92,6 +190,7 @@ class _LoadingViewState extends State<_LoadingView> {
   @override
   void initState() {
     super.initState();
+
     _timer = Timer.periodic(const Duration(milliseconds: 400), (_) {
       if (!mounted) return;
       setState(() => _step = (_step + 1) % 4);
@@ -107,6 +206,7 @@ class _LoadingViewState extends State<_LoadingView> {
   @override
   Widget build(BuildContext context) {
     final s = MediaQuery.of(context).size;
+
     final baseStyle = GoogleFonts.almarai(
       color: Colors.white70,
       fontSize: 18,
@@ -118,7 +218,6 @@ class _LoadingViewState extends State<_LoadingView> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ✅ لوتي كبيرة ومتمركزة
           SizedBox(
             width: s.width * 0.8,
             height: s.height * 0.45,
@@ -128,9 +227,9 @@ class _LoadingViewState extends State<_LoadingView> {
               height: 200,
             ),
           ),
+
           const SizedBox(height: 30),
 
-          // ✅ نص ثابت ونقاط شفافة تتحرك بهدوء
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -142,6 +241,7 @@ class _LoadingViewState extends State<_LoadingView> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: List.generate(3, (i) {
                     final visible = _step > i;
+
                     return AnimatedOpacity(
                       duration: const Duration(milliseconds: 180),
                       opacity: visible ? 1.0 : 0.2,
@@ -152,17 +252,22 @@ class _LoadingViewState extends State<_LoadingView> {
               ),
             ],
           ),
+
           const SizedBox(height: 14),
-Text(
-  'يمكنك مغادرة هذه الصفحة، وسيستمر التحليل تلقائيًا.',
-  textAlign: TextAlign.center,
-  style: GoogleFonts.almarai(
-    color: Colors.white54,
-    fontSize: 14,
-    height: 1.6,
-    fontWeight: FontWeight.w600,
-  ),
-),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              'يمكنك مغادرة هذه الصفحة، وسيستمر التحليل تلقائيًا.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.almarai(
+                color: Colors.white54,
+                fontSize: 14,
+                height: 1.6,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -172,7 +277,10 @@ Text(
 // ===================== تم =====================
 class _DoneView extends StatelessWidget {
   final int count;
-  const _DoneView({required this.count});
+
+  const _DoneView({
+    required this.count,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -180,8 +288,14 @@ class _DoneView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.check_circle, size: 90, color: kOrange),
+          const Icon(
+            Icons.check_circle,
+            size: 90,
+            color: kOrange,
+          ),
+
           const SizedBox(height: 12),
+
           Text(
             'النتيجة جاهزة!',
             style: GoogleFonts.almarai(
@@ -190,10 +304,15 @@ class _DoneView extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
+
           const SizedBox(height: 8),
+
           Text(
             'عدد النخيل التقريبي: $count',
-            style: GoogleFonts.almarai(color: Colors.white70, fontSize: 18),
+            style: GoogleFonts.almarai(
+              color: Colors.white70,
+              fontSize: 18,
+            ),
           ),
         ],
       ),
@@ -204,31 +323,48 @@ class _DoneView extends StatelessWidget {
 // ===================== خطأ =====================
 class _ErrorView extends StatelessWidget {
   final String message;
-  const _ErrorView({required this.message});
+
+  const _ErrorView({
+    required this.message,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.error_outline, size: 90, color: Colors.redAccent),
-          const SizedBox(height: 12),
-          Text(
-            'تعذّر إتمام التحليل',
-            style: GoogleFonts.almarai(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 90,
+              color: Colors.redAccent,
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.almarai(color: Colors.white70),
-          ),
-        ],
+
+            const SizedBox(height: 12),
+
+            Text(
+              'تعذّر إتمام التحليل',
+              style: GoogleFonts.almarai(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.almarai(
+                color: Colors.white70,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
