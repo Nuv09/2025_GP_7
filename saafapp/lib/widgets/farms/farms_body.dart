@@ -185,7 +185,7 @@ class _FarmCard extends StatelessWidget {
                             color: Colors.white60,
                           ),
                         );
-                      },
+                      }, 
                       loadingBuilder: (context, child, loadingProgress) {
                         if (loadingProgress == null) return child;
                         return Container(
