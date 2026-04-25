@@ -1119,15 +1119,19 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
         return "—"
 
     def add_logo(target_ws):
-        # نوسّع صف الهيدر في كل الشيتات عشان اللوقو ما ينضغط
-        target_ws.row_dimensions[1].height = 48
+        # ارتفاع الهيدر
+        target_ws.row_dimensions[1].height = 60
 
         logo_path = os.path.join(os.path.dirname(__file__), "static", "images", "saaf_logo.png")
         if os.path.exists(logo_path):
             try:
                 img = XLImage(logo_path)
-                img.width = 130
-                img.height = 46
+
+                # تكبير اللوقو نفسه
+                img.width = 170
+                img.height = 58
+
+                # مكانه داخل الهيدر
                 target_ws.add_image(img, "A1")
             except Exception:
                 pass
@@ -1529,8 +1533,8 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     flags_chart = BarChart()
     flags_chart.type = "bar"
     flags_chart.style = 11
-    flags_chart.height = 5.2
-    flags_chart.width = 8.6
+    flags_chart.height = 8
+    flags_chart.width = 14
     flags_chart.title = None
 
     try:
