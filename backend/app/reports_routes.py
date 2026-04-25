@@ -1529,10 +1529,14 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     flags_chart = BarChart()
     flags_chart.type = "bar"
     flags_chart.style = 11
-    flags_chart.height = 4.6
-    flags_chart.width = 6.8
-    flags_chart.legend = None
+    flags_chart.height = 5.2
+    flags_chart.width = 8.6
     flags_chart.title = None
+
+    try:
+        flags_chart.legend.position = "r"
+    except Exception:
+        pass
 
     flags_chart.add_data(
         Reference(ws2, min_col=2, min_row=chart_row2, max_row=chart_row2 + len(flags_rows)),
