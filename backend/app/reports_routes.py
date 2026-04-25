@@ -1564,14 +1564,16 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     except Exception:
         pass
 
-    flags_chart.x_axis.delete = False 
-    flags_chart.y_axis.delete = False
+    # في الـ bar الأفقي: x_axis = القيم الرقمية، y_axis = الأسماء
+    flags_chart.x_axis.delete = False   # إظهار محور الأرقام
+    flags_chart.y_axis.delete = False   # إظهار محور الأسماء
     flags_chart.x_axis.title = None
     flags_chart.y_axis.title = None
 
     max_count = max([item[1] for item in chart_flags_rows] + [1])
-    flags_chart.y_axis.scaling.min = 0
-    flags_chart.y_axis.scaling.max = max_count * 1.25
+    flags_chart.x_axis.scaling.min = 0
+    flags_chart.x_axis.scaling.max = max_count * 1.3
+    # لا تضبط y_axis.scaling لأنه يحتوي الأسماء وليس الأرقام
 
     ws2.add_chart(flags_chart, f"D{row2}")
 
