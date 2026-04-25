@@ -1536,11 +1536,11 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
         ws2.row_dimensions[r].hidden = True
 
     flags_chart = BarChart()
-    flags_chart.type = "col"  
+    flags_chart.type = "bar"  
     flags_chart.style = 11
     flags_chart.title = "أكثر إشارات الإجهاد تكرارًا"
-    flags_chart.height = 6.2
-    flags_chart.width = 10.8
+    flags_chart.height = 9.0
+    flags_chart.width = 12.0
     flags_chart.legend = None
     flags_chart.gapWidth = 55
 
@@ -1564,7 +1564,7 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     except Exception:
         pass
 
-    flags_chart.x_axis.delete = True
+    flags_chart.x_axis.delete = False 
     flags_chart.y_axis.delete = False
     flags_chart.x_axis.title = None
     flags_chart.y_axis.title = None
