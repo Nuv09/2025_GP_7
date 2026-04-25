@@ -2062,7 +2062,8 @@ def _merge_export_with_live_farm_data(export_data: dict, farm_data: dict) -> dic
         ),
         "pixels_with_any_flag": _prefer_live_number(
             alert_context.get("pixels_with_any_flag"),
-            risk_diagnostics.get("pixels_with_any_flag_latest"),
+            risk_diagnostics.get("affected_pixels_count")
+            or risk_diagnostics.get("pixels_with_any_flag_latest"),
             0,
         ),
         "flag_counts": _first_non_empty(alert_context.get("flag_counts"), {}),

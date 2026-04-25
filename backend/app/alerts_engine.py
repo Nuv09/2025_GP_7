@@ -359,7 +359,12 @@ def _compute_drivers(
         or {}
     )
 
-    rule_counts = risk_diagnostics.get("rule_counts_latest", {}) or {}
+    rule_counts = (
+        risk_diagnostics.get("classification_rule_counts")
+        or risk_diagnostics.get("rule_counts_latest")
+        or {}
+    )
+
     flag_counts = risk_diagnostics.get("flag_occurrences", {}) or {}
 
     # ✅ “رطوبة/ري” (counts)
@@ -598,7 +603,7 @@ def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]
             str(round(mon_now, 2)),
         )
 
-        hs = hotspots.get("critical", []) if sev == "critical" else (hotspots.get("monitor", []) or hotspots.get("stress", []) or [])
+        hs = hotspots.get("critical", []) if sev == "critical" else (hotspots.get("monitor", []) or [])
 
         acts: List[Dict[str, Any]] = []
         acts.append(actions_lib["visit_now"] if sev == "critical" else actions_lib["visit_48h"])
@@ -688,7 +693,7 @@ def build_alerts_and_recommendations(farm_id: str, health_result: Dict[str, Any]
                 "title_ar": "تنبيه: توقعات الأسبوع القادم",
                 "message_ar": " ".join(parts),
                 "actions": acts,
-                "hotspots": hotspots.get("monitor", []) or hotspots.get("stress", []) or hotspots.get("critical", []),
+                "hotspots": hotspots.get("monitor", []) or hotspots.get("critical", []),
                 "createdAtISO": created_at,
             }
         )

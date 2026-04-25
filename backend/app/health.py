@@ -1282,10 +1282,11 @@ def build_alert_signals(df_all: pd.DataFrame) -> Dict[str, Any]:
     if df_all is None or df_all.empty:
         return {
             "satellite_image_date": None,
-            "risk_counts_latest": {"Healthy": 0, "Monitor": 0, "Critical": 0},
-            "rule_counts_latest": {},
+            "status_counts": {"Healthy": 0, "Monitor": 0, "Critical": 0},
+            "classification_rule_counts": {},
+            "affected_pixels_count": 0,
             "flag_occurrences": {},
-            "hotspots": {"critical": [], "monitor": [], "stress": []},
+            "hotspots": {"critical": [], "monitor": []},
         }
 
     df = df_all.copy()
@@ -1362,20 +1363,15 @@ def build_alert_signals(df_all: pd.DataFrame) -> Dict[str, Any]:
     crit_mask = (d["pixel_risk_class"].astype(str) == "Critical") if "pixel_risk_class" in d.columns else pd.Series(False, index=d.index)
     mon_mask  = (d["pixel_risk_class"].astype(str) == "Monitor")  if "pixel_risk_class" in d.columns else pd.Series(False, index=d.index)
 
-    stress_mask = pd.Series(False, index=d.index)
-    if "RPW_label_rule" in d.columns:
-        stress_mask = d["RPW_label_rule"].astype(str).isin(["Monitor_RPW_tail", "Critical_RPW_tail"])
-
     return {
         "satellite_image_date": str(latest.date()) if pd.notna(latest) else None,
-        "pixels_with_any_flag_latest": pixels_with_any_flag,
-        "risk_counts_latest": risk_counts,
-        "rule_counts_latest": rule_counts,
+        "affected_pixels_count": pixels_with_any_flag,
+        "status_counts": risk_counts,
+        "classification_rule_counts": rule_counts,
         "flag_occurrences": flag_counts,
         "hotspots": {
             "critical": _top_points(crit_mask, topn=12),
             "monitor":  _top_points(mon_mask,  topn=12),
-            "stress":   _top_points(stress_mask, topn=12),
         },
     }
 
@@ -1816,9 +1812,19 @@ def prepare_export_data(farm_doc, health_result, detected_count=None):
     }
 
     # ── سياق التنبيهات: تفصيل قواعد التصنيف والعلامات الفردية ──
-    rule_counts = risk_diagnostics.get("rule_counts_latest", {}) or {}
+    rule_counts = (
+        risk_diagnostics.get("classification_rule_counts")
+        or risk_diagnostics.get("rule_counts_latest")
+        or {}
+    )
+
     flag_counts = risk_diagnostics.get("flag_occurrences", {}) or {}
-    pixels_with_any_flag = int(risk_diagnostics.get("pixels_with_any_flag_latest", 0) or 0)
+
+    pixels_with_any_flag = int(
+        risk_diagnostics.get("affected_pixels_count")
+        or risk_diagnostics.get("pixels_with_any_flag_latest")
+        or 0
+    )
 
     alert_context = {
         "total_pixels": int(total_pixels_current or 0),
