@@ -17,33 +17,42 @@ const Color kBeige = Color(0xFFFFF6E0);
 class FarmsScreen extends StatelessWidget {
   const FarmsScreen({super.key});
 
-@override
-Widget build(BuildContext context) {
-  final user = FirebaseAuth.instance.currentUser;
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
 
-  return AnnotatedRegion<SystemUiOverlayStyle>(
-    value: const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-    ),
-    child: Scaffold(
-      extendBodyBehindAppBar: true,
-      backgroundColor: Colors.transparent,
-      appBar: _farmsAppBar(context),
-      body: Stack(
-        children: [
-    const _FarmsLuxBackground(),
-    Padding(
-      padding: const EdgeInsets.only(top: 140),
-      child: user == null
-          ? _notLoggedIn(context)
-          : _FarmsList(uid: user.uid),
-          ),
-        ],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
       ),
-    ),
-  );
-}
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          textSelectionTheme: TextSelectionThemeData(
+            cursorColor: kGold,
+            selectionColor: kGold.withValues(alpha: 0.35),
+            selectionHandleColor: kGold,
+          ),
+        ),
+        child: Scaffold(
+          extendBodyBehindAppBar: true,
+          backgroundColor: Colors.transparent,
+          appBar: _farmsAppBar(context),
+          body: Stack(
+            children: [
+              const _FarmsLuxBackground(),
+              Padding(
+                padding: const EdgeInsets.only(top: 140),
+                child: user == null
+                    ? _notLoggedIn(context)
+                    : _FarmsList(uid: user.uid),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   AppBar _farmsAppBar(BuildContext context) {
     return AppBar(
@@ -57,56 +66,59 @@ Widget build(BuildContext context) {
         textDirection: TextDirection.ltr,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          
           // زر التنبيهات (Badge ديناميكي)
-StreamBuilder<QuerySnapshot>(
-  stream: FirebaseFirestore.instance
-      .collection('notifications')
-      .where('ownerUid', isEqualTo: FirebaseAuth.instance.currentUser?.uid ?? '')
-      .where('isRead', isEqualTo: false)
-      .limit(1)
-      .snapshots(),
-  builder: (context, snapNoti) {
-    final showBadge = (snapNoti.data?.docs.isNotEmpty ?? false);
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('notifications')
+                .where(
+                  'ownerUid',
+                  isEqualTo: FirebaseAuth.instance.currentUser?.uid ?? '',
+                )
+                .where('isRead', isEqualTo: false)
+                .limit(1)
+                .snapshots(),
+            builder: (context, snapNoti) {
+              final showBadge = (snapNoti.data?.docs.isNotEmpty ?? false);
 
-    return IconButton(
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const NotificationsPage(),
-      ),
-    );
-  },
-  icon: Stack(
-    children: [
-      const Icon(
-        Icons.notifications_active_outlined,
-        color: Colors.white,
-        size: 26,
-      ),
-      if (showBadge)
-        Positioned(
-  top: 1,
-  right: 1,
-  child: Container(
-    width: 9.5,
-    height: 9.5,
-    decoration: BoxDecoration(
-      color: const Color.fromARGB(255, 216, 74, 74),
-      shape: BoxShape.circle,
-      border: Border.all(
-        color:darkGreenColor  , // أو darkGreenColor إذا تبينها تمزج مع الخلفية
-        width: 1.2,
-      ),
-    ),
-  ),
-),
-    ],
-  ),
-);
-  },
-),
+              return IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationsPage(),
+                    ),
+                  );
+                },
+                icon: Stack(
+                  children: [
+                    const Icon(
+                      Icons.notifications_active_outlined,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                    if (showBadge)
+                      Positioned(
+                        top: 1,
+                        right: 1,
+                        child: Container(
+                          width: 9.5,
+                          height: 9.5,
+                          decoration: BoxDecoration(
+                            color: const Color.fromARGB(255, 216, 74, 74),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color:
+                                  darkGreenColor, // أو darkGreenColor إذا تبينها تمزج مع الخلفية
+                              width: 1.2,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
 
           // اللوقو في النص
           const Expanded(child: Center(child: _LogoButton())),
@@ -136,8 +148,9 @@ StreamBuilder<QuerySnapshot>(
                 await FirebaseAuth.instance.signOut();
               } catch (_) {}
               if (context.mounted) {
-                Navigator.of(context)
-                    .pushNamedAndRemoveUntil('/login', (r) => false);
+                Navigator.of(
+                  context,
+                ).pushNamedAndRemoveUntil('/login', (r) => false);
               }
             },
           ),
@@ -192,12 +205,14 @@ class _FarmsList extends StatefulWidget {
 
 class _FarmsListState extends State<_FarmsList> {
   final TextEditingController _searchCtrl = TextEditingController();
-  
+  final FocusNode _searchFocus = FocusNode();
+
   String _q = "";
 
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -208,139 +223,155 @@ class _FarmsListState extends State<_FarmsList> {
     return null;
   }
 
- String _formatDateOnly(dynamic raw) {
-  if (raw == null) return "—";
+  String _formatDateOnly(dynamic raw) {
+    if (raw == null) return "—";
 
-  try {
-    DateTime dt;
+    try {
+      DateTime dt;
 
-    if (raw is Timestamp) {
-      dt = raw.toDate();
-    } else if (raw is int) {
-      dt = DateTime.fromMillisecondsSinceEpoch(raw);
-    } else if (raw is String) {
-      // لو كان مخزن string (مثلاً "2026-02-24" أو "24/02/2026")
-      // نحاول نرجّعه بنفس الفورمات اللي نبيه
-      final s = raw.trim();
+      if (raw is Timestamp) {
+        dt = raw.toDate();
+      } else if (raw is int) {
+        dt = DateTime.fromMillisecondsSinceEpoch(raw);
+      } else if (raw is String) {
+        // لو كان مخزن string (مثلاً "2026-02-24" أو "24/02/2026")
+        // نحاول نرجّعه بنفس الفورمات اللي نبيه
+        final s = raw.trim();
 
-      // لو أصلاً داخل DD/MM/YYYY خلّيه زي ما هو
-      if (RegExp(r'^\d{2}/\d{2}/\d{4}$').hasMatch(s)) return s;
+        // لو أصلاً داخل DD/MM/YYYY خلّيه زي ما هو
+        if (RegExp(r'^\d{2}/\d{2}/\d{4}$').hasMatch(s)) return s;
 
-      // لو داخل YYYY-MM-DD
-      if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(s)) {
-        final y = s.substring(0, 4);
-        final m = s.substring(5, 7);
-        final d = s.substring(8, 10);
-        return "$d/$m/$y";
-      }
+        // لو داخل YYYY-MM-DD
+        if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(s)) {
+          final y = s.substring(0, 4);
+          final m = s.substring(5, 7);
+          final d = s.substring(8, 10);
+          return "$d/$m/$y";
+        }
 
-      // آخر محاولة: parse عام
-      final parsed = DateTime.tryParse(s);
-      if (parsed != null) {
-        dt = parsed;
+        // آخر محاولة: parse عام
+        final parsed = DateTime.tryParse(s);
+        if (parsed != null) {
+          dt = parsed;
+        } else {
+          return s; // اتركه مثل ما هو إذا ما قدرنا
+        }
       } else {
-        return s; // اتركه مثل ما هو إذا ما قدرنا
+        return "—";
       }
-    } else {
+
+      final dd = dt.day.toString().padLeft(2, '0');
+      final mm = dt.month.toString().padLeft(2, '0');
+
+      return "$dd/$mm";
+    } catch (_) {
       return "—";
     }
-
-    final dd = dt.day.toString().padLeft(2, '0');
-    final mm = dt.month.toString().padLeft(2, '0');
-
-    return "$dd/$mm";
-  } catch (_) {
-    return "—";
   }
-}
+
   double _getHealthyPct(Map<String, dynamic> d) {
-  try {
-    final healthRoot = (d['health'] as Map?)?.cast<String, dynamic>() ?? {};
-    final current =
-        (healthRoot['current_health'] as Map?)?.cast<String, dynamic>() ?? {};
+    try {
+      final healthRoot = (d['health'] as Map?)?.cast<String, dynamic>() ?? {};
+      final current =
+          (healthRoot['current_health'] as Map?)?.cast<String, dynamic>() ?? {};
 
-    final v = current['Healthy_Pct'];
-    if (v is num) return v.toDouble();
-    return double.tryParse(v?.toString() ?? '') ?? 0.0;
-  } catch (_) {
-    return 0.0;
+      final v = current['Healthy_Pct'];
+      if (v is num) return v.toDouble();
+      return double.tryParse(v?.toString() ?? '') ?? 0.0;
+    } catch (_) {
+      return 0.0;
+    }
   }
-}
 
- Widget _searchBar() {
-  return Padding(
-    padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
-    child: Directionality(
-      textDirection: TextDirection.rtl,
-      child: TextField(
-        controller: _searchCtrl,
-        onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
-        style: GoogleFonts.almarai(
-          color: const Color(0xFFEADEC4), // كريمي
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-        ),
-        cursorColor: const Color(0xFFFDCB6E),
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: Colors.white.withValues(alpha: 0.06), // خلفية ناعمة
-          hintText: "ابحث باسم المزرعة أو المنطقة...",
-          hintStyle: GoogleFonts.almarai(
-            color: Colors.white.withValues(alpha: 0.45),
-            fontWeight: FontWeight.w500,
+  Widget _searchBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+      child: Directionality(
+        textDirection: TextDirection.rtl,
+        child: TextField(
+          controller: _searchCtrl,
+          focusNode: _searchFocus,
+          onChanged: (v) {
+            setState(() => _q = v.toLowerCase());
+
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && !_searchFocus.hasFocus) {
+                _searchFocus.requestFocus();
+              }
+            });
+          },
+          style: GoogleFonts.almarai(
+            color: const Color(0xFFEADEC4),
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
           ),
-
-          // الأيقونة يمين (صح للـ RTL)
-          suffixIcon: Padding(
-            padding: const EdgeInsetsDirectional.only(end: 10),
-            child: Icon(
-              Icons.search_rounded,
-              color: const Color(0xFFFDCB6E).withValues(alpha: 0.85),
-              size: 26,
+          cursorColor: const Color(0xFFFDCB6E),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.white.withValues(alpha: 0.06), // خلفية ناعمة
+            hintText: "ابحث باسم المزرعة أو المنطقة...",
+            hintStyle: GoogleFonts.almarai(
+              color: Colors.white.withValues(alpha: 0.45),
+              fontWeight: FontWeight.w500,
             ),
-          ),
-          suffixIconConstraints: const BoxConstraints(minWidth: 48),
 
-          // زر مسح (يسار)
-          prefixIcon: _q.isEmpty
-              ? null
-              : IconButton(
-                  onPressed: () {
-                    _searchCtrl.clear();
-                    setState(() => _q = "");
-                  },
-                  icon: Icon(
-                    Icons.close_rounded,
-                    color: Colors.white.withValues(alpha: 0.7),
+            // الأيقونة يمين (صح للـ RTL)
+            suffixIcon: Padding(
+              padding: const EdgeInsetsDirectional.only(end: 10),
+              child: Icon(
+                Icons.search_rounded,
+                color: const Color(0xFFFDCB6E).withValues(alpha: 0.85),
+                size: 26,
+              ),
+            ),
+            suffixIconConstraints: const BoxConstraints(minWidth: 48),
+
+            // زر مسح (يسار)
+            prefixIcon: _q.isEmpty
+                ? null
+                : IconButton(
+                    onPressed: () {
+                      _searchCtrl.clear();
+                      setState(() => _q = "");
+                    },
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: Colors.white.withValues(alpha: 0.7),
+                    ),
                   ),
-                ),
 
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 18,
+              vertical: 16,
+            ),
 
-          // كبسولة ناعمة + إطار خفيف جدًا
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30),
-            borderSide:
-                BorderSide(color: Colors.white.withValues(alpha: 0.10), width: 1),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30),
-            borderSide:
-                BorderSide(color: Colors.white.withValues(alpha: 0.10), width: 1),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30),
-            borderSide: BorderSide(
-              color: const Color(0xFFFDCB6E).withValues(alpha: 0.35),
-              width: 1.2,
+            // كبسولة ناعمة + إطار خفيف جدًا
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.10),
+                width: 1,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.10),
+                width: 1,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide(
+                color: const Color(0xFFFDCB6E).withValues(alpha: 0.35),
+                width: 1.2,
+              ),
             ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   // دالة إظهار النافذة المنبثقة للتحليل بدلاً من السنيك بار
   void _showProcessingDialog(
@@ -351,64 +382,66 @@ class _FarmsListState extends State<_FarmsList> {
     showDialog(
       context: context,
       builder: (ctx) => BackdropFilter(
-  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-  child: AlertDialog(
-        backgroundColor: const Color(0xFF042C25),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        title: Icon(
-          status == 'failed' ? Icons.error_outline : Icons.auto_awesome,
-          color: goldColor,
-          size: 40,
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              status == 'failed' ? "تعذر التحليل" : "التحليل جارٍ الآن",
-              style: GoogleFonts.almarai(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF042C25),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
+          title: Icon(
+            status == 'failed' ? Icons.error_outline : Icons.auto_awesome,
+            color: goldColor,
+            size: 40,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                status == 'failed' ? "تعذر التحليل" : "التحليل جارٍ الآن",
+                style: GoogleFonts.almarai(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
               ),
-            ),
-            const SizedBox(height: 15),
-            Text(
-              status == 'failed'
-                  ? "للأسف واجهنا مشكلة في تحليل صور مزرعة $farmName. يرجى المحاولة لاحقاً."
-                  : "نحن نقوم الآن بمعالجة صور الأقمار الصناعية الخاصة بمزرعة $farmName لاستخراج المؤشرات الحيوية. ستصلك النتائج فور اكتمالها.",
-              textAlign: TextAlign.center,
-              style: GoogleFonts.almarai(
-                color: Colors.white70,
-                fontSize: 14,
-                height: 1.5,
+              const SizedBox(height: 15),
+              Text(
+                status == 'failed'
+                    ? "للأسف واجهنا مشكلة في تحليل صور مزرعة $farmName. يرجى المحاولة لاحقاً."
+                    : "نحن نقوم الآن بمعالجة صور الأقمار الصناعية الخاصة بمزرعة $farmName لاستخراج المؤشرات الحيوية. ستصلك النتائج فور اكتمالها.",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.almarai(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  height: 1.5,
+                ),
               ),
-            ),
-            if (status != 'failed') ...[
-              const SizedBox(height: 20),
-              const CircularProgressIndicator(color: goldColor),
+              if (status != 'failed') ...[
+                const SizedBox(height: 20),
+                const CircularProgressIndicator(color: goldColor),
+              ],
             ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                "حسناً",
+                style: GoogleFonts.almarai(
+                  color: goldColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              "حسناً",
-              style: GoogleFonts.almarai(
-                color: goldColor,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
       ),
-     ), 
     );
   }
 
-void _safeToast(String msg, {IconData? icon, String type = 'info'}) {
+  void _safeToast(String msg, {IconData? icon, String type = 'info'}) {
     if (!mounted) return;
-    
+
     // 🎨 تحديد الألوان بناءً على طلبك
     Color bgColor;
     Color contentColor = const Color(0xFF042C25); // kDeepGreen
@@ -417,7 +450,7 @@ void _safeToast(String msg, {IconData? icon, String type = 'info'}) {
     switch (type) {
       case 'success':
         // الأخضر اللي طلبتيه
-        bgColor = const Color(0xFF1E8D5F).withValues(alpha: 0.7); 
+        bgColor = const Color(0xFF1E8D5F).withValues(alpha: 0.7);
         contentColor = Colors.white;
         toastIcon = icon ?? Icons.check_circle_rounded;
         break;
@@ -434,7 +467,7 @@ void _safeToast(String msg, {IconData? icon, String type = 'info'}) {
     }
 
     final m = ScaffoldMessenger.maybeOf(context);
-    m?.removeCurrentSnackBar(); 
+    m?.removeCurrentSnackBar();
 
     m?.showSnackBar(
       SnackBar(
@@ -442,7 +475,7 @@ void _safeToast(String msg, {IconData? icon, String type = 'info'}) {
         behavior: SnackBarBehavior.floating,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        margin: const EdgeInsets.fromLTRB(30, 0, 30, 45), 
+        margin: const EdgeInsets.fromLTRB(30, 0, 30, 45),
         animation: CurvedAnimation(
           parent: AnimationController(
             vsync: ScaffoldMessenger.of(context),
@@ -466,7 +499,7 @@ void _safeToast(String msg, {IconData? icon, String type = 'info'}) {
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                textDirection: TextDirection.rtl, 
+                textDirection: TextDirection.rtl,
                 children: [
                   Icon(toastIcon, color: contentColor, size: 24),
                   const SizedBox(width: 12),
@@ -527,17 +560,18 @@ void _safeToast(String msg, {IconData? icon, String type = 'info'}) {
             final vb = tb is Timestamp ? tb.millisecondsSinceEpoch : 0;
             return vb.compareTo(va);
           });
-          final int total = docs.length;
+        final int total = docs.length;
 
-        final filteredDocs = _q.isEmpty
+        final query = _q.trim();
+
+        final filteredDocs = query.isEmpty
             ? docs
             : docs.where((e) {
                 final d = e.data() as Map<String, dynamic>;
                 final name = (d['farmName'] ?? '').toString().toLowerCase();
                 final region = (d['region'] ?? '').toString().toLowerCase();
-                return name.contains(_q) || region.contains(_q);
+                return name.contains(query) || region.contains(query);
               }).toList();
-
         if (filteredDocs.isEmpty) {
           // لو ما فيه مزارع أصلاً
           if (docs.isEmpty) {
@@ -545,72 +579,78 @@ void _safeToast(String msg, {IconData? icon, String type = 'info'}) {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-  padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-  child: Row(
-    crossAxisAlignment: CrossAxisAlignment.end,
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      // ✅ العنوان + سطر صغير تحته
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'مزارعي',
-            style: GoogleFonts.almarai(
-              color: Colors.white,
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
-              height: 1.0,
-            ),
-          ),
-          const SizedBox(height: 6),
-         
-        ],
-      ),
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // ✅ العنوان + سطر صغير تحته
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'مزارعي',
+                            style: GoogleFonts.almarai(
+                              color: Colors.white,
+                              fontSize: 26,
+                              fontWeight: FontWeight.w700,
+                              height: 1.0,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                        ],
+                      ),
 
-      // ✅ كبسولة الإجمالي (أصغر + أفخم)
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.04),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: const Color(0xFFEBB974).withValues(alpha: 0.22),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.grid_view_rounded,
-              size: 16,
-              color: const Color(0xFFEBB974).withValues(alpha: 0.9),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '$total',
-              style: GoogleFonts.almarai(
-                color: Colors.white.withValues(alpha: 0.92),
-                fontSize: 12.5,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              'مزرعة',
-              style: GoogleFonts.almarai(
-                color: Colors.white.withValues(alpha: 0.65),
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      ),
-    ],
-  ),
-),
-                
+                      // ✅ كبسولة الإجمالي (أصغر + أفخم)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.04),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: const Color(
+                              0xFFEBB974,
+                            ).withValues(alpha: 0.22),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.grid_view_rounded,
+                              size: 16,
+                              color: const Color(
+                                0xFFEBB974,
+                              ).withValues(alpha: 0.9),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '$total',
+                              style: GoogleFonts.almarai(
+                                color: Colors.white.withValues(alpha: 0.92),
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'مزرعة',
+                              style: GoogleFonts.almarai(
+                                color: Colors.white.withValues(alpha: 0.65),
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
                 _searchBar(),
                 Expanded(
                   child: Center(
@@ -629,72 +669,78 @@ void _safeToast(String msg, {IconData? icon, String type = 'info'}) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-             Padding(
-  padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-  child: Row(
-    crossAxisAlignment: CrossAxisAlignment.end,
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      // ✅ العنوان + سطر صغير تحته
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'مزارعي',
-            style: GoogleFonts.almarai(
-              color: Colors.white,
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
-              height: 1.0,
-            ),
-          ),
-          const SizedBox(height: 6),
-         
-        ],
-      ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // ✅ العنوان + سطر صغير تحته
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'مزارعي',
+                          style: GoogleFonts.almarai(
+                            color: Colors.white,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w700,
+                            height: 1.0,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                      ],
+                    ),
 
-      // ✅ كبسولة الإجمالي (أصغر + أفخم)
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.04),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: const Color(0xFFEBB974).withValues(alpha: 0.22),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.grid_view_rounded,
-              size: 16,
-              color: const Color(0xFFEBB974).withValues(alpha: 0.9),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '$total',
-              style: GoogleFonts.almarai(
-                color: Colors.white.withValues(alpha: 0.92),
-                fontSize: 12.5,
-                fontWeight: FontWeight.w800,
+                    // ✅ كبسولة الإجمالي (أصغر + أفخم)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: const Color(
+                            0xFFEBB974,
+                          ).withValues(alpha: 0.22),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.grid_view_rounded,
+                            size: 16,
+                            color: const Color(
+                              0xFFEBB974,
+                            ).withValues(alpha: 0.9),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '$total',
+                            style: GoogleFonts.almarai(
+                              color: Colors.white.withValues(alpha: 0.92),
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'مزرعة',
+                            style: GoogleFonts.almarai(
+                              color: Colors.white.withValues(alpha: 0.65),
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              'مزرعة',
-              style: GoogleFonts.almarai(
-                color: Colors.white.withValues(alpha: 0.65),
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      ),
-    ],
-  ),
-),
               _searchBar(),
               Expanded(
                 child: Center(
@@ -712,72 +758,74 @@ void _safeToast(String msg, {IconData? icon, String type = 'info'}) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-           Padding(
-  padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-  child: Row(
-    crossAxisAlignment: CrossAxisAlignment.end,
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      // ✅ العنوان + سطر صغير تحته
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'مزارعي',
-            style: GoogleFonts.almarai(
-              color: Colors.white,
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
-              height: 1.0,
-            ),
-          ),
-          const SizedBox(height: 6),
-          
-        ],
-      ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // ✅ العنوان + سطر صغير تحته
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'مزارعي',
+                        style: GoogleFonts.almarai(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w700,
+                          height: 1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                    ],
+                  ),
 
-      // ✅ كبسولة الإجمالي (أصغر + أفخم)
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.04),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: const Color(0xFFEBB974).withValues(alpha: 0.22),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.grid_view_rounded,
-              size: 16,
-              color: const Color(0xFFEBB974).withValues(alpha: 0.9),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '$total',
-              style: GoogleFonts.almarai(
-                color: Colors.white.withValues(alpha: 0.92),
-                fontSize: 12.5,
-                fontWeight: FontWeight.w800,
+                  // ✅ كبسولة الإجمالي (أصغر + أفخم)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: const Color(0xFFEBB974).withValues(alpha: 0.22),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.grid_view_rounded,
+                          size: 16,
+                          color: const Color(0xFFEBB974).withValues(alpha: 0.9),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '$total',
+                          style: GoogleFonts.almarai(
+                            color: Colors.white.withValues(alpha: 0.92),
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'مزرعة',
+                          style: GoogleFonts.almarai(
+                            color: Colors.white.withValues(alpha: 0.65),
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 6),
-            Text(
-              'مزرعة',
-              style: GoogleFonts.almarai(
-                color: Colors.white.withValues(alpha: 0.65),
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      ),
-    ],
-  ),
-),
             _searchBar(),
             Expanded(
               child: ListView.separated(
@@ -809,147 +857,167 @@ void _safeToast(String msg, {IconData? icon, String type = 'info'}) {
                   final healthyPct = _getHealthyPct(d);
 
                   return TweenAnimationBuilder<double>(
-                    
-  key: ValueKey('farm-anim-${doc.id}'),                  
-  tween: Tween(begin: 0.0, end: 1.0),
-  duration: Duration(milliseconds: 450 + (i * 60)),
-  curve: Curves.easeOutCubic,
-  builder: (context, t, child) {
-    return Opacity(
-      opacity: t,
-      child: Transform.translate(
-        offset: Offset(0, (1 - t) * 18),
-        child: child,
-      ),
-    );
-  },
-  child: _PressScale(
-    onTap: () {
-      if (status == 'done') {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => FarmDashboardPage(
-              farmData: d,
-              farmId: doc.id,
-            ),
-          ),
-        );
-      } else {
-        _showProcessingDialog(context, name, status);
-      }
-    },
-    child: Stack(
-      children: [
+                    key: ValueKey('farm-anim-${doc.id}'),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: Duration(milliseconds: 450 + (i * 60)),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, t, child) {
+                      return Opacity(
+                        opacity: t,
+                        child: Transform.translate(
+                          offset: Offset(0, (1 - t) * 18),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: _PressScale(
+                      onTap: () {
+                        if (status == 'done') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => FarmDashboardPage(
+                                farmData: d,
+                                farmId: doc.id,
+                              ),
+                            ),
+                          );
+                        } else {
+                          _showProcessingDialog(context, name, status);
+                        }
+                      },
+                      child: Stack(
+                        children: [
+                          FarmCard(
+                            farmIndex: i,
+                            title: name.isEmpty ? 'مزرعة بدون اسم' : name,
+                            subtitle: region.isEmpty ? '—' : region,
+                            sizeText: null,
+                            imageURL: imageURL.isNotEmpty ? imageURL : null,
+                            createdAt: createdAt,
+                            lastAnalysisText: lastDate == "—" ? null : lastDate,
+                            analysisStatus: status,
+                            healthyPct: healthyPct,
+                            healthRing: _HealthRing(pct: healthyPct),
+                            onEdit: () async {
+                              await Navigator.pushNamed(
+                                context,
+                                '/editFarm',
+                                arguments: {'farmId': doc.id, 'initialData': d},
+                              );
+                            },
+                            onDelete: () async {
+                              bool confirmDelete =
+                                  await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => BackdropFilter(
+                                      filter: ImageFilter.blur(
+                                        sigmaX: 8,
+                                        sigmaY: 8,
+                                      ),
+                                      child: AlertDialog(
+                                        backgroundColor: const Color(
+                                          0xFF042C25,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            24,
+                                          ),
+                                        ),
+                                        title: Text(
+                                          'تأكيد الحذف',
+                                          textAlign: TextAlign.center,
+                                          style: GoogleFonts.almarai(
+                                            color: const Color(0xFFFFF6E0),
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 22,
+                                          ),
+                                        ),
+                                        content: Text(
+                                          'هل أنت متأكد من حذف مزرعة "$name"؟ لا يمكن التراجع عن هذا الإجراء.',
+                                          textAlign: TextAlign.center,
+                                          style: GoogleFonts.almarai(
+                                            color: const Color(0xFFFFF6E0),
+                                            fontSize: 16,
+                                            height: 1.5,
+                                          ),
+                                        ),
+                                        actionsAlignment:
+                                            MainAxisAlignment.center,
+                                        actions: [
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: const Color(
+                                                0xFFF44336,
+                                              ),
+                                              foregroundColor: Colors.white,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                            ),
+                                            onPressed: () =>
+                                                Navigator.pop(ctx, true),
+                                            child: Text(
+                                              'حذف',
+                                              style: GoogleFonts.almarai(
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(
+                                            width: 12,
+                                          ), // مسافة بسيطة بين الزرين
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(ctx, false),
+                                            child: Text(
+                                              'إلغاء',
+                                              style: GoogleFonts.almarai(
+                                                color: const Color(0xFFFFF6E0),
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ) ??
+                                  false;
 
-       FarmCard(
-  farmIndex: i,
-  title: name.isEmpty ? 'مزرعة بدون اسم' : name,
-  subtitle: region.isEmpty ? '—' : region,
-  sizeText: null,
-  imageURL: imageURL.isNotEmpty ? imageURL : null,
-  createdAt: createdAt,
-  lastAnalysisText: lastDate == "—" ? null : lastDate,
-  analysisStatus: status,
-  healthyPct: healthyPct,
-  healthRing: _HealthRing(pct: healthyPct),  onEdit: () async {
-    await Navigator.pushNamed(
-      context,
-      '/editFarm',
-      arguments: {'farmId': doc.id, 'initialData': d},
-    );
-  },
-onDelete: () async {
-  bool confirmDelete = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-      child: AlertDialog(
-        backgroundColor: const Color(0xFF042C25),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        title: Text(
-          'تأكيد الحذف',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.almarai(
-            color: const Color(0xFFFFF6E0),
-            fontWeight: FontWeight.w800,
-            fontSize: 22,
-          ),
-        ),
-        content: Text(
-          'هل أنت متأكد من حذف مزرعة "$name"؟ لا يمكن التراجع عن هذا الإجراء.',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.almarai(
-            color: const Color(0xFFFFF6E0),
-            fontSize: 16,
-            height: 1.5,
-          ),
-        ),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF44336),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'حذف',
-              style: GoogleFonts.almarai(
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12), // مسافة بسيطة بين الزرين
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              'إلغاء',
-              style: GoogleFonts.almarai(
-                color: const Color(0xFFFFF6E0),
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  ) ?? false;
+                              if (confirmDelete) {
+                                try {
+                                  if (imageURL.isNotEmpty) {
+                                    try {
+                                      await FirebaseStorage.instance
+                                          .refFromURL(imageURL)
+                                          .delete();
+                                    } catch (_) {}
+                                  }
+                                  await FirebaseFirestore.instance
+                                      .collection('farms')
+                                      .doc(doc.id)
+                                      .delete();
 
-if (confirmDelete) {
-    try {
-      if (imageURL.isNotEmpty) {
-        try {
-          await FirebaseStorage.instance.refFromURL(imageURL).delete();
-        } catch (_) {}
-      }
-      await FirebaseFirestore.instance
-          .collection('farms')
-          .doc(doc.id)
-          .delete();
-
-      // ✅ الإشعار الجديد عند النجاح بالتصميم الإبداعي
-      _safeToast("تم حذف المزرعة بنجاح", type: 'success');
-
-    } catch (e) {
-      // ❌ الإشعار الجديد عند حدوث خطأ
-      _safeToast("حدث خطأ أثناء الحذف: $e", type: 'error');
-    }
-  }
-},
-),
-    
-
-    
-      ],
-    ),
-  ),
-);
+                                  // ✅ الإشعار الجديد عند النجاح بالتصميم الإبداعي
+                                  _safeToast(
+                                    "تم حذف المزرعة بنجاح",
+                                    type: 'success',
+                                  );
+                                } catch (e) {
+                                  // ❌ الإشعار الجديد عند حدوث خطأ
+                                  _safeToast(
+                                    "حدث خطأ أثناء الحذف: $e",
+                                    type: 'error',
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
                 },
               ),
             ),
@@ -1058,7 +1126,7 @@ class _LogoButtonState extends State<_LogoButton> {
       ),
     );
   }
-} 
+}
 
 class _FarmsLuxBackground extends StatelessWidget {
   const _FarmsLuxBackground();
@@ -1107,7 +1175,6 @@ class _FarmsNoisePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-
 class _PressScale extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;
@@ -1137,6 +1204,7 @@ class _PressScaleState extends State<_PressScale> {
     );
   }
 }
+
 class _HealthRing extends StatefulWidget {
   final double pct;
   const _HealthRing({required this.pct});
@@ -1144,6 +1212,7 @@ class _HealthRing extends StatefulWidget {
   @override
   State<_HealthRing> createState() => _HealthRingState();
 }
+
 class _HealthRingState extends State<_HealthRing>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c;
@@ -1214,8 +1283,12 @@ class _HealthRingState extends State<_HealthRing>
                     value: progress,
                     strokeWidth: 6,
                     strokeCap: StrokeCap.round,
-                    backgroundColor: const Color.fromARGB(255, 71, 117, 71)
-                        .withValues(alpha: 0.12),
+                    backgroundColor: const Color.fromARGB(
+                      255,
+                      71,
+                      117,
+                      71,
+                    ).withValues(alpha: 0.12),
                     valueColor: AlwaysStoppedAnimation<Color>(
                       ring.withValues(alpha: 0.95), // ✅ هنا
                     ),
@@ -1228,8 +1301,7 @@ class _HealthRingState extends State<_HealthRing>
                       "صحة مزرعتك",
                       style: GoogleFonts.almarai(
                         fontSize: 9,
-                        color:
-                            const Color(0xFF2F4F2F).withValues(alpha: 0.75),
+                        color: const Color(0xFF2F4F2F).withValues(alpha: 0.75),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -1242,8 +1314,9 @@ class _HealthRingState extends State<_HealthRing>
                         "${v.round()}%",
                         textAlign: TextAlign.center,
                         style: GoogleFonts.almarai(
-                          color:
-                              const Color(0xFF2F4F2F).withValues(alpha: 0.95),
+                          color: const Color(
+                            0xFF2F4F2F,
+                          ).withValues(alpha: 0.95),
                           fontWeight: FontWeight.w800,
                           fontSize: 16,
                         ),

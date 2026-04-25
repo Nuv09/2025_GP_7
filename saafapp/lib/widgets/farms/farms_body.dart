@@ -1,9 +1,6 @@
-// lib/widgets/farms/farms_body.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:saafapp/constant.dart';
-
-// Firebase (قراءة فقط)
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -22,7 +19,6 @@ class FarmsBody extends StatelessWidget {
           Expanded(
             child: Stack(
               children: [
-                // الخلفية البيج
                 Container(
                   margin: const EdgeInsets.only(top: 70.0),
                   decoration: const BoxDecoration(
@@ -58,7 +54,9 @@ class FarmsBody extends StatelessWidget {
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(
-                          child: CircularProgressIndicator(color: darkGreenColor),
+                          child: CircularProgressIndicator(
+                            color: darkGreenColor,
+                          ),
                         );
                       }
 
@@ -104,9 +102,10 @@ class FarmsBody extends StatelessWidget {
                           final region = (d['region'] ?? '').toString();
                           final size = (d['farmSize'] ?? '').toString();
 
-                          // ✅ موحّد ويغطي imageURL و imageUrl
                           final imageURL =
-                              (d['imageURL'] ?? d['imageUrl'] ?? '').toString().trim();
+                              (d['imageURL'] ?? d['imageUrl'] ?? '')
+                                  .toString()
+                                  .trim();
 
                           final createdAt = (d['createdAt'] is Timestamp)
                               ? (d['createdAt'] as Timestamp).toDate()
@@ -132,7 +131,6 @@ class FarmsBody extends StatelessWidget {
   }
 }
 
-/// بطاقة عرض مزرعة (داخليًا لهذا الملف)
 class _FarmCard extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -165,7 +163,6 @@ class _FarmCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // صورة المزرعة
           ClipRRect(
             borderRadius: const BorderRadius.only(
               topRight: Radius.circular(18),
@@ -178,12 +175,15 @@ class _FarmCard extends StatelessWidget {
                   ? Image.network(
                       imageURL!,
                       fit: BoxFit.cover,
-                      // ✅ طباعة أي خطأ تحميل بدلًا من الصمت
+                      //  طباعة أي خطأ تحميل   
                       errorBuilder: (context, error, stackTrace) {
                         debugPrint('Image load error: $error | url=$imageURL');
                         return Container(
                           color: const Color(0x22000000),
-                          child: const Icon(Icons.broken_image, color: Colors.white60),
+                          child: const Icon(
+                            Icons.broken_image,
+                            color: Colors.white60,
+                          ),
                         );
                       },
                       loadingBuilder: (context, child, loadingProgress) {
@@ -204,12 +204,14 @@ class _FarmCard extends StatelessWidget {
                     )
                   : Container(
                       color: const Color(0x22000000),
-                      child: const Icon(Icons.image_not_supported, color: Colors.white60),
+                      child: const Icon(
+                        Icons.image_not_supported,
+                        color: Colors.white60,
+                      ),
                     ),
             ),
           ),
 
-          // معلومات
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -229,7 +231,11 @@ class _FarmCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.location_on, size: 18, color: Colors.white70),
+                      const Icon(
+                        Icons.location_on,
+                        size: 18,
+                        color: Colors.white70,
+                      ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
@@ -245,13 +251,24 @@ class _FarmCard extends StatelessWidget {
                   Row(
                     children: [
                       if (sizeText != null) ...[
-                        const Icon(Icons.straighten, size: 18, color: Colors.white70),
+                        const Icon(
+                          Icons.straighten,
+                          size: 18,
+                          color: Colors.white70,
+                        ),
                         const SizedBox(width: 4),
-                        Text(sizeText!, style: GoogleFonts.almarai(color: Colors.white70)),
+                        Text(
+                          sizeText!,
+                          style: GoogleFonts.almarai(color: Colors.white70),
+                        ),
                         const SizedBox(width: 12),
                       ],
                       if (createdAt != null) ...[
-                        const Icon(Icons.schedule, size: 18, color: Colors.white70),
+                        const Icon(
+                          Icons.schedule,
+                          size: 18,
+                          color: Colors.white70,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           _formatDate(createdAt!),

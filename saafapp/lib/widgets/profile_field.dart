@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart'; // <<< ADD
+import 'package:google_fonts/google_fonts.dart'; 
 
 const Color kGold = Color(0xFFEBB974);
 
@@ -42,11 +42,9 @@ class ProfileField extends StatelessWidget {
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: GoogleFonts.almarai(
-          // <<< CHANGED
           color: cs.onSurface.withAlpha((255 * 0.6).round()),
         ),
 
-        // ← بديل inputDecorationTheme (محلي داخل الودجت)
         filled: true,
         fillColor: const Color.fromRGBO(255, 255, 255, 0.08),
         contentPadding: const EdgeInsets.symmetric(

@@ -24,7 +24,7 @@ import 'dart:ui';
 import 'package:flutter/services.dart';
 
 const Color primaryColor = Color(0xFF1E8D5F);
-const Color secondaryColor = Color(0xFFEBB974); 
+const Color secondaryColor = Color(0xFFEBB974);
 const Color darkBackground = Color(0xFF042C25);
 
 class AddFarmPage extends StatefulWidget {
@@ -43,22 +43,21 @@ class _AddFarmPageState extends State<AddFarmPage> {
   final _notesController = TextEditingController();
   final _contractNumberController = TextEditingController(); // رقم العقد
 
-
   // بحث الخريطة
   final _searchCtrl = TextEditingController();
 
   String? _selectedRegion;
 
-  File? _farmImage; 
-  Uint8List? _imageBytes; 
+  File? _farmImage;
+  Uint8List? _imageBytes;
 
-final MapController _mapController = MapController();
-LatLng _currentCenter = const LatLng(24.774265, 46.738586);
+  final MapController _mapController = MapController();
+  LatLng _currentCenter = const LatLng(24.774265, 46.738586);
 
-final List<LatLng> _polygonPoints = [];
-List<Polygon> _polygons = [];
-List<Marker> _markers = [];
-  // Firebase
+  final List<LatLng> _polygonPoints = [];
+  List<Polygon> _polygons = [];
+  List<Marker> _markers = [];
+
   final _auth = FirebaseAuth.instance;
   final _db = FirebaseFirestore.instance;
   late final FirebaseStorage _storage;
@@ -85,7 +84,6 @@ List<Marker> _markers = [];
   List<Map<String, dynamic>> _suggestions = [];
   bool _loadingSuggest = false;
 
-
   String _cleanUrl(String? raw) {
     if (raw == null) return '';
     var u = raw.replaceAll(RegExp(r'\s+'), '');
@@ -108,20 +106,20 @@ List<Marker> _markers = [];
     _notesController.dispose();
     _searchCtrl.dispose();
     _contractNumberController.dispose();
-    _debounce?.cancel(); 
+    _debounce?.cancel();
     super.dispose();
   }
 
   void _safeToast(String msg, {IconData? icon, String type = 'info'}) {
     if (!mounted) return;
-    
+
     Color bgColor;
     Color contentColor = const Color(0xFF042C25); // kDeepGreen
     IconData toastIcon;
 
     switch (type) {
       case 'success':
-        bgColor = const Color(0xFF1E8D5F).withValues(alpha: 0.7); 
+        bgColor = const Color(0xFF1E8D5F).withValues(alpha: 0.7);
         contentColor = Colors.white;
         toastIcon = icon ?? Icons.check_circle_rounded;
         break;
@@ -137,7 +135,7 @@ List<Marker> _markers = [];
     }
 
     final m = ScaffoldMessenger.maybeOf(context);
-    m?.removeCurrentSnackBar(); 
+    m?.removeCurrentSnackBar();
 
     m?.showSnackBar(
       SnackBar(
@@ -145,7 +143,7 @@ List<Marker> _markers = [];
         behavior: SnackBarBehavior.floating,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        margin: const EdgeInsets.fromLTRB(30, 0, 30, 45), 
+        margin: const EdgeInsets.fromLTRB(30, 0, 30, 45),
         animation: CurvedAnimation(
           parent: AnimationController(
             vsync: ScaffoldMessenger.of(context),
@@ -169,7 +167,7 @@ List<Marker> _markers = [];
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                textDirection: TextDirection.rtl, 
+                textDirection: TextDirection.rtl,
                 children: [
                   Icon(toastIcon, color: contentColor, size: 24),
                   const SizedBox(width: 12),
@@ -196,51 +194,53 @@ List<Marker> _markers = [];
   // =================== الموقع الحالي ===================
 
   Future<void> _centerToMyLocation() async {
-  try {
-    final pos = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
-    setState(() {
-      _currentCenter = LatLng(pos.latitude, pos.longitude);
-    });
-    _mapController.move(_currentCenter, 15); 
-    
-    if (mounted) setState(() {});
-  } catch (e) {
-    debugPrint('location error: $e');
+    try {
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      setState(() {
+        _currentCenter = LatLng(pos.latitude, pos.longitude);
+      });
+      _mapController.move(_currentCenter, 15);
+
+      if (mounted) setState(() {});
+    } catch (e) {
+      debugPrint('location error: $e');
+    }
   }
-}
 
   // =================== البحث (Geocoding احتياطي) ===================
-Future<void> _searchAndGo() async {
-  final text = _searchCtrl.text.trim();
-  if (text.isEmpty) return;
+  Future<void> _searchAndGo() async {
+    final text = _searchCtrl.text.trim();
+    if (text.isEmpty) return;
 
-  try {
-    final url = 'https://api.maptiler.com/geocoding/$text.json?key=${Secrets.mapTilerKey}&country=sa&language=ar';
-    final res = await http.get(Uri.parse(url));
-    final data = jsonDecode(res.body);
-    
-    if (data['features'] != null && data['features'].isNotEmpty) {
-      final coords = data['features'][0]['center']; 
-      final newLatLng = LatLng(coords[1], coords[0]);
-      
-      _mapController.move(newLatLng, 15);
-      setState(() {
-        _currentCenter = newLatLng;
-      });
+    try {
+      final url =
+          'https://api.maptiler.com/geocoding/$text.json?key=${Secrets.mapTilerKey}&country=sa&language=ar';
+      final res = await http.get(Uri.parse(url));
+      final data = jsonDecode(res.body);
+
+      if (data['features'] != null && data['features'].isNotEmpty) {
+        final coords = data['features'][0]['center'];
+        final newLatLng = LatLng(coords[1], coords[0]);
+
+        _mapController.move(newLatLng, 15);
+        setState(() {
+          _currentCenter = newLatLng;
+        });
+      }
+    } catch (e) {
+      debugPrint('MapTiler Search error: $e');
     }
-  } catch (e) {
-    debugPrint('MapTiler Search error: $e');
   }
-}
 
   // =================== Helpers للبحث ===================
 
   // ignore: unused_element
   LatLng? _tryParseLatLng(String s) {
-    final m = RegExp(r'^\s*([+-]?\d+(\.\d+)?)[\s,]+([+-]?\d+(\.\d+)?)\s*$')
-        .firstMatch(s);
+    final m = RegExp(
+      r'^\s*([+-]?\d+(\.\d+)?)[\s,]+([+-]?\d+(\.\d+)?)\s*$',
+    ).firstMatch(s);
     if (m == null) return null;
     final lat = double.tryParse(m.group(1)!);
     final lng = double.tryParse(m.group(3)!);
@@ -248,13 +248,12 @@ Future<void> _searchAndGo() async {
     if (lat.abs() > 90 || lng.abs() > 180) return null;
     return LatLng(lat, lng);
   }
-  
 
   // ignore: unused_element
   double _dist2(LatLng a, LatLng b) {
     final dx = a.latitude - b.latitude;
     final dy = a.longitude - b.longitude;
-    return dx * dx + dy * dy; // مسافة تربيعية كافية للمقارنة
+    return dx * dx + dy * dy; 
   }
 
   // =================== رسم المضلع ===================
@@ -277,38 +276,36 @@ Future<void> _searchAndGo() async {
     setState(() {});
   }
 
-void _rebuildOverlays() {
-  _markers = _polygonPoints.map((point) {
-    return Marker(
-      point: point,
-      width: 40,
-      height: 40,
-      child: const Icon(
-        Icons.location_on,
-        color: Colors.green,
-        size: 30,
-      ),
-    );
-  }).toList();
+  void _rebuildOverlays() {
+    _markers = _polygonPoints.map((point) {
+      return Marker(
+        point: point,
+        width: 40,
+        height: 40,
+        child: const Icon(Icons.location_on, color: Colors.green, size: 30),
+      );
+    }).toList();
 
-  _polygons = [
-    if (_polygonPoints.length >= 3)
-      Polygon(
-        points: _polygonPoints,
-        color: const Color.fromARGB(75, 215, 172, 92),
-        borderColor: const Color.fromARGB(255, 2, 79, 25),
-        borderStrokeWidth: 3,
-      ),
-  ];
+    _polygons = [
+      if (_polygonPoints.length >= 3)
+        Polygon(
+          points: _polygonPoints,
+          color: const Color.fromARGB(75, 215, 172, 92),
+          borderColor: const Color.fromARGB(255, 2, 79, 25),
+          borderStrokeWidth: 3,
+        ),
+    ];
 
-  setState(() {});
-}
+    setState(() {});
+  }
 
   // =================== اختيار صورة ===================
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final x =
-        await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    final x = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
     if (x == null) return;
 
     if (kIsWeb) {
@@ -366,38 +363,38 @@ void _rebuildOverlays() {
     return LatLng(lat / pts.length, lng / pts.length);
   }
 
-Future<String?> _reverseRegionFromCentroid() async {
-  try {
-    if (_polygonPoints.isEmpty) return null;
-    final c = _centroid(_polygonPoints);
-    
-    // نطلب اسم المنطقة من MapTiler باستخدام الإحداثيات
-    final url = 'https://api.maptiler.com/geocoding/${c.longitude},${c.latitude}.json?key=${Secrets.mapTilerKey}&language=ar';
-    
-    final res = await http.get(Uri.parse(url));
-    final data = jsonDecode(res.body);
-    
-    if (data['features'] != null && data['features'].isNotEmpty) {
-      for (var feature in data['features']) {
-        // نبحث عن التصنيف الذي يمثل المنطقة أو المحافظة
-        if (feature['place_type'].contains('province') || feature['place_type'].contains('region')) {
-          return feature['text_ar'] ?? feature['text'];
+  Future<String?> _reverseRegionFromCentroid() async {
+    try {
+      if (_polygonPoints.isEmpty) return null;
+      final c = _centroid(_polygonPoints);
+
+      final url =
+          'https://api.maptiler.com/geocoding/${c.longitude},${c.latitude}.json?key=${Secrets.mapTilerKey}&language=ar';
+
+      final res = await http.get(Uri.parse(url));
+      final data = jsonDecode(res.body);
+
+      if (data['features'] != null && data['features'].isNotEmpty) {
+        for (var feature in data['features']) {
+          if (feature['place_type'].contains('province') ||
+              feature['place_type'].contains('region')) {
+            return feature['text_ar'] ?? feature['text'];
+          }
         }
+        return data['features'][0]['text_ar'] ?? data['features'][0]['text'];
       }
-      return data['features'][0]['text_ar'] ?? data['features'][0]['text'];
+      return null;
+    } catch (e) {
+      debugPrint('MapTiler Reverse Geocoding error: $e');
+      return null;
     }
-    return null;
-  } catch (e) {
-    debugPrint('MapTiler Reverse Geocoding error: $e');
-    return null;
   }
-}
 
   String _normalize(String s) {
     if (s.isEmpty) return s;
-    // إزالة تشكيل
+
     final noTashkeel = s.replaceAll(RegExp(r'[\u064B-\u0652]'), '');
-    // إزالة كلمات عامة والتعريف وبعض الرموز
+
     var t = noTashkeel
         .replaceAll('منطقة', '')
         .replaceAll('امارة', '')
@@ -411,9 +408,8 @@ Future<String?> _reverseRegionFromCentroid() async {
         .replaceAll(' ', '')
         .toLowerCase();
 
-    // خرائط لأسماء شائعة
+
     final map = {
-      // عربي -> موحّد
       'مكهالمكرمه': 'مكةالمكرمة',
       'مكه': 'مكةالمكرمة',
       'الرياض': 'الرياض',
@@ -431,7 +427,7 @@ Future<String?> _reverseRegionFromCentroid() async {
 
       // إنجليزي -> عربي موحّد
       'riyadh': 'الرياض',
-      'abha': 'عسير', // أبها مدينة ضمن عسير
+      'abha': 'عسير', 
       'asir': 'عسير',
       'makkah': 'مكةالمكرمة',
       'mecca': 'مكةالمكرمة',
@@ -458,79 +454,77 @@ Future<String?> _reverseRegionFromCentroid() async {
     return t;
   }
 
- Future<bool> _confirmDialog(String title, String message) async {
-  return await showDialog<bool>(
-        context: context,
-        builder: (ctx) => BackdropFilter(
-  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-  child: AlertDialog(
-          backgroundColor: const Color(0xFF042C25), 
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          title: Text(
-            title,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.almarai(
-              color: const Color(0xFFFFF6E0), 
-              fontWeight: FontWeight.w800,
-              fontSize: 22,
-            ),
-          ),
-          content: Text(
-            message,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.almarai(
-              color: const Color(0xFFFFF6E0), 
-              fontSize: 16,
-              height: 1.5,
-            ),
-          ),
-          actionsAlignment: MainAxisAlignment.center,
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(
-                'إلغاء',
-                style: GoogleFonts.almarai(
-                  color: const Color(0xFFFFF6E0), 
-                  fontWeight: FontWeight.w700,
-                ),
+  Future<bool> _confirmDialog(String title, String message) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+            child: AlertDialog(
+              backgroundColor: const Color(0xFF042C25),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
               ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: secondaryColor,
-                foregroundColor: const Color(0xFF042C25),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(
-                'متابعة',
+              title: Text(
+                title,
+                textAlign: TextAlign.center,
                 style: GoogleFonts.almarai(
+                  color: const Color(0xFFFFF6E0),
                   fontWeight: FontWeight.w800,
-                  color: const Color(0xFF042C25),
+                  fontSize: 22,
                 ),
               ),
+              content: Text(
+                message,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.almarai(
+                  color: const Color(0xFFFFF6E0),
+                  fontSize: 16,
+                  height: 1.5,
+                ),
+              ),
+              actionsAlignment: MainAxisAlignment.center,
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: Text(
+                    'إلغاء',
+                    style: GoogleFonts.almarai(
+                      color: const Color(0xFFFFF6E0),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: secondaryColor,
+                    foregroundColor: const Color(0xFF042C25),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(
+                    'متابعة',
+                    style: GoogleFonts.almarai(
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF042C25),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-       ), 
-      ) ??
-      false;
-}
+          ),
+        ) ??
+        false;
+  }
 
-  // =================== رفع الصورة (اختياري) ===================
+  // =================== رفع الصورة ===================
   // ignore: unused_element
   Future<String?> _uploadImageAndGetUrl(User user) async {
     try {
-      final ref = _storage
-          .ref()
-          .child(
-            'farm_images/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg',
-          );
+      final ref = _storage.ref().child(
+        'farm_images/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
       final meta = SettableMetadata(contentType: 'image/jpeg');
 
       UploadTask? task;
@@ -539,7 +533,7 @@ Future<String?> _reverseRegionFromCentroid() async {
       } else if (_farmImage != null) {
         task = ref.putFile(_farmImage!, meta);
       } else {
-        return null; // لا يوجد صورة
+        return null; 
       }
 
       final sub = task.snapshotEvents.listen(
@@ -555,26 +549,22 @@ Future<String?> _reverseRegionFromCentroid() async {
       final url = _cleanUrl(await ref.getDownloadURL());
       return url;
     } on FirebaseException catch (e) {
-      // ✅ تحديث هنا
       _safeToast('تعذر رفع الصورة: ${e.code}', type: 'error');
       debugPrint('FirebaseException during upload: ${e.code} ${e.message}');
       return null;
     } on TimeoutException catch (_) {
-      // ✅ تحديث هنا
       _safeToast(
         'مهلة رفع الصورة انتهت. تحقق من الشبكة أو من إعدادات Storage.',
         type: 'error',
       );
       return null;
     } catch (e) {
-      // ✅ تحديث هنا
       _safeToast('خطأ غير متوقع أثناء رفع الصورة: $e', type: 'error');
       return null;
     }
   }
 
   // =================== الحفظ ===================
-  // 🔧 ننشئ الوثيقة أولاً، ننتقل لصفحة الانتظار، ثم نرفع الصورة ونستدعي التحليل بشكل غير منتظر.
   Future<void> _submitFarmData() async {
     if (!mounted) return;
 
@@ -592,8 +582,8 @@ Future<String?> _reverseRegionFromCentroid() async {
           final ok = await _confirmDialog(
             'تحذير عدم تطابق المنطقة',
             'المنطقة المختارة: "$selected"\n'
-            'إحداثيات الخريطة تشير إلى: "$detected"\n\n'
-            'هل تريد المتابعة رغم عدم التطابق؟',
+                'إحداثيات الخريطة تشير إلى: "$detected"\n\n'
+                'هل تريد المتابعة رغم عدم التطابق؟',
           );
           if (!ok) return;
         }
@@ -608,8 +598,8 @@ Future<String?> _reverseRegionFromCentroid() async {
           final ok = await _confirmDialog(
             'تحذير اختلاف المساحة',
             'المساحة المدخلة: ${entered.toStringAsFixed(0)} م²\n'
-            'المساحة المقدّرة من الخريطة: ${computed.toStringAsFixed(0)} م²\n\n'
-            'يوجد فرق كبير (> 30%). هل تريد المتابعة؟',
+                'المساحة المقدّرة من الخريطة: ${computed.toStringAsFixed(0)} م²\n\n'
+                'يوجد فرق كبير (> 30%). هل تريد المتابعة؟',
           );
           if (!ok) return;
         }
@@ -619,9 +609,8 @@ Future<String?> _reverseRegionFromCentroid() async {
       DocumentReference<Map<String, dynamic>>? contractRef;
 
       try {
-final user = _auth.currentUser;
+        final user = _auth.currentUser;
         if (user == null) {
-          // ✅ تحديث هنا
           _safeToast('يجب تسجيل الدخول أولاً.', type: 'error');
           if (mounted) setState(() => _isSaving = false);
           return;
@@ -631,53 +620,46 @@ final user = _auth.currentUser;
             .replaceAll(RegExp(r'\s+'), '')
             .trim();
 
-        final isValidContract = RegExp(r'^\d{10}$').hasMatch(contract); 
+        final isValidContract = RegExp(r'^\d{10}$').hasMatch(contract);
         if (!isValidContract) {
-          // ✅ تحديث هنا
           _safeToast('يجب أن يتكون رقم الصك من 10 خانات', type: 'error');
           if (mounted) setState(() => _isSaving = false);
           return;
         }
 
-contractRef = _db.collection('contracts').doc(contract);
+        contractRef = _db.collection('contracts').doc(contract);
 
-try {
-  await _db.runTransaction((tx) async {
-    final snap = await tx.get(contractRef!);
-    if (snap.exists) {
-      throw 'contract-taken'; // نحن نحدد هذا الخطأ يدوياً
-    }
-    tx.set(contractRef, {
-      'ownerUid': user.uid,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-  });
-}  catch (e) {
-  if (e == 'contract-taken') {
-    // ✅ تحديث هنا
-    _safeToast('هذه المزرعة مضافة مسبقًا', type: 'error');
-  } else if (e is FirebaseException) {
-    debugPrint('🔥 FirebaseException code=${e.code} message=${e.message}');
-    // ✅ تحديث هنا
-    _safeToast('خطأ في قاعدة البيانات: ${e.code}', type: 'error');
-  } else {
-    debugPrint('🔥 Unknown error: $e');
-    // ✅ تحديث هنا
-    _safeToast('حدث خطأ غير متوقع', type: 'error');
-  }
-  if (mounted) setState(() => _isSaving = false);
-  return;
-}
-
-
-
-
-
+        try {
+          await _db.runTransaction((tx) async {
+            final snap = await tx.get(contractRef!);
+            if (snap.exists) {
+              throw 'contract-taken';
+            }
+            tx.set(contractRef, {
+              'ownerUid': user.uid,
+              'createdAt': FieldValue.serverTimestamp(),
+            });
+          });
+        } catch (e) {
+          if (e == 'contract-taken') {
+            _safeToast('هذه المزرعة مضافة مسبقًا', type: 'error');
+          } else if (e is FirebaseException) {
+            debugPrint(
+              ' FirebaseException code=${e.code} message=${e.message}',
+            );
+            _safeToast('خطأ في قاعدة البيانات: ${e.code}', type: 'error');
+          } else {
+            debugPrint(' Unknown error: $e');
+            _safeToast('حدث خطأ غير متوقع', type: 'error');
+          }
+          if (mounted) setState(() => _isSaving = false);
+          return;
+        }
 
         final polygonData = _polygonPoints
-            .map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList();
+            .map((p) => {'lat': p.latitude, 'lng': p.longitude})
+            .toList();
 
-        // ✅ ننشئ الوثيقة أولاً بدون انتظار
         final docRef = await _db.collection('farms').add({
           'farmName': _farmNameController.text.trim(),
           'ownerName': _ownerNameController.text.trim(),
@@ -691,15 +673,12 @@ try {
           'createdBy': user.uid,
           'contractNumber': contract,
 
-
-          // حالة التحليل والنتيجة الابتدائية
           'status': 'pending',
           'palm_count': 0,
           'detection_quality': 0.0,
           'errorMessage': null,
         });
 
-        // ✅ ننتقل فورًا لصفحة الانتظار/التحليل
         if (!mounted) return;
         Navigator.pushReplacementNamed(
           context,
@@ -707,7 +686,6 @@ try {
           arguments: {'farmId': docRef.id},
         );
 
-        // ⬇️ بعد التنقل: نرفع الصورة (إن وُجدت) ونحدّث الوثيقة — لا ننتظر
         Future(() async {
           try {
             String? imageUrl;
@@ -715,7 +693,8 @@ try {
 
             if (_imageBytes != null || _farmImage != null) {
               final ref = _storage.ref().child(
-                  'farm_images/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg');
+                'farm_images/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.jpg',
+              );
               final meta = SettableMetadata(contentType: 'image/jpeg');
 
               UploadTask task = (kIsWeb && _imageBytes != null)
@@ -736,26 +715,26 @@ try {
           }
         });
 
-        // ⬇️ إطلاق خدمة التحليل — لا ننتظر
         Future(() async {
           try {
             final response = await http.post(
               Uri.parse(
-                  'https://saaf-analyzer-new-120954850101.us-central1.run.app/analyze'),
+                'https://saaf-analyzer-new-120954850101.us-central1.run.app/analyze',
+              ),
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode({'farmId': docRef.id}),
             );
             if (response.statusCode != 200) {
-              debugPrint('Analyzer non-200: ${response.statusCode} ${response.body}');
+              debugPrint(
+                'Analyzer non-200: ${response.statusCode} ${response.body}',
+              );
             }
           } catch (e) {
             debugPrint('خطأ في بدء التحليل: $e');
           }
         });
 
-        // لا مزيد من setState هنا لأننا غادرنا الصفحة
-} catch (e) {
-        // ✅ تحديث هنا
+      } catch (e) {
         _safeToast('حدث خطأ أثناء حفظ البيانات: $e', type: 'error');
         if (mounted) setState(() => _isSaving = false);
       } finally {
@@ -764,7 +743,6 @@ try {
         }
       }
     } else {
-      // ✅ تحديث التنبيهات للشروط الناقصة
       if (_polygonPoints.length < 3) {
         _safeToast('حدد 3 نقاط على الأقل لحدود المزرعة.', type: 'error');
       } else if (_selectedRegion == null) {
@@ -773,183 +751,182 @@ try {
     }
   }
 
-
   // =================== Autocomplete & Details ===================
 
-void _onSearchChanged(String value) {
-  if (_debounce?.isActive ?? false) _debounce!.cancel();
+  void _onSearchChanged(String value) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
 
-  _debounce = Timer(const Duration(milliseconds: 500), () async {
-    if (value.isEmpty) {
-      setState(() => _suggestions = []);
-      return;
-    }
-    // لم نعد بحاجة لـ sessionToken هنا لأننا نستخدم MapTiler
-    await _fetchMapTilerSuggestions(value);
-  });
-}
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      if (value.isEmpty) {
+        setState(() => _suggestions = []);
+        return;
+      }
+      await _fetchMapTilerSuggestions(value);
+    });
+  }
 
-Widget _buildLuxBackground() {
-  return Positioned.fill(
-    child: Stack(
-      children: [
-        // Base gradient
-        Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-              colors: [
-                Color(0xFF05352D),
-                Color(0xFF042C25),
-                Color(0xFF031E1A),
-              ],
-              stops: [0.0, 0.55, 1.0],
-            ),
-          ),
-        ),
-
-        // Gold glow
-        Positioned(
-          top: -120,
-          right: -80,
-          child: Container(
-            width: 320,
-            height: 320,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
+  Widget _buildLuxBackground() {
+    return Positioned.fill(
+      child: Stack(
+        children: [
+          // Base gradient
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
                 colors: [
-                  secondaryColor.withValues(alpha: 0.25),
-                  Colors.transparent,
+                  Color(0xFF05352D),
+                  Color(0xFF042C25),
+                  Color(0xFF031E1A),
                 ],
-                stops: const [0.0, 1.0],
+                stops: [0.0, 0.55, 1.0],
               ),
             ),
           ),
-        ),
 
-        // Teal glow
-        Positioned(
-          bottom: -140,
-          left: -120,
-          child: Container(
-            width: 360,
-            height: 360,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  const Color(0xFF0C6B5C).withValues(alpha: 0.18),
-                  Colors.transparent,
-                ],
-                stops: const [0.0, 1.0],
-              ),
-            ),
-          ),
-        ),
-
-        // Vignette
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.black.withValues(alpha: 0.18),
-                Colors.transparent,
-                Colors.black.withValues(alpha: 0.25),
-              ],
-              stops: const [0.0, 0.45, 1.0],
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-  // =================== واجهة المستخدم ===================
-  @override
-  Widget build(BuildContext context) {
-return Directionality(
-  textDirection: TextDirection.rtl,
-  child: Theme(
-    data: Theme.of(context).copyWith(
-      textSelectionTheme: TextSelectionThemeData(
-        cursorColor: secondaryColor,
-        selectionColor: secondaryColor.withValues(alpha: 0.35),
-        selectionHandleColor: secondaryColor,
-      ),
-    ),
-    child: Scaffold(
-        extendBodyBehindAppBar: true,
-        backgroundColor: darkBackground,
-
-        appBar: AppBar(
-  backgroundColor: const Color(0xFF042C25).withValues(alpha: 0.7),
-  surfaceTintColor: Colors.transparent,
-  elevation: 0,
-  scrolledUnderElevation: 0,
-          leading: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10.0),
-            child: Material(
-              color: Colors.white.withValues(alpha: 0.08),
-              shape: const CircleBorder(),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: () => Navigator.of(context)
-                    .pushNamedAndRemoveUntil('/main', (route) => false),
-                child: const Padding(
-                  padding: EdgeInsets.only(right: 7, left: 14),
-                  child: Icon(Icons.arrow_back, color: Colors.white),
+          // Gold glow
+          Positioned(
+            top: -120,
+            right: -80,
+            child: Container(
+              width: 320,
+              height: 320,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    secondaryColor.withValues(alpha: 0.25),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 1.0],
                 ),
               ),
             ),
           ),
-          title: Text('إضافة مزرعة جديدة', style: saafPageTitle),
-        ),
 
-        body: Stack(
-  children: [
-    _buildLuxBackground(),
-    SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          16 + kToolbarHeight + MediaQuery.of(context).padding.top,
-          16,
-          16 +
-              kBottomNavigationBarHeight +
-              MediaQuery.of(context).viewPadding.bottom +
-              40,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 10),
-            const SizedBox(height: 10),
-            Center(
-              child: Icon(
-                Icons.agriculture_rounded,
-                color: secondaryColor,
-                size: 50,
+          // Teal glow
+          Positioned(
+            bottom: -140,
+            left: -120,
+            child: Container(
+              width: 360,
+              height: 360,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF0C6B5C).withValues(alpha: 0.18),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 1.0],
+                ),
               ),
             ),
-            const SizedBox(height: 10),
+          ),
 
-            _buildFarmForm(),
-            const SizedBox(height: 30),
-            _buildMapSection(),
-            const SizedBox(height: 20),
-            _buildSubmitButton(),
-          ],
+          // Vignette
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.18),
+                  Colors.transparent,
+                  Colors.black.withValues(alpha: 0.25),
+                ],
+                stops: const [0.0, 0.45, 1.0],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =================== واجهة المستخدم ===================
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          textSelectionTheme: TextSelectionThemeData(
+            cursorColor: secondaryColor,
+            selectionColor: secondaryColor.withValues(alpha: 0.35),
+            selectionHandleColor: secondaryColor,
+          ),
         ),
-      ),
-    ),
-  ],
-),
-      ),
+        child: Scaffold(
+          extendBodyBehindAppBar: true,
+          backgroundColor: darkBackground,
+
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF042C25).withValues(alpha: 0.7),
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            leading: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10.0),
+              child: Material(
+                color: Colors.white.withValues(alpha: 0.08),
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () => Navigator.of(
+                    context,
+                  ).pushNamedAndRemoveUntil('/main', (route) => false),
+                  child: const Padding(
+                    padding: EdgeInsets.only(right: 7, left: 14),
+                    child: Icon(Icons.arrow_back, color: Colors.white),
+                  ),
+                ),
+              ),
+            ),
+            title: Text('إضافة مزرعة جديدة', style: saafPageTitle),
+          ),
+
+          body: Stack(
+            children: [
+              _buildLuxBackground(),
+              SingleChildScrollView(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    16 + kToolbarHeight + MediaQuery.of(context).padding.top,
+                    16,
+                    16 +
+                        kBottomNavigationBarHeight +
+                        MediaQuery.of(context).viewPadding.bottom +
+                        40,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 10),
+                      const SizedBox(height: 10),
+                      Center(
+                        child: Icon(
+                          Icons.agriculture_rounded,
+                          color: secondaryColor,
+                          size: 50,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      _buildFarmForm(),
+                      const SizedBox(height: 30),
+                      _buildMapSection(),
+                      const SizedBox(height: 20),
+                      _buildSubmitButton(),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -958,20 +935,20 @@ return Directionality(
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-  color: Colors.white.withValues(alpha: 0.06),
-  borderRadius: BorderRadius.circular(25),
-  border: Border.all(
-    color: secondaryColor.withValues(alpha: 0.25),
-    width: 1,
-  ),
-  boxShadow: [
-    BoxShadow(
-      color: Colors.black.withValues(alpha: 0.28),
-      blurRadius: 24,
-      offset: const Offset(0, 16),
-    ),
-  ],
-),
+        color: Colors.white.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(
+          color: secondaryColor.withValues(alpha: 0.25),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.28),
+            blurRadius: 24,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
       child: Form(
         key: _formKey,
         child: Column(
@@ -990,22 +967,23 @@ return Directionality(
             const SizedBox(height: 20),
 
             _textField(
-  controller: _contractNumberController,
-  label: 'رقم الصك',
-  icon: Icons.confirmation_number_rounded,
-  keyboardType: TextInputType.number,
-),
-const SizedBox(height: 20),
+              controller: _contractNumberController,
+              label: 'رقم الصك',
+              icon: Icons.confirmation_number_rounded,
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 20),
 
-_textField(
-  controller: _farmSizeController,
-  label: 'مساحة المزرعة (م²)',
-  icon: Icons.straighten,
-  keyboardType: TextInputType.number,
-  inputFormatters: [
-    FilteringTextInputFormatter.digitsOnly, // ✅ هذا السطر يمنع الحروف تماماً
-  ],
-),
+            _textField(
+              controller: _farmSizeController,
+              label: 'مساحة المزرعة (م²)',
+              icon: Icons.straighten,
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter
+                    .digitsOnly, 
+              ],
+            ),
             const SizedBox(height: 20),
             _regionDropdown(),
             const SizedBox(height: 20),
@@ -1031,11 +1009,7 @@ _textField(
             else if (_farmImage != null)
               ClipRRect(
                 borderRadius: BorderRadius.circular(15),
-                child: Image.file(
-                  _farmImage!,
-                  height: 150,
-                  fit: BoxFit.cover,
-                ),
+                child: Image.file(_farmImage!, height: 150, fit: BoxFit.cover),
               ),
           ],
         ),
@@ -1043,18 +1017,18 @@ _textField(
     );
   }
 
-Widget _textField({
+  Widget _textField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
     bool optional = false,
     int maxLines = 1,
-    List<TextInputFormatter>? inputFormatters, // 1️⃣ أضيفي هذا السطر
+    List<TextInputFormatter>? inputFormatters, 
   }) {
     return TextFormField(
       controller: controller,
-      inputFormatters: inputFormatters, // 2️⃣ وأضيفي هذا السطر
+      inputFormatters: inputFormatters, 
       cursorColor: secondaryColor,
       keyboardType: keyboardType,
       textAlign: TextAlign.right,
@@ -1064,12 +1038,12 @@ Widget _textField({
         if (!optional && (value == null || value.isEmpty)) {
           return 'هذا الحقل مطلوب';
         }
-  if (controller == _contractNumberController) {
-    final v = value?.trim() ?? '';
-    if (!RegExp(r'^\d{10}$').hasMatch(v)) {
-      return 'يجب أن يتكون رقم الصك من 10 خانات';
-    }
-  }
+        if (controller == _contractNumberController) {
+          final v = value?.trim() ?? '';
+          if (!RegExp(r'^\d{10}$').hasMatch(v)) {
+            return 'يجب أن يتكون رقم الصك من 10 خانات';
+          }
+        }
         return null;
       },
       decoration: InputDecoration(
@@ -1077,108 +1051,98 @@ Widget _textField({
         labelStyle: GoogleFonts.almarai(color: Colors.white70),
         prefixIcon: Icon(icon, color: secondaryColor),
         filled: true,
-fillColor: Colors.white.withValues(alpha: 0.06),
+        fillColor: Colors.white.withValues(alpha: 0.06),
 
-enabledBorder: OutlineInputBorder(
-  borderRadius: BorderRadius.circular(15.0),
-  borderSide: BorderSide(color: secondaryColor.withValues(alpha: 0.25)),
-),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15.0),
+          borderSide: BorderSide(color: secondaryColor.withValues(alpha: 0.25)),
+        ),
 
-focusedBorder: OutlineInputBorder(
-  borderRadius: const BorderRadius.all(Radius.circular(15.0)),
-  borderSide: BorderSide(color: secondaryColor.withValues(alpha: 0.55), width: 2),
-),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: const BorderRadius.all(Radius.circular(15.0)),
+          borderSide: BorderSide(
+            color: secondaryColor.withValues(alpha: 0.55),
+            width: 2,
+          ),
+        ),
       ),
     );
   }
 
-Widget _regionDropdown() {
-  final errorColor = Theme.of(context).colorScheme.error;
+  Widget _regionDropdown() {
+    final errorColor = Theme.of(context).colorScheme.error;
 
-  return DropdownButtonFormField<String>(
-    decoration: InputDecoration(
-      labelText: 'المنطقة',
-      labelStyle: GoogleFonts.almarai(color: Colors.white70),
-      prefixIcon: const Icon(Icons.location_on, color: secondaryColor),
-      filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.06),
+    return DropdownButtonFormField<String>(
+      decoration: InputDecoration(
+        labelText: 'المنطقة',
+        labelStyle: GoogleFonts.almarai(color: Colors.white70),
+        prefixIcon: const Icon(Icons.location_on, color: secondaryColor),
+        filled: true,
+        fillColor: Colors.white.withValues(alpha: 0.06),
 
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15.0),
-        borderSide: BorderSide(
-          color: secondaryColor.withValues(alpha: 0.25),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15.0),
+          borderSide: BorderSide(color: secondaryColor.withValues(alpha: 0.25)),
         ),
-      ),
 
-      focusedBorder: OutlineInputBorder(
-        borderRadius: const BorderRadius.all(Radius.circular(15.0)),
-        borderSide: BorderSide(
-          color: secondaryColor.withValues(alpha: 0.55),
-          width: 2,
-        ),
-      ),
-
-      // نفس درجة الأحمر المستخدمة في باقي الحقول
-      errorBorder: UnderlineInputBorder(
-        borderSide: BorderSide(
-          color: errorColor,
-          width: 1,
-        ),
-      ),
-
-      focusedErrorBorder: UnderlineInputBorder(
-        borderSide: BorderSide(
-          color: errorColor,
-          width: 1,
-        ),
-      ),
-
-      errorStyle: GoogleFonts.almarai(
-        color: errorColor,
-        fontSize: 12,
-      ),
-    ),
-
-    dropdownColor: darkBackground,
-    style: GoogleFonts.almarai(color: Colors.white),
-    initialValue: _selectedRegion,
-    isExpanded: true,
-
-    hint: Text(
-      'اختر منطقة',
-      style: GoogleFonts.almarai(color: Colors.white70),
-    ),
-
-    icon: const Icon(
-      Icons.keyboard_arrow_down_rounded,
-      color: Colors.white70,
-    ),
-
-    onChanged: (val) => setState(() => _selectedRegion = val),
-
-    items: _saudiRegions
-        .map(
-          (r) => DropdownMenuItem(
-            value: r,
-            child: Text(
-              r,
-              style: GoogleFonts.almarai(color: Colors.white),
-            ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: const BorderRadius.all(Radius.circular(15.0)),
+          borderSide: BorderSide(
+            color: secondaryColor.withValues(alpha: 0.55),
+            width: 2,
           ),
-        )
-        .toList(),
+        ),
 
-    validator: (v) => v == null ? 'الرجاء اختيار منطقة' : null,
-  );
-}
+        errorBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: errorColor, width: 1),
+        ),
+
+        focusedErrorBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: errorColor, width: 1),
+        ),
+
+        errorStyle: GoogleFonts.almarai(color: errorColor, fontSize: 12),
+      ),
+
+      dropdownColor: darkBackground,
+      style: GoogleFonts.almarai(color: Colors.white),
+      initialValue: _selectedRegion,
+      isExpanded: true,
+
+      hint: Text(
+        'اختر منطقة',
+        style: GoogleFonts.almarai(color: Colors.white70),
+      ),
+
+      icon: const Icon(
+        Icons.keyboard_arrow_down_rounded,
+        color: Colors.white70,
+      ),
+
+      onChanged: (val) => setState(() => _selectedRegion = val),
+
+      items: _saudiRegions
+          .map(
+            (r) => DropdownMenuItem(
+              value: r,
+              child: Text(r, style: GoogleFonts.almarai(color: Colors.white)),
+            ),
+          )
+          .toList(),
+
+      validator: (v) => v == null ? 'الرجاء اختيار منطقة' : null,
+    );
+  }
 
   Widget _imagePicker() {
     return SizedBox(
       height: 60,
       child: ElevatedButton.icon(
         onPressed: _pickImage,
-        icon: const Icon(Icons.add_photo_alternate_rounded,
-            color: secondaryColor),
+        icon: const Icon(
+          Icons.add_photo_alternate_rounded,
+          color: secondaryColor,
+        ),
         label: const Text(
           'أضف صورة للمزرعة (اختياري)',
           style: TextStyle(color: secondaryColor, fontWeight: FontWeight.bold),
@@ -1193,285 +1157,320 @@ Widget _regionDropdown() {
       ),
     );
   }
-  // 1. دالة البحث الجديدة باستخدام MapTiler
-Future<void> _fetchMapTilerSuggestions(String input) async {
-  if (input.isEmpty) {
-    setState(() => _suggestions = []);
-    return;
+
+  Future<void> _fetchMapTilerSuggestions(String input) async {
+    if (input.isEmpty) {
+      setState(() => _suggestions = []);
+      return;
+    }
+    setState(() => _loadingSuggest = true);
+
+    final url =
+        'https://api.maptiler.com/geocoding/$input.json?key=${Secrets.mapTilerKey}&country=sa&language=ar';
+
+    try {
+      final res = await http.get(Uri.parse(url));
+      final data = jsonDecode(res.body);
+      final List features = data['features'] ?? [];
+
+      setState(() {
+        _suggestions = features
+            .map(
+              (e) => {
+                'primary': e['text_ar'] ?? e['text'], 
+                'secondary':
+                    e['place_name_ar'] ?? e['place_name'],
+                'center': e['center'], 
+              },
+            )
+            .toList();
+      });
+    } catch (e) {
+      debugPrint('MapTiler Geocoding Error: $e');
+    } finally {
+      setState(() => _loadingSuggest = false);
+    }
   }
-  setState(() => _loadingSuggest = true);
 
-  // نستخدم الرابط الخاص بـ MapTiler للبحث في السعودية وبالعربي
-  final url = 'https://api.maptiler.com/geocoding/$input.json?key=${Secrets.mapTilerKey}&country=sa&language=ar';
+  void _moveToMapTilerLocation(List<dynamic> center) {
+    final newLatLng = LatLng(center[1], center[0]);
 
-  try {
-    final res = await http.get(Uri.parse(url));
-    final data = jsonDecode(res.body);
-    final List features = data['features'] ?? [];
+    _mapController.move(newLatLng, 15);
 
     setState(() {
-      _suggestions = features.map((e) => {
-        'primary': e['text_ar'] ?? e['text'], // الاسم بالعربي
-        'secondary': e['place_name_ar'] ?? e['place_name'], // العنوان الكامل
-        'center': e['center'], // الإحداثيات [lng, lat]
-      }).toList();
+      _currentCenter = newLatLng;
+      _suggestions = [];
+      _searchCtrl.clear();
     });
-  } catch (e) {
-    debugPrint('MapTiler Geocoding Error: $e');
-  } finally {
-    setState(() => _loadingSuggest = false);
   }
-}
 
-// 2. دالة الانتقال للموقع المختار من البحث
-void _moveToMapTilerLocation(List<dynamic> center) {
-  
-  final newLatLng = LatLng(center[1], center[0]);
-  
-  _mapController.move(newLatLng, 15); 
-
-  setState(() {
-    _currentCenter = newLatLng;
-    _suggestions = []; 
-    _searchCtrl.clear(); 
-  });
-}
-
-Widget _buildMapSection() {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Text(
-        'تحديد حدود المزرعة',
-        style: GoogleFonts.almarai(
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-          color: Colors.white,
+  Widget _buildMapSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'تحديد حدود المزرعة',
+          style: GoogleFonts.almarai(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
         ),
-      ),
-      const SizedBox(height: 12),
-  
-      Container(
-        height: 380, 
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(25),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(25),
-          child: Stack(
-            children: [
-              // 1. الخريطة الأساسية (MapTiler)
-              FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(
-                  initialCenter: _currentCenter,
-                  initialZoom: 15.0,
-                  onTap: (tapPosition, point) => _onMapTap(point),
-                ),
-                children: [
-                  TileLayer(
-                    urlTemplate: 'https://api.maptiler.com/maps/hybrid/{z}/{x}/{y}.jpg?key=${Secrets.mapTilerKey}',
-                    userAgentPackageName: 'com.saaf.app',
-                  ),
-                  // رسم المضلع (الحدود)
-                  if (_polygonPoints.isNotEmpty)
-                    PolygonLayer(
-                      polygons: [
-                        Polygon(
-                          points: _polygonPoints,
-                          color: const Color.fromARGB(75, 215, 172, 92),
-                          borderColor: const Color.fromARGB(255, 2, 79, 25),
-                          borderStrokeWidth: 3,
-                        ),
-                      ],
-                    ),
-                  // رسم النقاط
-                  MarkerLayer(
-                    markers: _polygonPoints.map((p) => Marker(
-                      point: p,
-                      child: const Icon(Icons.location_on, color: Colors.green, size: 30),
-                    )).toList(),
-                  ),
-                ],
+        const SizedBox(height: 12),
+
+        Container(
+          height: 380,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(25),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
               ),
-              
-              // 2. أزرار التحكم اليدوية (الزوم والبوصلة)
-              Positioned(
-                bottom: 20,
-                left: 15, 
-                child: Column(
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(25),
+            child: Stack(
+              children: [
+                FlutterMap(
+                  mapController: _mapController,
+                  options: MapOptions(
+                    initialCenter: _currentCenter,
+                    initialZoom: 15.0,
+                    onTap: (tapPosition, point) => _onMapTap(point),
+                  ),
                   children: [
-                    _buildCustomMapButton(
-                      icon: Icons.add,
-                      onPressed: () => _mapController.move(_mapController.camera.center, _mapController.camera.zoom + 1),
+                    TileLayer(
+                      urlTemplate:
+                          'https://api.maptiler.com/maps/hybrid/{z}/{x}/{y}.jpg?key=${Secrets.mapTilerKey}',
+                      userAgentPackageName: 'com.saaf.app',
                     ),
-                    _buildCustomMapButton(
-                      icon: Icons.remove,
-                      onPressed: () => _mapController.move(_mapController.camera.center, _mapController.camera.zoom - 1),
-                    ),
-                    _buildCustomMapButton(
-                      icon: Icons.explore_outlined,
-                      onPressed: () => _mapController.rotate(0), // إعادة توجيه الشمال
+                    if (_polygonPoints.isNotEmpty)
+                      PolygonLayer(
+                        polygons: [
+                          Polygon(
+                            points: _polygonPoints,
+                            color: const Color.fromARGB(75, 215, 172, 92),
+                            borderColor: const Color.fromARGB(255, 2, 79, 25),
+                            borderStrokeWidth: 3,
+                          ),
+                        ],
+                      ),
+                    MarkerLayer(
+                      markers: _polygonPoints
+                          .map(
+                            (p) => Marker(
+                              point: p,
+                              child: const Icon(
+                                Icons.location_on,
+                                color: Colors.green,
+                                size: 30,
+                              ),
+                            ),
+                          )
+                          .toList(),
                     ),
                   ],
                 ),
-              ),
 
-              // 3. شريط البحث  
-              Positioned(
-                top: 15,
-                left: 15,
-                right: 15,
-                child: Material(
-                  elevation: 8,
-                  borderRadius: BorderRadius.circular(30),
-                  color: Colors.white,
-                  child: Row(
+                Positioned(
+                  bottom: 20,
+                  left: 15,
+                  child: Column(
                     children: [
-                      const SizedBox(width: 15),
-                      const Icon(Icons.search, color: primaryColor), 
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: TextField(
-                          controller: _searchCtrl,
-                          onChanged: _onSearchChanged,
-                          onSubmitted: (_) => _searchAndGo(),
-                          decoration: InputDecoration(
-                            hintText: 'ابحث عن موقع المزرعة...',
-                            hintStyle: GoogleFonts.almarai(color: Colors.black45, fontSize: 14),
-                            border: InputBorder.none,
-                          ),
-                          style: GoogleFonts.almarai(color: Colors.black87),
+                      _buildCustomMapButton(
+                        icon: Icons.add,
+                        onPressed: () => _mapController.move(
+                          _mapController.camera.center,
+                          _mapController.camera.zoom + 1,
                         ),
+                      ),
+                      _buildCustomMapButton(
+                        icon: Icons.remove,
+                        onPressed: () => _mapController.move(
+                          _mapController.camera.center,
+                          _mapController.camera.zoom - 1,
+                        ),
+                      ),
+                      _buildCustomMapButton(
+                        icon: Icons.explore_outlined,
+                        onPressed: () =>
+                            _mapController.rotate(0), 
                       ),
                     ],
                   ),
                 ),
-              ),
-              
-              // 4. قائمة الاقتراحات (Autocomplete)
-              if (_suggestions.isNotEmpty || _loadingSuggest)
+
                 Positioned(
-                  top: 70,
-                  left: 20,
-                  right: 20,
+                  top: 15,
+                  left: 15,
+                  right: 15,
                   child: Material(
-                    elevation: 10,
-                    borderRadius: BorderRadius.circular(15),
+                    elevation: 8,
+                    borderRadius: BorderRadius.circular(30),
                     color: Colors.white,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 200),
-                      child: _loadingSuggest
-                          ? const Padding(
-                              padding: EdgeInsets.all(15),
-                              child: Center(child: CircularProgressIndicator()),
-                              
-                            )
-                          : ListView.separated(
-                              shrinkWrap: true,
-                              itemCount: _suggestions.length,
-                              separatorBuilder: (_, __) => const Divider(height: 1),
-                              itemBuilder: (ctx, i) {
-  final s = _suggestions[i];
-  return ListTile(
-    leading: const Icon(Icons.location_on, color: secondaryColor),
-    title: Text(
-      s['primary'] ?? '',
-      style: GoogleFonts.almarai(
-        fontSize: 14,
-        color: Colors.black87, 
-      ),
-    ),
-    subtitle: Text(
-      s['secondary'] ?? '',
-      style: GoogleFonts.almarai(
-        fontSize: 12,
-        color: Colors.black54,
-      ),
-    ),
-    onTap: () => _moveToMapTilerLocation(s['center']),
-  );
-},
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 15),
+                        const Icon(Icons.search, color: primaryColor),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchCtrl,
+                            onChanged: _onSearchChanged,
+                            onSubmitted: (_) => _searchAndGo(),
+                            decoration: InputDecoration(
+                              hintText: 'ابحث عن موقع المزرعة...',
+                              hintStyle: GoogleFonts.almarai(
+                                color: Colors.black45,
+                                fontSize: 14,
+                              ),
+                              border: InputBorder.none,
                             ),
+                            style: GoogleFonts.almarai(color: Colors.black87),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-            ],
+
+                if (_suggestions.isNotEmpty || _loadingSuggest)
+                  Positioned(
+                    top: 70,
+                    left: 20,
+                    right: 20,
+                    child: Material(
+                      elevation: 10,
+                      borderRadius: BorderRadius.circular(15),
+                      color: Colors.white,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 200),
+                        child: _loadingSuggest
+                            ? const Padding(
+                                padding: EdgeInsets.all(15),
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              )
+                            : ListView.separated(
+                                shrinkWrap: true,
+                                itemCount: _suggestions.length,
+                                separatorBuilder: (_, __) =>
+                                    const Divider(height: 1),
+                                itemBuilder: (ctx, i) {
+                                  final s = _suggestions[i];
+                                  return ListTile(
+                                    leading: const Icon(
+                                      Icons.location_on,
+                                      color: secondaryColor,
+                                    ),
+                                    title: Text(
+                                      s['primary'] ?? '',
+                                      style: GoogleFonts.almarai(
+                                        fontSize: 14,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      s['secondary'] ?? '',
+                                      style: GoogleFonts.almarai(
+                                        fontSize: 12,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                    onTap: () =>
+                                        _moveToMapTilerLocation(s['center']),
+                                  );
+                                },
+                              ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
-      ),
-      const SizedBox(height: 15),
-      // أزرار التحكم السفلية (تراجع ومسح)
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _mapActionButton(
-            label: 'تراجع',
-            icon: Icons.undo,
-            color: secondaryColor,
-            textColor: darkBackground,
-            onTap: _undoLastPoint,
-          ),
-          _mapActionButton(
-            label: 'مسح الكل',
-            icon: Icons.delete_sweep,
-            color: Colors.redAccent,
-            textColor: Colors.white,
-            onTap: _clearPolygon,
-          ),
-        ],
-      ),
-    ],
-  );
-}
+        const SizedBox(height: 15),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _mapActionButton(
+              label: 'تراجع',
+              icon: Icons.undo,
+              color: secondaryColor,
+              textColor: darkBackground,
+              onTap: _undoLastPoint,
+            ),
+            _mapActionButton(
+              label: 'مسح الكل',
+              icon: Icons.delete_sweep,
+              color: Colors.redAccent,
+              textColor: Colors.white,
+              onTap: _clearPolygon,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
- Widget _buildCustomMapButton({required IconData icon, required VoidCallback onPressed}) {
-  return Container(
-    margin: const EdgeInsets.symmetric(vertical: 4),
-    child: Material(
-      color: Colors.white.withValues(alpha: 0.9), 
-      borderRadius: BorderRadius.circular(12),
-      elevation: 4,
-      child: InkWell(
-        onTap: onPressed,
+  Widget _buildCustomMapButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: Material(
+        color: Colors.white.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: secondaryColor.withValues(alpha: 0.5), width: 1),
-          ),
-          child: Icon(
-            icon,
-            color: darkBackground, 
-            size: 26,
+        elevation: 4,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: secondaryColor.withValues(alpha: 0.5),
+                width: 1,
+              ),
+            ),
+            child: Icon(icon, color: darkBackground, size: 26),
           ),
         ),
       ),
-    ),
-  );
-} 
-Widget _mapActionButton({required String label, required IconData icon, required Color color, required Color textColor, required VoidCallback onTap}) {
-  return ElevatedButton.icon(
-    onPressed: onTap,
-    icon: Icon(icon, color: textColor, size: 20),
-    label: Text(label, style: GoogleFonts.almarai(color: textColor, fontWeight: FontWeight.bold)),
-    style: ElevatedButton.styleFrom(
-      backgroundColor: color,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-    ),
-  );
-}
+    );
+  }
 
+  Widget _mapActionButton({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required Color textColor,
+    required VoidCallback onTap,
+  }) {
+    return ElevatedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, color: textColor, size: 20),
+      label: Text(
+        label,
+        style: GoogleFonts.almarai(
+          color: textColor,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      ),
+    );
+  }
 
   Widget _buildSubmitButton() {
     return SizedBox(
@@ -1491,7 +1490,9 @@ Widget _mapActionButton({required String label, required IconData icon, required
             child: Center(
               child: _isSaving
                   ? const CircularProgressIndicator(
-                      strokeWidth: 3, color: Color(0xFF042C25))
+                      strokeWidth: 3,
+                      color: Color(0xFF042C25),
+                    )
                   : Text(
                       'إضافة المزرعة',
                       style: GoogleFonts.almarai(

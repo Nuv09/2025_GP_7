@@ -2,6 +2,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data' as td show Uint8List;
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -15,11 +16,6 @@ import 'package:http/http.dart' as http;
 import 'package:saafapp/constant.dart';
 import 'dart:ui';
 
-// // ✅ Reverse Geocoding
-// import 'package:geocoding/geocoding.dart' show Placemark, placemarkFromCoordinates, Location, locationFromAddress;
-
-// // ✅ Session token لِـ Places
-// import 'package:uuid/uuid.dart';
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -197,9 +193,44 @@ void _safeToast(String msg, {IconData? icon, String type = 'info'}) {
   }
   // ========= Helpers =========
 
+double _toWebMercatorX(double lon) {
+  const originShift = 20037508.342789244;
+  return lon * originShift / 180.0;
+}
+
+double _toWebMercatorY(double lat) {
+  final clamped = lat.clamp(-85.05112878, 85.05112878);
+  const originShift = 20037508.342789244;
+  final rad = clamped * math.pi / 180.0;
+
+  return originShift *
+      math.log(math.tan(math.pi / 4.0 + rad / 2.0)) /
+      math.pi;
+}
+
+double _estimateAreaSqM(List<LatLng> pts) {
+  if (pts.length < 3) return 0;
+
+  final xs = <double>[];
+  final ys = <double>[];
+
+  for (final p in pts) {
+    xs.add(_toWebMercatorX(p.longitude));
+    ys.add(_toWebMercatorY(p.latitude));
+  }
+
+  xs.add(xs.first);
+  ys.add(ys.first);
+
+  double sum = 0;
+  for (int i = 0; i < xs.length - 1; i++) {
+    sum += (xs[i] * ys[i + 1]) - (xs[i + 1] * ys[i]);
+  }
+
+  return sum.abs() * 0.5;
+}
   
 void _rebuildOverlays() {
-  // تحويل النقاط إلى Markers تناسب Flutter Map
   _markers = _polygonPoints.map((point) {
     return Marker(
       point: point,
@@ -226,19 +257,18 @@ void _rebuildOverlays() {
 
   setState(() {});
 }
-  void _onMapTap(LatLng p) {
-    _polygonPoints.add(p);
-    _rebuildOverlays();
-    _fitCameraToPolygon();
-  }
 
-  void _undoLastPoint() {
-    if (_polygonPoints.isNotEmpty) {
-      _polygonPoints.removeLast();
-      _rebuildOverlays();
-      _fitCameraToPolygon();
-    }
+void _onMapTap(LatLng p) {
+  _polygonPoints.add(p);
+  _rebuildOverlays();
+}
+
+void _undoLastPoint() {
+  if (_polygonPoints.isNotEmpty) {
+    _polygonPoints.removeLast();
+    _rebuildOverlays();
   }
+}
 
   void _clearPolygon() {
     _polygonPoints.clear();
@@ -561,12 +591,29 @@ Future<bool> _confirmDialog(String title, String message) async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_polygonPoints.length < 3) {
-      _safeToast('حدد 3 نقاط على الأقل لحدود المزرعة', type: 'error');
-      return;
-    }
+  _safeToast('حدد 3 نقاط على الأقل لحدود المزرعة', type: 'error');
+  return;
+}
 
-    // تحقق المنطقة
-    if (_selectedRegion != null && _selectedRegion!.trim().isNotEmpty) {
+final entered = double.tryParse(_farmSizeController.text.trim()) ?? 0.0;
+if (entered > 0) {
+  final computed = _estimateAreaSqM(_polygonPoints);
+  final ratio = (computed - entered).abs() / entered;
+
+  if (ratio > 0.30) {
+    final ok = await _confirmDialog(
+      'تحذير اختلاف المساحة',
+      'المساحة المدخلة: ${entered.toStringAsFixed(0)} م²\n'
+      'المساحة المقدّرة من الخريطة: ${computed.toStringAsFixed(0)} م²\n\n'
+      'يوجد فرق كبير (> 30%). هل تريد المتابعة؟',
+    );
+
+    if (!ok) return;
+  }
+}
+
+// تحقق المنطقة
+if (_selectedRegion != null && _selectedRegion!.trim().isNotEmpty) {
       try {
         final detected = await _reverseRegionFromCentroid();
         if (detected != null && detected.isNotEmpty) {
@@ -672,12 +719,12 @@ Future<bool> _confirmDialog(String title, String message) async {
         });
 
         if (!mounted) return;
-        _safeToast('تم حفظ التعديلات بنجاح', type: 'success'); // ✅ الإشعار الأخضر
+        _safeToast('تم حفظ التعديلات بنجاح', type: 'success'); 
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (!mounted) return;
-      _safeToast('تعذر التعديل: $e', type: 'error'); // ❌ الإشعار العنابي
+      _safeToast('تعذر التعديل: $e', type: 'error'); 
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }

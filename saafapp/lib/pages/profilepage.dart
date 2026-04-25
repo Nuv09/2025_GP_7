@@ -1,4 +1,3 @@
-// lib/pages/profilepage.dart
 import 'dart:io' show File;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -7,11 +6,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:saafapp/constant.dart';
 import 'dart:ui';
-// Firebase
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-
 import 'package:saafapp/widgets/saaf_image.dart';
 
 const Color kDeepGreen = Color(0xFF042C25);
@@ -47,7 +44,6 @@ class _ProfilePageState extends State<ProfilePage> {
   String? _pickedFilePath;
   Uint8List? _pickedBytes;
 
-  // المنطقة
   String? _selectedRegion;
   final List<String> _regions = const [
     'الرياض',
@@ -81,11 +77,9 @@ class _ProfilePageState extends State<ProfilePage> {
     super.dispose();
   }
 
-  // تدعم الألوان حسب الحالة (نجاح، خطأ، معلومات)
   void _safeToast(String msg, {IconData? icon, String type = 'info'}) {
     if (!mounted) return;
 
-    // تحديد اللون والأيقونة بناءً على النوع
     Color bgColor;
     Color contentColor = kDeepGreen;
     IconData toastIcon;
@@ -1153,218 +1147,226 @@ class _ProfilePageState extends State<ProfilePage> {
             _buildLuxBackground(),
             SafeArea(
               child: Container(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 190),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 110),
                 child: SingleChildScrollView(
-                  child: _glassCard(
-                    padding: const EdgeInsets.all(20),
-                    borderRadius: const BorderRadius.all(Radius.circular(25)),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Center(
-                            child: SizedBox(
-                              width: 120,
-                              height: 120,
-                              child: _clickableAvatar(),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          const SizedBox(height: 24),
-
-                          _buildField(
-                            controller: _nameCtrl,
-                            label: 'الاسم الكامل',
-                            icon: Icons.person,
-                            editing: _editName,
-                            onToggle: () =>
-                                setState(() => _editName = !_editName),
-                            validator: (value) {
-                              final v = value?.trim() ?? '';
-                              if (v.isEmpty) {
-                                return 'الرجاء إدخال الاسم';
-                              }
-
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-
-                          _buildField(
-                            controller: _phoneCtrl,
-                            label: 'رقم الجوال',
-                            icon: Icons.phone,
-                            editing: _editPhone,
-                            onToggle: () =>
-                                setState(() => _editPhone = !_editPhone),
-                            keyboardType: TextInputType.phone,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              LengthLimitingTextInputFormatter(10),
-                            ],
-                            validator: (value) {
-                              final p = value?.trim() ?? '';
-                              if (p.isEmpty) {
-                                return 'الرجاء إدخال رقم الجوال';
-                              }
-                              if (!RegExp(r'^05\d{8}$').hasMatch(p)) {
-                                return 'رجاءً أدخل الرقم بصيغة 05XXXXXXXX';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-
-                          _buildField(
-                            controller: _emailCtrl,
-                            label: 'البريد الإلكتروني',
-                            icon: Icons.email,
-                            editing: _editEmail,
-                            onToggle: () =>
-                                setState(() => _editEmail = !_editEmail),
-                            keyboardType: TextInputType.emailAddress,
-                          ),
-                          const SizedBox(height: 12),
-
-                          DropdownButtonFormField<String>(
-                            initialValue: _selectedRegion,
-                            decoration: InputDecoration(
-                              labelText: 'المنطقة',
-                              labelStyle: GoogleFonts.almarai(
-                                color: Colors.white70,
-                              ),
-                              prefixIcon: const Icon(
-                                Icons.location_on,
-                                color: kGold,
-                              ),
-                              filled: true,
-                              fillColor: Colors.white.withValues(alpha: 0.06),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(15.0),
-                                borderSide: BorderSide(
-                                  color: kGold.withValues(alpha: 0.25),
-                                  width: 1,
+                  child: Column(
+                    children: [
+                      _glassCard(
+                        padding: const EdgeInsets.all(20),
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(25),
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Center(
+                                child: SizedBox(
+                                  width: 120,
+                                  height: 120,
+                                  child: _clickableAvatar(),
                                 ),
                               ),
+                              const SizedBox(height: 24),
 
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(15.0),
-                                borderSide: BorderSide(
-                                  color: kGold.withValues(alpha: 0.25),
-                                  width: 1,
-                                ),
+                              _buildField(
+                                controller: _nameCtrl,
+                                label: 'الاسم الكامل',
+                                icon: Icons.person,
+                                editing: _editName,
+                                onToggle: () =>
+                                    setState(() => _editName = !_editName),
+                                validator: (value) {
+                                  final v = value?.trim() ?? '';
+                                  if (v.isEmpty) return 'الرجاء إدخال الاسم';
+                                  return null;
+                                },
                               ),
+                              const SizedBox(height: 12),
 
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(15.0),
-                                borderSide: BorderSide(
-                                  color: kGold.withValues(alpha: 0.55),
-                                  width: 2,
-                                ),
-                              ),
-
-                              errorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(15.0),
-                                borderSide: const BorderSide(
-                                  color: Colors.redAccent,
-                                ),
-                              ),
-
-                              focusedErrorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(15.0),
-                                borderSide: const BorderSide(
-                                  color: Colors.redAccent,
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'الرجاء اختيار المنطقة';
-                              }
-                              return null;
-                            },
-                            dropdownColor: kDeepGreen,
-                            style: GoogleFonts.almarai(color: Colors.white),
-                            isExpanded: true,
-                            hint: Text(
-                              'اختر منطقة',
-                              style: GoogleFonts.almarai(color: Colors.white54),
-                            ),
-                            onChanged: (val) =>
-                                setState(() => _selectedRegion = val),
-                            items: _regions
-                                .map(
-                                  (r) => DropdownMenuItem(
-                                    value: r,
-                                    child: Text(r),
-                                  ),
-                                )
-                                .toList(),
-                          ),
-
-                          const SizedBox(height: 28),
-
-                          SizedBox(
-                            height: 54,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [kGold, kBeige],
-                                ),
-                                borderRadius: BorderRadius.circular(35),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.25),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 6),
-                                  ),
+                              _buildField(
+                                controller: _phoneCtrl,
+                                label: 'رقم الجوال',
+                                icon: Icons.phone,
+                                editing: _editPhone,
+                                onToggle: () =>
+                                    setState(() => _editPhone = !_editPhone),
+                                keyboardType: TextInputType.phone,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(10),
                                 ],
+                                validator: (value) {
+                                  final p = value?.trim() ?? '';
+
+                                  if (p.isEmpty) {
+                                    return 'الرجاء إدخال رقم الجوال';
+                                  }
+
+                                  if (!RegExp(r'^05\d{8}$').hasMatch(p)) {
+                                    return 'الرجاء إدخال الرقم بصيغة 05XXXXXXXX';
+                                  }
+
+                                  return null;
+                                },
                               ),
-                              child: Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(35),
-                                  onTap: _saving ? null : _saveProfile,
-                                  child: Center(
-                                    child: Text(
-                                      _saving
-                                          ? '...جاري الحفظ'
-                                          : 'حفظ التعديلات',
-                                      style: GoogleFonts.almarai(
-                                        color: kDeepGreen,
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 16,
+                              const SizedBox(height: 12),
+
+                              _buildField(
+                                controller: _emailCtrl,
+                                label: 'البريد الإلكتروني',
+                                icon: Icons.email,
+                                editing: _editEmail,
+                                onToggle: () =>
+                                    setState(() => _editEmail = !_editEmail),
+                                keyboardType: TextInputType.emailAddress,
+                              ),
+                              const SizedBox(height: 12),
+
+                              DropdownButtonFormField<String>(
+                                initialValue: _selectedRegion,
+                                decoration: InputDecoration(
+                                  labelText: 'المنطقة',
+                                  labelStyle: GoogleFonts.almarai(
+                                    color: Colors.white70,
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.location_on,
+                                    color: kGold,
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.white.withValues(
+                                    alpha: 0.06,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(15.0),
+                                    borderSide: BorderSide(
+                                      color: kGold.withValues(alpha: 0.25),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(15.0),
+                                    borderSide: BorderSide(
+                                      color: kGold.withValues(alpha: 0.25),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(15.0),
+                                    borderSide: BorderSide(
+                                      color: kGold.withValues(alpha: 0.55),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(15.0),
+                                    borderSide: const BorderSide(
+                                      color: Colors.redAccent,
+                                    ),
+                                  ),
+                                  focusedErrorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(15.0),
+                                    borderSide: const BorderSide(
+                                      color: Colors.redAccent,
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'الرجاء اختيار المنطقة';
+                                  }
+                                  return null;
+                                },
+                                dropdownColor: kDeepGreen,
+                                style: GoogleFonts.almarai(color: Colors.white),
+                                isExpanded: true,
+                                hint: Text(
+                                  'اختر منطقة',
+                                  style: GoogleFonts.almarai(
+                                    color: Colors.white54,
+                                  ),
+                                ),
+                                onChanged: (val) =>
+                                    setState(() => _selectedRegion = val),
+                                items: _regions
+                                    .map(
+                                      (r) => DropdownMenuItem(
+                                        value: r,
+                                        child: Text(r),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+
+                              const SizedBox(height: 28),
+
+                              SizedBox(
+                                height: 54,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [kGold, kBeige],
+                                    ),
+                                    borderRadius: BorderRadius.circular(35),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.25,
+                                        ),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 6),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(35),
+                                      onTap: _saving ? null : _saveProfile,
+                                      child: Center(
+                                        child: Text(
+                                          _saving
+                                              ? '...جاري الحفظ'
+                                              : 'حفظ التعديلات',
+                                          style: GoogleFonts.almarai(
+                                            color: kDeepGreen,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 16,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
 
-                          TextButton.icon(
-                            onPressed: _saving ? null : _showDeleteConfirmation,
-                            icon: const Icon(
-                              Icons.delete_forever,
-                              color: Colors.redAccent,
-                            ),
-                            label: Text(
-                              'حذف الحساب',
-                              style: GoogleFonts.almarai(
-                                color: Colors.redAccent,
-                                fontWeight: FontWeight.w600,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
+                              const SizedBox(height: 8),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+
+                      const SizedBox(height: 14),
+
+                      TextButton.icon(
+                        onPressed: _saving ? null : _showDeleteConfirmation,
+                        icon: const Icon(
+                          Icons.delete_forever,
+                          color: Colors.redAccent,
+                        ),
+                        label: Text(
+                          'حذف الحساب',
+                          style: GoogleFonts.almarai(
+                            color: Colors.redAccent,
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

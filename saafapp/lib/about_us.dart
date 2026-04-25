@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-// الألوان
 const Color kDeepGreen = Color(0xFF042C25);
 const Color kLightBeige = Color(0xFFFFF6E0);
 const Color kAccentColor = Color(0xFFEBB974);
@@ -18,7 +16,9 @@ class AboutUsPage extends StatefulWidget {
 }
 
 class _AboutUsPageState extends State<AboutUsPage> {
-  final PageController _sliderController = PageController(viewportFraction: 0.98);
+  final PageController _sliderController = PageController(
+    viewportFraction: 0.98,
+  );
   final ValueNotifier<int> _activeIndex = ValueNotifier<int>(0);
   Timer? _sliderTimer;
 
@@ -40,7 +40,6 @@ class _AboutUsPageState extends State<AboutUsPage> {
       if (_activeIndex.value != idx) _activeIndex.value = idx;
     });
 
-    // Auto-scroll slider
     _sliderTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!_sliderController.hasClients) return;
       final current = (_sliderController.page ?? 0).round();
@@ -64,27 +63,27 @@ class _AboutUsPageState extends State<AboutUsPage> {
 
   // ------------------ Helpers -----------------------
   TextStyle _titleSmallStyle() => GoogleFonts.almarai(
-        color: kAccentColor,
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.2,
-      );
+    color: kAccentColor,
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0.2,
+  );
 
   TextStyle _headlineStyle(bool narrow) => GoogleFonts.almarai(
-        color: kLightBeige,
-        fontSize: narrow ? 34 : 44,
-        fontWeight: FontWeight.w700,
-        height: 1.15,
-      );
+    color: kLightBeige,
+    fontSize: narrow ? 34 : 44,
+    fontWeight: FontWeight.w700,
+    height: 1.15,
+  );
 
   TextStyle _bodyStyle() => GoogleFonts.almarai(
-        color: kLightBeige.withValues(alpha: 0.78),
-        height: 1.8,
-        fontSize: 16.5,
-        fontWeight: FontWeight.w500,
-      );
+    color: kLightBeige.withValues(alpha: 0.78),
+    height: 1.8,
+    fontSize: 16.5,
+    fontWeight: FontWeight.w500,
+  );
 
-  // ------------------ Luxury Background -----------------------
+  // ------------------ Background -----------------------
   Widget _buildLuxBackground() {
     return Positioned.fill(
       child: Stack(
@@ -95,11 +94,7 @@ class _AboutUsPageState extends State<AboutUsPage> {
               gradient: LinearGradient(
                 begin: Alignment.topRight,
                 end: Alignment.bottomLeft,
-                colors: [
-                  Color(0xFF05352D),
-                  kDeepGreen,
-                  Color(0xFF031E1A),
-                ],
+                colors: [Color(0xFF05352D), kDeepGreen, Color(0xFF031E1A)],
                 stops: [0.0, 0.55, 1.0],
               ),
             ),
@@ -248,7 +243,6 @@ class _AboutUsPageState extends State<AboutUsPage> {
                   ),
                 ),
 
-                // Subtle gold top sheen
                 Positioned(
                   top: 0,
                   left: 0,
@@ -268,9 +262,6 @@ class _AboutUsPageState extends State<AboutUsPage> {
                   ),
                 ),
 
-             
-
-                // Dots indicator (lux)
                 Positioned(
                   bottom: 18,
                   left: 18,
@@ -278,26 +269,30 @@ class _AboutUsPageState extends State<AboutUsPage> {
                     valueListenable: _activeIndex,
                     builder: (_, active, __) {
                       return _glassCard(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        borderRadius: const BorderRadius.all(Radius.circular(18)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(18),
+                        ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
-                          children: List.generate(
-                            _aboutImages.length,
-                            (i) {
-                              final bool on = i == active;
-                              return AnimatedContainer(
-                                duration: const Duration(milliseconds: 250),
-                                margin: const EdgeInsets.symmetric(horizontal: 4),
-                                width: on ? 18 : 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: on ? kAccentColor : Colors.white.withValues(alpha: 0.35),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                              );
-                            },
-                          ),
+                          children: List.generate(_aboutImages.length, (i) {
+                            final bool on = i == active;
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 250),
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              width: on ? 18 : 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: on
+                                    ? kAccentColor
+                                    : Colors.white.withValues(alpha: 0.35),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            );
+                          }),
                         ),
                       );
                     },
@@ -318,9 +313,17 @@ class _AboutUsPageState extends State<AboutUsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("سعـف… حيث تلتقي الزراعة بالذكاء", textAlign: TextAlign.right, style: _titleSmallStyle()),
+          Text(
+            "سعـف… حيث تلتقي الزراعة بالذكاء",
+            textAlign: TextAlign.right,
+            style: _titleSmallStyle(),
+          ),
           const SizedBox(height: 10),
-          Text("نحو مستقبل زراعي أكثر دقّة واستدامة", textAlign: TextAlign.right, style: _headlineStyle(narrow)),
+          Text(
+            "نحو مستقبل زراعي أكثر دقّة واستدامة",
+            textAlign: TextAlign.right,
+            style: _headlineStyle(narrow),
+          ),
           const SizedBox(height: 18),
 
           _glassCard(
@@ -365,9 +368,15 @@ class _AboutUsPageState extends State<AboutUsPage> {
                   decoration: BoxDecoration(
                     color: kAccentColor.withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: kAccentColor.withValues(alpha: 0.28)),
+                    border: Border.all(
+                      color: kAccentColor.withValues(alpha: 0.28),
+                    ),
                   ),
-                  child: const Icon(Icons.support_agent_rounded, color: kAccentColor, size: 22),
+                  child: const Icon(
+                    Icons.support_agent_rounded,
+                    color: kAccentColor,
+                    size: 22,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -384,20 +393,19 @@ class _AboutUsPageState extends State<AboutUsPage> {
             ),
             const SizedBox(height: 10),
             SizedBox(
-  width: double.infinity,
-  child: Text(
-    "للمساعدة أو الاستفسارات نرحّب بتواصلكم.",
-    textAlign: TextAlign.center,
-    style: GoogleFonts.almarai(
-      color: Colors.white70,
-      fontSize: 13.5,
-      fontWeight: FontWeight.w600,
-    ),
-  ),
-),
+              width: double.infinity,
+              child: Text(
+                "للمساعدة أو الاستفسارات نرحّب بتواصلكم.",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.almarai(
+                  color: Colors.white70,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
             const SizedBox(height: 14),
 
-            // Email Button (lux)
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -411,15 +419,18 @@ class _AboutUsPageState extends State<AboutUsPage> {
                   backgroundColor: kAccentColor,
                   foregroundColor: kDeepGreen,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
               ),
             ),
 
             const SizedBox(height: 10),
-
-           
           ],
         ),
       ),
@@ -455,7 +466,10 @@ class _AboutUsPageState extends State<AboutUsPage> {
                               const SizedBox(height: 18),
 
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 16,
+                                ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -476,7 +490,10 @@ class _AboutUsPageState extends State<AboutUsPage> {
                     return SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 28,
+                          vertical: 22,
+                        ),
                         child: Center(
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 1200),
@@ -496,7 +513,8 @@ class _AboutUsPageState extends State<AboutUsPage> {
                                   child: Padding(
                                     padding: const EdgeInsets.only(top: 12),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         _buildTextSection(false),
                                         const SizedBox(height: 16),

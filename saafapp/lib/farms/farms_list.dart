@@ -1,10 +1,9 @@
-// موديل بسيط يمثل المزرعة (يُستخدم في الكارت والقوائم)
 class FarmsList {
   final String farmOwner;
   final String farmName;
-  final String infectionAreas;   // وصف بسيط
-  final int numberOfPalm;        // عدد النخيل
-  final String? imageURL;        // رابط صورة Firebase (اختياري)
+  final String infectionAreas;
+  final int numberOfPalm;
+  final String? imageURL;
 
   const FarmsList({
     required this.farmOwner,
@@ -14,15 +13,16 @@ class FarmsList {
     this.imageURL,
   });
 
-  // تحويل من مستند Firestore إلى FarmsList
   factory FarmsList.fromMap(Map<String, dynamic> data) {
     return FarmsList(
       farmOwner: (data['ownerName'] ?? '').toString(),
-      farmName:  (data['farmName']  ?? '').toString(),
+      farmName: (data['farmName'] ?? '').toString(),
       infectionAreas: (data['infectionAreas'] ?? 'غير محدد').toString(),
       numberOfPalm: _asInt(data['numberOfPalm']),
       imageURL: (() {
-        final v = (data['imageURL'] ?? data['imageUrl'] ?? '').toString().trim();
+        final v = (data['imageURL'] ?? data['imageUrl'] ?? '')
+            .toString()
+            .trim();
         return v.isEmpty ? null : v;
       })(),
     );
