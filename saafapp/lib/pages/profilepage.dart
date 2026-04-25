@@ -44,8 +44,8 @@ class _ProfilePageState extends State<ProfilePage> {
   final _db = FirebaseFirestore.instance;
   final _storage = FirebaseStorage.instance;
 
-  String? _pickedFilePath; 
-  Uint8List? _pickedBytes; 
+  String? _pickedFilePath;
+  Uint8List? _pickedBytes;
 
   // المنطقة
   String? _selectedRegion;
@@ -87,28 +87,21 @@ class _ProfilePageState extends State<ProfilePage> {
 
     // تحديد اللون والأيقونة بناءً على النوع
     Color bgColor;
-    Color contentColor = kDeepGreen; 
+    Color contentColor = kDeepGreen;
     IconData toastIcon;
 
     switch (type) {
       case 'success':
-        bgColor = const Color(
-          0xFF1E8D5F,
-        ).withValues(alpha: 0.7); 
-        contentColor = Colors.white; 
+        bgColor = const Color(0xFF1E8D5F).withValues(alpha: 0.7);
+        contentColor = Colors.white;
         toastIcon = icon ?? Icons.check_circle_rounded;
         break;
       case 'error':
-        bgColor = const Color.fromARGB(
-          255,
-          153,
-          30,
-          30,
-        ).withValues(alpha: 0.7); 
+        bgColor = const Color.fromARGB(255, 153, 30, 30).withValues(alpha: 0.7);
         contentColor = Colors.white;
         toastIcon = icon ?? Icons.error_rounded;
         break;
-      default: 
+      default:
         bgColor = kBeige.withValues(alpha: 0.9);
         contentColor = kDeepGreen;
         toastIcon = icon ?? Icons.info_rounded;
@@ -380,9 +373,7 @@ class _ProfilePageState extends State<ProfilePage> {
         width: 120,
         height: 120,
         child: Image(
-          image: AssetImage(
-            'assets/images/saaf_logo.png',
-          ),
+          image: AssetImage('assets/images/saaf_logo.png'),
           fit: BoxFit.cover,
         ),
       ),
@@ -405,7 +396,7 @@ class _ProfilePageState extends State<ProfilePage> {
             shape: BoxShape.circle,
             border: Border.all(
               color: kGold.withValues(alpha: 0.50),
-              width: 2.5, 
+              width: 2.5,
             ),
           ),
         ),
@@ -424,10 +415,7 @@ class _ProfilePageState extends State<ProfilePage> {
               decoration: BoxDecoration(
                 color: kGold,
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: kDeepGreen,
-                  width: 2,
-                ),
+                border: Border.all(color: kDeepGreen, width: 2),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.3),
@@ -496,7 +484,7 @@ class _ProfilePageState extends State<ProfilePage> {
         _pickedFilePath = x.path;
         _pickedBytes = null;
       }
-      setState(() {}); 
+      setState(() {});
 
       final u = _auth.currentUser;
       if (u == null) return;
@@ -510,7 +498,6 @@ class _ProfilePageState extends State<ProfilePage> {
       final String? newUrl = await _uploadAvatar(u.uid);
 
       if (newUrl != null) {
-
         await _db.collection('users').doc(u.uid).update({
           'photoURL': newUrl,
           'updatedAt': FieldValue.serverTimestamp(),
@@ -520,8 +507,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
         if (!mounted) return;
         setState(() {
-          avatarPath = newUrl; 
-          _avatarRev++; 
+          avatarPath = newUrl;
+          _avatarRev++;
         });
 
         _safeToast('تم حفظ الصورة بنجاح', type: 'success');
@@ -536,7 +523,6 @@ class _ProfilePageState extends State<ProfilePage> {
     if (u == null) return;
 
     try {
-
       if (avatarPath != null && avatarPath!.startsWith('http')) {
         try {
           await _storage.refFromURL(avatarPath!).delete();
@@ -545,21 +531,20 @@ class _ProfilePageState extends State<ProfilePage> {
         }
       }
 
-
       await _db.collection('users').doc(u.uid).update({
         'photoURL': FieldValue.delete(),
       });
 
-      await u.updatePhotoURL(null); 
+      await u.updatePhotoURL(null);
       await u.reload();
 
       if (!mounted) return;
 
       setState(() {
-        avatarPath = null; 
+        avatarPath = null;
         _pickedBytes = null;
-        _pickedFilePath = null; 
-        _avatarRev++; 
+        _pickedFilePath = null;
+        _avatarRev++;
       });
 
       _safeToast("تمت إزالة الصورة بنجاح", type: 'success');
@@ -624,26 +609,36 @@ class _ProfilePageState extends State<ProfilePage> {
               fontSize: 22,
             ),
           ),
-          content: TextField(
-            controller: ctrl,
-            obscureText: true,
-            style: GoogleFonts.almarai(color: Colors.white),
-            decoration: InputDecoration(
-              labelText: 'كلمة المرور الحالية',
-              labelStyle: GoogleFonts.almarai(color: Colors.white70),
-              filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.06),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(15),
-                borderSide: BorderSide.none,
+          content: Theme(
+            data: Theme.of(context).copyWith(
+              textSelectionTheme: TextSelectionThemeData(
+                cursorColor: kGold,
+                selectionColor: kGold.withValues(alpha: 0.55),
+                selectionHandleColor: kGold,
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: const BorderRadius.all(Radius.circular(15.0)),
-                borderSide: BorderSide(color: kGold.withValues(alpha: 0.25)),
-              ),
-              focusedBorder: const OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(15.0)),
-                borderSide: BorderSide(color: kAccent, width: 2),
+            ),
+            child: TextField(
+              controller: ctrl,
+              obscureText: true,
+              cursorColor: kGold,
+              style: GoogleFonts.almarai(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'كلمة المرور الحالية',
+                labelStyle: GoogleFonts.almarai(color: Colors.white70),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.06),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: const BorderRadius.all(Radius.circular(15.0)),
+                  borderSide: BorderSide(color: kGold.withValues(alpha: 0.25)),
+                ),
+                focusedBorder: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(15.0)),
+                  borderSide: BorderSide(color: kAccent, width: 2),
+                ),
               ),
             ),
           ),
@@ -768,8 +763,7 @@ class _ProfilePageState extends State<ProfilePage> {
         'name': newName,
         'phone': newPhone,
         'region': newRegion,
-        'photoURL':
-            newPhoto, 
+        'photoURL': newPhoto,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
@@ -878,12 +872,12 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  //  نافذة طلب كلمة المرور 
+  //  نافذة طلب كلمة المرور
   Future<String?> _askForPassword() async {
     final ctrl = TextEditingController();
     final userEmail = _auth.currentUser?.email ?? "";
     String? localError;
-    bool obscurePassword = true; 
+    bool obscurePassword = true;
 
     return await showDialog<String>(
       context: context,
@@ -891,9 +885,7 @@ class _ProfilePageState extends State<ProfilePage> {
         builder: (context, setDialogState) => BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
           child: AlertDialog(
-            backgroundColor: const Color(
-              0xFF0D2B24,
-            ).withValues(alpha: 0.9),
+            backgroundColor: const Color(0xFF0D2B24).withValues(alpha: 0.9),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(25),
               side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
@@ -926,39 +918,52 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                TextField(
-                  controller: ctrl,
-                  obscureText: obscurePassword, 
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: 'كلمة المرور الحالية',
-                    hintStyle: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.5),
+                Theme(
+                  data: Theme.of(context).copyWith(
+                    textSelectionTheme: TextSelectionThemeData(
+                      cursorColor: kGold,
+                      selectionColor: kGold.withValues(alpha: 0.55),
+                      selectionHandleColor: kGold,
                     ),
-                    filled: true,
-                    fillColor: Colors.black.withValues(alpha: 0.2),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15),
-                      borderSide: BorderSide.none,
-                    ),
-
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                        color: kGold.withValues(alpha: 0.7),
+                  ),
+                  child: TextField(
+                    controller: ctrl,
+                    obscureText: obscurePassword,
+                    cursorColor: kGold,
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'كلمة المرور الحالية',
+                      hintStyle: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.5),
                       ),
-                      onPressed: () {
-                        setDialogState(() {
-                          obscurePassword = !obscurePassword;
-                        });
-                      },
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15),
-                      borderSide: const BorderSide(color: kAccent, width: 1.5),
+                      filled: true,
+                      fillColor: Colors.black.withValues(alpha: 0.2),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide: BorderSide.none,
+                      ),
+
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: kGold.withValues(alpha: 0.7),
+                        ),
+                        onPressed: () {
+                          setDialogState(() {
+                            obscurePassword = !obscurePassword;
+                          });
+                        },
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide: const BorderSide(
+                          color: kAccent,
+                          width: 1.5,
+                        ),
+                      ),
                     ),
                   ),
                 ),

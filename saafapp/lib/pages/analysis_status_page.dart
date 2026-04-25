@@ -11,10 +11,7 @@ const Color kOrange = Color(0xFFEBB974);
 class AnalysisStatusPage extends StatelessWidget {
   final String farmId;
 
-  const AnalysisStatusPage({
-    super.key,
-    required this.farmId,
-  });
+  const AnalysisStatusPage({super.key, required this.farmId});
 
   void _goHome(BuildContext context) {
     Navigator.pushNamedAndRemoveUntil(context, '/main', (_) => false);
@@ -35,11 +32,7 @@ class AnalysisStatusPage extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topRight,
                 end: Alignment.bottomLeft,
-                colors: [
-                  Color(0xFF05352D),
-                  kDeepGreen,
-                  Color(0xFF031E1A),
-                ],
+                colors: [Color(0xFF05352D), kDeepGreen, Color(0xFF031E1A)],
                 stops: [0.0, 0.55, 1.0],
               ),
             ),
@@ -54,10 +47,7 @@ class AnalysisStatusPage extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [
-                    kOrange.withValues(alpha: 0.25),
-                    Colors.transparent,
-                  ],
+                  colors: [kOrange.withValues(alpha: 0.25), Colors.transparent],
                   stops: const [0.0, 1.0],
                 ),
               ),
@@ -134,8 +124,7 @@ class AnalysisStatusPage extends StatelessWidget {
                     return const _LoadingView();
                   }
 
-                  final data =
-                      snap.data!.data() as Map<String, dynamic>? ?? {};
+                  final data = snap.data!.data() as Map<String, dynamic>? ?? {};
 
                   final status = (data['status'] ?? 'pending') as String;
 
@@ -274,13 +263,10 @@ class _LoadingViewState extends State<_LoadingView> {
   }
 }
 
-// ===================== تم =====================
 class _DoneView extends StatelessWidget {
   final int count;
 
-  const _DoneView({
-    required this.count,
-  });
+  const _DoneView({required this.count});
 
   @override
   Widget build(BuildContext context) {
@@ -288,11 +274,7 @@ class _DoneView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.check_circle,
-            size: 90,
-            color: kOrange,
-          ),
+          const Icon(Icons.check_circle, size: 90, color: kOrange),
 
           const SizedBox(height: 12),
 
@@ -309,10 +291,7 @@ class _DoneView extends StatelessWidget {
 
           Text(
             'عدد النخيل التقريبي: $count',
-            style: GoogleFonts.almarai(
-              color: Colors.white70,
-              fontSize: 18,
-            ),
+            style: GoogleFonts.almarai(color: Colors.white70, fontSize: 18),
           ),
         ],
       ),
@@ -320,13 +299,12 @@ class _DoneView extends StatelessWidget {
   }
 }
 
-// ===================== خطأ =====================
+// ===================== عند ظهور خطأ =====================
+
 class _ErrorView extends StatelessWidget {
   final String message;
 
-  const _ErrorView({
-    required this.message,
-  });
+  const _ErrorView({required this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -336,11 +314,7 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.error_outline,
-              size: 90,
-              color: Colors.redAccent,
-            ),
+            const Icon(Icons.error_outline, size: 90, color: Colors.redAccent),
 
             const SizedBox(height: 12),
 
@@ -358,10 +332,7 @@ class _ErrorView extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: GoogleFonts.almarai(
-                color: Colors.white70,
-                height: 1.5,
-              ),
+              style: GoogleFonts.almarai(color: Colors.white70, height: 1.5),
             ),
           ],
         ),

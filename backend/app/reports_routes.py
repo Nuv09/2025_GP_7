@@ -1780,14 +1780,34 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     # ─────────────────────────────────────────────
     # pie
     pie = PieChart()
-    pie.series = []
-    pie.add_data(Reference(ws6, min_col=2, min_row=1, max_row=4), titles_from_data=True)
-    pie.set_categories(Reference(ws6, min_col=1, min_row=2, max_row=4))
+    pie.title = "التوزيع الحالي"
+    pie.height = 8
+    pie.width = 12
+    pie.add_data(
+        Reference(ws6, min_col=2, min_row=1, max_row=4),
+        titles_from_data=True
+    )
+    pie.set_categories(
+        Reference(ws6, min_col=1, min_row=2, max_row=4)
+    )
+
+    pie.dLbls = DataLabelList()
+    pie.dLbls.showVal = True
+    pie.dLbls.showPercent = True
+    pie.dLbls.showCatName = True
+    pie.dLbls.showLeaderLines = True
+
+    ws.add_chart(pie, "A37")
 
     # bar
     bar.series = []
-    bar.add_data(Reference(ws6, min_col=2, max_col=3, min_row=1, max_row=4), titles_from_data=True)
-    bar.set_categories(Reference(ws6, min_col=1, min_row=2, max_row=4))
+    bar.add_data(
+        Reference(ws6, min_col=2, max_col=3, min_row=1, max_row=4),
+        titles_from_data=True
+    )
+    bar.set_categories(
+        Reference(ws6, min_col=1, min_row=2, max_row=4)
+    )
 
     # flags chart
     flags_chart.series = []
