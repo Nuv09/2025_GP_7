@@ -103,7 +103,6 @@ def _enrich_indices_table(indices_table, ndvi=None, ndmi=None, ndre=None):
             "note": item.get("note") or note,
         })
 
-    # fallback إذا indices_table فاضية بالكامل
     if enriched:
         return enriched
 
@@ -515,7 +514,6 @@ def _map_bounds(map_points: list, farm_polygon: list | None = None):
     min_lat, max_lat = min(lats), max(lats)
     min_lng, max_lng = min(lngs), max(lngs)
 
-    # padding بسيط حتى ما تكون الحدود ملاصقة للصورة
     lat_pad = max((max_lat - min_lat) * 0.025, 0.00015)
     lng_pad = max((max_lng - min_lng) * 0.025, 0.00015)
 
@@ -556,7 +554,6 @@ def _heatmap_svg(map_points: list, width: int = 505, height: int = 280, farm_pol
            py = gy - meta["origin_y"]
            return round(px, 1), round(py, 1)
 
-        # fallback only
         min_lat = bounds["min_lat"]
         max_lat = bounds["max_lat"]
         min_lng = bounds["min_lng"]
@@ -645,7 +642,6 @@ def _footer_logo_html(logo_data_uri: str | None) -> str:
 def _delta_badge_html(delta_pct: float) -> str:
     delta_pct = _safe_float(delta_pct, 0.0)
 
-    # ارفعي العتبة حتى لا يظهر كل شيء "بدون تغير"
     if abs(delta_pct) < 0.5:
         return '<span style="color:#64748b;">بدون تغير ملحوظ</span>'
 
@@ -691,11 +687,9 @@ def style_chart_axes(chart, *, y_title=None, x_title=None, show_values=False, is
         chart.y_axis.delete = False
         chart.x_axis.delete = False
 
-        # إظهار أرقام المحاور بدل اختفائها
         chart.y_axis.tickLblPos = "nextTo"
         chart.x_axis.tickLblPos = "low"
 
-        # في الرسوم النسبية
         if is_percent:
             chart.y_axis.scaling.min = 0
             chart.y_axis.scaling.max = 100
@@ -710,6 +704,7 @@ def style_chart_axes(chart, *, y_title=None, x_title=None, show_values=False, is
             chart.dLbls.showPercent = False
     except Exception:
         pass
+
 # ─────────────────────────────────────────────
 # PDF Generation — weasyprint
 # ─────────────────────────────────────────────
@@ -749,7 +744,6 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
         or "—"
     )
 
-    # fallback قوي لعدد النخيل من الوثيقة نفسها وقت التصدير
     total_palms = (
         header.get("total_palms")
         or export_data.get("total_palms")
@@ -778,19 +772,17 @@ def generate_pdf_report(export_data: dict, farm_id: str, farm_doc: dict | None =
         [r.get("count", 0) for r in risk_drivers[:3]],
         ["#0ea5e9", "#f59e0b", "#ef4444"]
     )
-    # ── قرافات جديدة خاصة بالصفحة الأولى ──
+
     multi_sparkline_svg = _multi_index_sparkline(multi_trend)
     flag_rows = _flag_breakdown_rows(alert_context.get("flag_counts", {}))
     total_flag_signals = sum(int(r.get("value", 0) or 0) for r in flag_rows)
     sector_rows = _sector_distribution_rows(map_points)
     total_map_points = len([p for p in (map_points or []) if p.get("lat") is not None and p.get("lng") is not None])
 
-    # ── بيانات المناخ والسياق ──
     rain_mm       = _safe_float(climate.get("rain_mm", 0))
     t_mean        = _safe_float(climate.get("t_mean", 0))
     rpw_score     = _safe_float(climate.get("rpw_score", 0))
 
-    # ── نسبة RPW كنص وصفي ──
     total_pixels = int(alert_context.get("total_pixels", 0) or climate.get("total_pixels", 0) or 0)
     pixels_with_any_flag = int(alert_context.get("pixels_with_any_flag", 0) or 0)
     signal_note = alert_context.get("signal_note") or "قد تُسجَّل أكثر من إشارة للبكسل الواحد."
@@ -1231,9 +1223,6 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
             r += 1
         return r
 
-    # ─────────────────────────────────────────────
-    # data
-    # ─────────────────────────────────────────────
     header = safe_dict(export_data.get("header"))
     dist = safe_dict(export_data.get("distribution"))
     forecast = safe_dict(export_data.get("forecast"))
@@ -1366,7 +1355,6 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     ]
     row = write_label_value_table(ws, row + 1, "توقع الأسبوع القادم", forecast_rows)
 
-    # بيانات للرسم أسفل الشيت بعيدًا عن الدمج
     data_row = row + 3
     ws.cell(data_row, 1, "الفئة")
     ws.cell(data_row, 2, "الحالي")
@@ -1527,7 +1515,6 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
         title_color=ORANGE
     )
 
-    # بيانات القراف: نعرض أعلى 6 إشارات فقط عشان ما تتزاحم الأسماء
     chart_flags_rows = [
         [FLAG_LABELS.get(k, k), v]
         for k, v in flags_rows
@@ -1537,7 +1524,6 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     if not chart_flags_rows:
         chart_flags_rows = [["لا توجد إشارات", 0]]
 
-    # مصدر القراف نخليه بعيد ومخفي، مو تحت الجدول مباشرة
     chart_row2 = max(end_flags + 25, 80)
     ws2.cell(chart_row2, 1, "الإشارة")
     ws2.cell(chart_row2, 2, "العدد")
@@ -1550,13 +1536,13 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
         ws2.row_dimensions[r].hidden = True
 
     flags_chart = BarChart()
-    flags_chart.type = "bar"
+    flags_chart.type = "col"  
     flags_chart.style = 11
     flags_chart.title = "أكثر إشارات الإجهاد تكرارًا"
-    flags_chart.height = 7.5
-    flags_chart.width = 10.5
+    flags_chart.height = 6.2
+    flags_chart.width = 10.8
     flags_chart.legend = None
-    flags_chart.gapWidth = 45
+    flags_chart.gapWidth = 55
 
     flags_chart.add_data(
         Reference(ws2, min_col=2, min_row=chart_row2, max_row=chart_row2 + len(chart_flags_rows)),
@@ -1578,17 +1564,16 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     except Exception:
         pass
 
-    flags_chart.x_axis.delete = False
+    flags_chart.x_axis.delete = True
     flags_chart.y_axis.delete = False
     flags_chart.x_axis.title = None
     flags_chart.y_axis.title = None
-    flags_chart.x_axis.scaling.min = 0
 
     max_count = max([item[1] for item in chart_flags_rows] + [1])
-    flags_chart.x_axis.scaling.max = max_count * 1.25
+    flags_chart.y_axis.scaling.min = 0
+    flags_chart.y_axis.scaling.max = max_count * 1.25
 
-    # رفعناه فوق: مباشرة بعد الجدول بسطر واحد
-    ws2.add_chart(flags_chart, f"A{end_flags + 1}")
+    ws2.add_chart(flags_chart, f"D{row2}")
 
     # ─────────────────────────────────────────────
     # Sheet 3: المخاطر والمناطق
@@ -1667,20 +1652,24 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
         cur += 1
 
     # risk chart data
-    chart_row3 = cur + 2
+    chart_row3 = max(cur + 25, 80)
+
     ws3.cell(chart_row3, 1, "السبب")
     ws3.cell(chart_row3, 2, "العدد")
+
     for i, item in enumerate(risk_rows, start=1):
         ws3.cell(chart_row3 + i, 1, item[0])
         ws3.cell(chart_row3 + i, 2, item[1])
+
     for r in range(chart_row3, chart_row3 + len(risk_rows) + 2):
         ws3.row_dimensions[r].hidden = True
 
     risk_chart = BarChart()
     risk_chart.title = "أسباب الخطر الرئيسية"
     risk_chart.style = 10
-    risk_chart.height = 8
-    risk_chart.width = 13
+    risk_chart.height = 6.8
+    risk_chart.width = 12
+
     risk_chart.add_data(
         Reference(ws3, min_col=2, min_row=chart_row3, max_row=chart_row3 + len(risk_rows)),
         titles_from_data=True
@@ -1688,6 +1677,7 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     risk_chart.set_categories(
         Reference(ws3, min_col=1, min_row=chart_row3 + 1, max_row=chart_row3 + len(risk_rows))
     )
+
     style_chart_axes(
         risk_chart,
         y_title="عدد الإشارات",
@@ -1695,7 +1685,8 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
         show_values=True,
         is_percent=False,
     )
-    ws3.add_chart(risk_chart, "A30")
+
+    ws3.add_chart(risk_chart, f"A{cur + 1}")
 
     # ─────────────────────────────────────────────
     # Sheet 4: البيانات المكانية
@@ -1845,8 +1836,6 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
         Reference(ws6, min_col=1, min_row=2, max_row=4)
     )
 
-    # الألوان حسب ترتيب البيانات:
-    # سليم = أخضر، متابعة = أزرق، حرج = أحمر
     pie_colors = ["22C55E", "2563EB", "EF4444"]
 
     try:
@@ -2304,7 +2293,6 @@ def export_pdf(farm_id):
         if not farm_data.get("health"):
             return jsonify({"ok": False, "error": "بيانات التحليل ناقصة. شغّل التحليل أولاً."}), 400
 
-        # إذا كان فيه export_data قديم استخدميه مؤقتًا، وإلا ابنِ واحد جديد وقت الطلب
         stored_export = farm_data.get("export_data") or {}
 
         if stored_export:
