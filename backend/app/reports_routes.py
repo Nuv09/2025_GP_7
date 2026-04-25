@@ -1119,12 +1119,15 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
         return "—"
 
     def add_logo(target_ws):
+        # نوسّع صف الهيدر في كل الشيتات عشان اللوقو ما ينضغط
+        target_ws.row_dimensions[1].height = 48
+
         logo_path = os.path.join(os.path.dirname(__file__), "static", "images", "saaf_logo.png")
         if os.path.exists(logo_path):
             try:
                 img = XLImage(logo_path)
-                img.width = 115
-                img.height = 42
+                img.width = 130
+                img.height = 46
                 target_ws.add_image(img, "A1")
             except Exception:
                 pass
@@ -1311,7 +1314,7 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
         ws, "A1:H1", "سعف — تقرير تحليل صحة المزرعة",
         f=font(16, True, WHITE), bg=GREEN_DARK, al=align_center(), bd=border(GREEN_DARK)
     )
-    ws.row_dimensions[1].height = 30
+    ws.row_dimensions[1].height = 48
     ws.row_dimensions[2].height = 10
 
     merge_value(
@@ -1526,9 +1529,11 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     flags_chart = BarChart()
     flags_chart.type = "bar"
     flags_chart.style = 11
-    flags_chart.title = "أكثر إشارات الإجهاد تكرارًا"
-    flags_chart.height = 8
-    flags_chart.width = 14
+    flags_chart.height = 4.6
+    flags_chart.width = 6.8
+    flags_chart.legend = None
+    flags_chart.title = None
+
     flags_chart.add_data(
         Reference(ws2, min_col=2, min_row=chart_row2, max_row=chart_row2 + len(flags_rows)),
         titles_from_data=True
@@ -1536,7 +1541,28 @@ def generate_excel_report(export_data: dict, farm_id: str) -> str:
     flags_chart.set_categories(
         Reference(ws2, min_col=1, min_row=chart_row2 + 1, max_row=chart_row2 + len(flags_rows))
     )
-    ws2.add_chart(flags_chart, "A34")
+
+    # إظهار الأرقام فقط
+    flags_chart.dLbls = DataLabelList()
+    flags_chart.dLbls.showVal = True
+    flags_chart.dLbls.showLegendKey = False
+    flags_chart.dLbls.showCatName = False
+    flags_chart.dLbls.showSerName = False
+    flags_chart.dLbls.showPercent = False
+
+    try:
+        flags_chart.dLbls.dLblPos = "outEnd"
+    except Exception:
+        pass
+
+    # إخفاء كل شيء غير الأرقام
+    flags_chart.x_axis.delete = True
+    flags_chart.y_axis.delete = True
+    flags_chart.x_axis.title = None
+    flags_chart.y_axis.title = None
+
+    # بجانب الجدول، وليس تحته
+    ws2.add_chart(flags_chart, f"C{row2}")
 
     # ─────────────────────────────────────────────
     # Sheet 3: المخاطر والمناطق
