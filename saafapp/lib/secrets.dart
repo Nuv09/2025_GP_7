@@ -40,5 +40,5 @@ class Secrets {
       "AIzaSyCEU204FgpLDPx_XvogBcnrMVQ6wCQdu30";
 
   static const String weatherApiKey = "c20bf6e172ae4184888190817260702";
-  static const String mapTilerKey = 'tyKEvH9kqbCLLgvQPvlo';
+  static const String mapTilerKey = 'iJIwtIO7i7UHuPRvQDLN';
 }
