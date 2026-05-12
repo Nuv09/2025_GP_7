@@ -30,6 +30,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _zxcvbn = Zxcvbn();
   int _passwordScore = 0; // 0 (ضعيف جداً) إلى 4 (قوي جداً)
   String? _passwordWarning; // رسالة التحذير من zxcvbn
+  List<String> _passwordSuggestions = [];
 
   // ⭐️ التعديل 1: حالة الموافقة على الشروط
   bool _agreeTerms = false;
@@ -185,7 +186,73 @@ class _SignUpScreenState extends State<SignUpScreen> {
       },
     );
   }
+String _translateWarning(String? warning) {
+  if (warning == null || warning.trim().isEmpty) return '';
 
+  const map = {
+    'This is a top-10 common password':
+        'كلمة المرور من أكثر 10 كلمات مرور شيوعًا وسهلة التخمين',
+    'This is a top-100 common password':
+        'كلمة المرور من أكثر 100 كلمة مرور شيوعًا',
+    'This is a very common password':
+        'كلمة المرور شائعة جدًا وسهلة التخمين',
+    'This is similar to a commonly used password':
+        'كلمة المرور مشابهة لكلمة مرور شائعة',
+    'A word by itself is easy to guess':
+        'استخدام كلمة واحدة فقط يجعل كلمة المرور سهلة التخمين',
+    'Names and surnames by themselves are easy to guess':
+        'الأسماء وحدها سهلة التخمين',
+    'Common names and surnames are easy to guess':
+        'الأسماء الشائعة سهلة التخمين',
+    'Straight rows of keys are easy to guess':
+        'أنماط لوحة المفاتيح المتتالية سهلة التخمين',
+    'Short keyboard patterns are easy to guess':
+        'أنماط لوحة المفاتيح القصيرة سهلة التخمين',
+    'Repeats like "aaa" are easy to guess':
+        'تكرار الأحرف مثل aaa يجعل كلمة المرور سهلة التخمين',
+    'Repeats like "abcabcabc" are only slightly harder to guess than "abc"':
+        'تكرار نفس النمط لا يجعل كلمة المرور قوية',
+    'Sequences like abc or 6543 are easy to guess':
+        'التسلسلات مثل abc أو 6543 سهلة التخمين',
+    'Recent years are easy to guess':
+        'السنوات الحديثة سهلة التخمين',
+    'Dates are often easy to guess':
+        'التواريخ غالبًا سهلة التخمين',
+  };
+
+  return map[warning] ?? 'يرجى اختيار كلمة مرور أقوى';
+}
+
+List<String> _translateSuggestions(List<dynamic>? suggestions) {
+  if (suggestions == null) return [];
+
+  const map = {
+    'Add another word or two. Uncommon words are better.':
+        'أضف كلمة أو كلمتين إضافيتين، ويفضل أن تكون غير شائعة',
+    'Avoid repeated words and characters':
+        'تجنب تكرار الكلمات أو الأحرف',
+    'Avoid sequences':
+        'تجنب التسلسلات مثل 1234 أو abcd',
+    'Avoid recent years':
+        'تجنب استخدام السنوات الحديثة',
+    'Avoid years that are associated with you':
+        'تجنب استخدام سنوات مرتبطة بك',
+    'Avoid dates and years that are associated with you':
+        'تجنب استخدام تواريخ أو سنوات مرتبطة بك',
+    "Capitalization doesn't help very much":
+        'تغيير الحروف إلى كبيرة لا يزيد الأمان كثيرًا',
+    'All-uppercase is almost as easy to guess as all-lowercase':
+        'استخدام الحروف الكبيرة فقط لا يجعلها أقوى بكثير',
+    "Reversed words aren't much harder to guess":
+        'عكس الكلمات لا يجعلها أصعب بكثير',
+    "Predictable substitutions like '@' instead of 'a' don't help very much":
+        'الاستبدالات المتوقعة مثل @ بدل a لا تساعد كثيرًا',
+  };
+
+  return suggestions
+      .map((s) => map[s.toString()] ?? 'اختر كلمة مرور أقل توقعًا')
+      .toList();
+}
   // دالة لتقييم قوة كلمة المرور وتحديث الحالة
   void _updatePasswordStrength() {
     final password = _passCtrl.text;
@@ -193,6 +260,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       setState(() {
         _passwordScore = 0;
         _passwordWarning = null;
+        _passwordSuggestions = [];
       });
       return;
     }
@@ -203,7 +271,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     setState(() {
       _passwordScore = (result.score ?? 0)
           .toInt(); 
-      _passwordWarning = result.feedback.warning;
+      _passwordWarning = _translateWarning(result.feedback.warning);
+      _passwordSuggestions = _translateSuggestions(result.feedback.suggestions);
     });
   }
 
@@ -496,6 +565,7 @@ try {
                                       color: _getScoreColor(_passwordScore),
                                       text: _getScoreText(_passwordScore),
                                       warning: _passwordWarning,
+                                      suggestions: _passwordSuggestions,
                                     ),
                                   const SizedBox(height: 12),
                                   _SaafField(
@@ -649,12 +719,15 @@ class _PasswordStrengthIndicator extends StatelessWidget {
   final Color color;
   final String text;
   final String? warning;
+  final List<String> suggestions;
+
 
   const _PasswordStrengthIndicator({
     required this.score,
     required this.color,
     required this.text,
     this.warning,
+    this.suggestions = const [],
   });
 
   @override
@@ -688,17 +761,29 @@ class _PasswordStrengthIndicator extends StatelessWidget {
               ),
             ],
           ),
-          if (warning != null && score < 2)
-            Padding(
-              padding: const EdgeInsets.only(top: 4.0),
-              child: Text(
-                'تحذير: $warning',
-                style: GoogleFonts.almarai(
-                  color: Colors.red.shade200,
-                  fontSize: 12,
-                ),
-              ),
-            ),
+          if (warning != null && warning!.isNotEmpty && score < 2)
+  Padding(
+    padding: const EdgeInsets.only(top: 4.0),
+    child: Text(
+      'تحذير: $warning',
+      style: GoogleFonts.almarai(
+        color: Colors.red.shade200,
+        fontSize: 12,
+      ),
+    ),
+  ),
+
+if (suggestions.isNotEmpty && score < 2)
+  Padding(
+    padding: const EdgeInsets.only(top: 4.0),
+    child: Text(
+      suggestions.first,
+      style: GoogleFonts.almarai(
+        color: kLightBeige.withValues(alpha: 0.85),
+        fontSize: 12,
+      ),
+    ),
+  ),
         ],
       ),
     );
