@@ -1151,9 +1151,9 @@ if (emailChanged) {
         ),
       ),
       child: Scaffold(
-        extendBody: true,
+        extendBody: false,
         extendBodyBehindAppBar: true,
-        backgroundColor: Colors.transparent,
+        backgroundColor: kDeepGreen,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
@@ -1201,9 +1201,8 @@ if (emailChanged) {
           children: [
             _buildLuxBackground(),
             SafeArea(
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 110),
-                child: SingleChildScrollView(
+  child: SingleChildScrollView(
+    padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
                   child: Column(
                     children: [
                       _glassCard(
@@ -1425,7 +1424,7 @@ if (emailChanged) {
                   ),
                 ),
               ),
-            ),
+            
           ],
         ),
       ),
