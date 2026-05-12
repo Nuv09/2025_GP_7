@@ -156,6 +156,32 @@ Future<void> _saveFcmTokenIfLoggedIn({String? forcedToken}) async {
     'fcmUpdatedAt': FieldValue.serverTimestamp(),
   }, SetOptions(merge: true));
 }
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: darkGreenColor,
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final user = snapshot.data;
+
+        if (user != null && user.emailVerified) {
+          return const IdleSessionWrapper(child: MainShell());
+        }
+
+        return const SaafLandingScreen();
+      },
+    );
+  }
+}
 
 // ======================== MyApp ========================
 
@@ -192,7 +218,7 @@ class MyApp extends StatelessWidget {
           onSurface: whiteColor,
         ),
       ),
-      initialRoute: '/landing',
+      home: const AuthGate(),
       routes: {
         '/landing': (_) => const SaafLandingScreen(),
         '/login': (_) => const LoginScreen(),
