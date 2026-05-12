@@ -584,7 +584,7 @@ Future<void> _sendResetEmail() async {
                                     const SizedBox(height: 18),
                                     _SaafButton(
                                       label: _loading
-                                          ? '...جاري الدخول'
+                                          ? 'جاري الدخول...'
                                           : 'تسجيل الدخول',
                                       onTap: _loading ? () {} : _signIn,
                                     ),

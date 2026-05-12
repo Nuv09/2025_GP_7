@@ -639,7 +639,7 @@ try {
 
                                   _SaafButton(
                                     label: _loading
-                                        ? '...جاري الإنشاء'
+                                        ? 'جاري الإنشاء...'
                                         : 'إنشاء الحساب',
                                     onTap: _loading ? () {} : _signUp,
                                   ),

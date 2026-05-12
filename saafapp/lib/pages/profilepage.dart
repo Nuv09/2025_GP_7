@@ -10,6 +10,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:saafapp/widgets/saaf_image.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 const Color kDeepGreen = Color(0xFF042C25);
 const Color kGold = Color(0xFFEBB974);
@@ -157,7 +158,48 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
+Future<bool> _checkProfileAvailability({
+  required String email,
+  required String phone,
+}) async {
+  try {
+    final callable =
+        FirebaseFunctions.instance.httpsCallable(
+          'checkProfileAvailability',
+        );
 
+    final result = await callable.call({
+      'email': email,
+      'phone': phone,
+    });
+
+    final data = Map<String, dynamic>.from(result.data as Map);
+
+    if (data['emailUsed'] == true) {
+      _safeToast(
+        'البريد الإلكتروني مستخدم بالفعل',
+        type: 'error',
+      );
+      return false;
+    }
+
+    if (data['phoneUsed'] == true) {
+      _safeToast(
+        'رقم الجوال مستخدم بالفعل',
+        type: 'error',
+      );
+      return false;
+    }
+
+    return true;
+  } catch (e) {
+    _safeToast(
+      'تعذر التحقق من البيانات، حاول مجددًا',
+      type: 'error',
+    );
+    return false;
+  }
+}
   Future<void> _loadUser() async {
     try {
       final u = _auth.currentUser;
@@ -726,6 +768,7 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+
   Future<void> _saveProfile() async {
     final navigator = Navigator.of(context);
     final u = _auth.currentUser;
@@ -740,11 +783,23 @@ class _ProfilePageState extends State<ProfilePage> {
       final newName = _nameCtrl.text.trim();
       final newPhone = _phoneCtrl.text.trim();
       final newRegion = _selectedRegion;
-      final newEmail = _emailCtrl.text.trim();
+      final newEmail = _emailCtrl.text.trim().toLowerCase();
+final currentEmail = (u.email ?? '').toLowerCase();
+final isAvailable = await _checkProfileAvailability(
+  email: newEmail,
+  phone: newPhone,
+);
 
-      final emailChanged = newEmail.isNotEmpty && newEmail != (u.email ?? '');
-      if (emailChanged) {
-        final ok = await _updateEmailFlow(newEmail);
+if (!isAvailable) {
+  if (mounted) setState(() => _saving = false);
+  return;
+}
+
+final emailChanged = newEmail.isNotEmpty && newEmail != currentEmail;
+
+if (emailChanged) {
+
+  final ok = await _updateEmailFlow(newEmail);
         if (!ok) {
           if (mounted) setState(() => _saving = false);
           return;
@@ -1329,7 +1384,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                       child: Center(
                                         child: Text(
                                           _saving
-                                              ? '...جاري الحفظ'
+                                              ? 'جاري الحفظ...'
                                               : 'حفظ التعديلات',
                                           style: GoogleFonts.almarai(
                                             color: kDeepGreen,
