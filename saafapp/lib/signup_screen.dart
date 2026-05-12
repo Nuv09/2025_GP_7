@@ -106,7 +106,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         content: ClipRRect(
           borderRadius: BorderRadius.circular(25),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
               decoration: BoxDecoration(
