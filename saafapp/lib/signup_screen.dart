@@ -408,10 +408,8 @@ try {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(22),
                           child: BackdropFilter(
-                            filter: const ColorFilter.mode(
-                              Colors.black12,
-                              BlendMode.srcOver,
-                            ),
+                              filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                            
                             child: Container(
                               width: double.infinity,
                               padding: const EdgeInsets.fromLTRB(
