@@ -280,7 +280,7 @@ try {
 
       if (!mounted) return;
 
-      _safeToast("تم إنشاء الحساب بنجاح! ضلاً تحقق من بريدك الإلكتروني لإكمال التفعيل", type: 'success');
+      _safeToast("تم إنشاء الحساب بنجاح! فضلاً تحقق من بريدك الإلكتروني لإكمال التفعيل", type: 'success');
 
       Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
