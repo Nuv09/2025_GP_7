@@ -397,10 +397,10 @@ class _InfoPane extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(
-        right: defaultPadding,
-        left: 6,
-        top: 12,
-        bottom: 12,
+         right: 10,
+         left: 4,
+         top: 10,
+         bottom: 10,
       ),
       child: Row(
         children: [
@@ -421,7 +421,6 @@ class _InfoPane extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 3),
-
                 Row(
                   children: [
                     const Icon(
@@ -433,7 +432,6 @@ class _InfoPane extends StatelessWidget {
                     Flexible(
                       child: Text(
                         subtitle.isEmpty ? '—' : subtitle,
-
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -445,121 +443,73 @@ class _InfoPane extends StatelessWidget {
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 0),
-
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 6,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    if (sizeText != null) ...[
+                const SizedBox(height: 4),
+                if (sizeText != null) ...[
+                  Row(
+                    children: [
                       const Icon(
                         Icons.straighten,
                         size: 14,
                         color: darkGreenColor,
                       ),
-                      Text(
-                        sizeText!,
-                        style: const TextStyle(color: darkGreenColor),
-                      ),
-                    ],
-                  ],
-                ),
-
-                if (createdAt != null) ...[
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.schedule,
-                        size: 14,
-                        color: darkGreenColor,
-                      ),
-                      const SizedBox(width: 6),
-
-                      SizedBox(
-                        width: 70,
+                      const SizedBox(width: 4),
+                      Expanded(
                         child: Text(
-                          'تاريخ الإضافة:',
+                          sizeText!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: darkGreenColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(width: 6),
-
-                      SizedBox(
-                        width: 33,
-                        child: Directionality(
-                          textDirection: TextDirection.ltr,
-                          child: Text(
-                            _formatDate(createdAt!),
-                            textAlign: TextAlign.left,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: darkGreenColor,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                            ),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ],
-
-                if (lastAnalysisText != null &&
-                    lastAnalysisText!.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.analytics_outlined,
-                        size: 14,
-                        color: darkGreenColor,
-                      ),
-                      const SizedBox(width: 6),
-
-                      const SizedBox(
-                        width: 70,
-                        child: Text(
-                          'آخر تحليل:',
-                          style: TextStyle(
-                            color: darkGreenColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(width: 6),
-
-                      SizedBox(
-                        width: 33,
-                        child: Directionality(
-                          textDirection: TextDirection.ltr,
-                          child: Text(
-                            lastAnalysisText!,
-                            textAlign: TextAlign.left,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: darkGreenColor,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-
+             if (createdAt != null) ...[
+  const SizedBox(height: 8),
+  Row(
+    children: [
+      const Icon(Icons.schedule, size: 14, color: darkGreenColor),
+      const SizedBox(width: 6),
+      const Text(
+        'تاريخ الإضافة:',
+        style: TextStyle(color: darkGreenColor, fontSize: 11, fontWeight: FontWeight.w800),
+      ),
+      const Spacer(),
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Text(
+          _formatDate(createdAt!),
+          style: const TextStyle(color: darkGreenColor, fontSize: 10, fontWeight: FontWeight.w800),
+        ),
+      ),
+    ],
+  ),
+],
+               if (lastAnalysisText != null && lastAnalysisText!.isNotEmpty) ...[
+  const SizedBox(height: 8),
+  Row(
+    children: [
+      const Icon(Icons.analytics_outlined, size: 14, color: darkGreenColor),
+      const SizedBox(width: 6),
+      const Text(
+        'آخر تحليل:',
+        style: TextStyle(color: darkGreenColor, fontSize: 11, fontWeight: FontWeight.w800),
+      ),
+      const Spacer(),
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Text(
+          lastAnalysisText!,
+          style: const TextStyle(color: darkGreenColor, fontSize: 10, fontWeight: FontWeight.w800),
+        ),
+      ),
+    ],
+  ),
+],
                 const SizedBox(height: 6),
                 Builder(
                   builder: (context) {
@@ -574,16 +524,12 @@ class _InfoPane extends StatelessWidget {
                       );
                     }
 
-                    if (s == 'done') {
-                      return const SizedBox.shrink();
-                    }
                     return const SizedBox.shrink();
                   },
                 ),
               ],
             ),
           ),
-
           if (healthRing != null) ...[
             const SizedBox(width: 6),
             Padding(
@@ -604,6 +550,7 @@ class _InfoPane extends StatelessWidget {
     return '$dd/$mm';
   }
 }
+
 
 class _ActionButtons extends StatelessWidget {
   final VoidCallback? onEdit;

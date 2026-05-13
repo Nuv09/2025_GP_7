@@ -808,7 +808,7 @@ if (res.statusCode == 404) {
   Widget _buildFloatingTabBar() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-      height: 75,
+      height: 85,
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.03),
@@ -831,7 +831,7 @@ if (res.statusCode == 404) {
         unselectedLabelColor: Colors.white38,
         labelStyle: GoogleFonts.almarai(
           fontWeight: FontWeight.bold,
-          fontSize: 13,
+          fontSize: 11,
         ),
         tabs: const [
           Tab(icon: Icon(Icons.map_outlined), text: "الخريطة"),
@@ -1412,9 +1412,11 @@ final int totalPalms = palmCountRaw is int
                             space: 10,
                             child: Text(
                               shortDate,
+                              softWrap: false,        // ← أضف هذا
+                              overflow: TextOverflow.visible, 
                               style: GoogleFonts.almarai(
                                 color: Colors.white,
-                                fontSize: 11,
+                                fontSize: 10,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -1500,47 +1502,37 @@ final int totalPalms = palmCountRaw is int
             ),
           ),
           const SizedBox(height: 25),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildSimpleLegend(
-                "مؤشر الغطاء النباتي",
-                const Color(0xFF69F0AE),
-              ),
-              const SizedBox(width: 15),
-              _buildSimpleLegend("مؤشر الرطوبه", Colors.blueAccent),
-              const SizedBox(width: 15),
-              _buildSimpleLegend("مؤشر الكلوروفيل", goldColor),
-            ],
-          ),
+          Wrap(
+  alignment: WrapAlignment.center,
+  spacing: 8,        // ← من 12 إلى 8
+  runSpacing: 8,
+  children: [
+    _buildSimpleLegend("مؤشر الغطاء النباتي", const Color(0xFF69F0AE)),
+    _buildSimpleLegend("مؤشر الرطوبة", Colors.blueAccent),
+    _buildSimpleLegend("مؤشر الكلوروفيل", goldColor),
+  ],
+),
         ],
       ),
     );
   }
-
-  Widget _buildSimpleLegend(String label, Color color) {
-    return Flexible(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 5),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.almarai(color: Colors.white70, fontSize: 10),
-            ),
-          ),
-        ],
+Widget _buildSimpleLegend(String label, Color color) {
+  return Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 8,           // ← من 10 إلى 8
+        height: 8,          // ← من 10 إلى 8
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       ),
-    );
-  }
+      const SizedBox(width: 4),
+      Text(
+        label,
+        style: GoogleFonts.almarai(color: Colors.white70, fontSize: 9), // ← من 10 إلى 9
+      ),
+    ],
+  );
+}
 
   Widget _buildLegendItem(String label, Color color, double val) {
     return Padding(
