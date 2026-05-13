@@ -23,7 +23,7 @@ PROJECT_ID = os.environ.get("GEE_PROJECT_ID", "saaf-97251")
 OUT_ROOT = os.environ.get("HEALTH_OUT_ROOT", "/tmp/saaf_health")
 os.makedirs(OUT_ROOT, exist_ok=True)
 
-TODAY = pd.Timestamp.utcnow().normalize()
+TODAY = pd.Timestamp.now(tz="UTC").tz_localize(None).normalize()
 DATE_TO = TODAY
 DATE_FROM = TODAY - pd.Timedelta(weeks=52)
 
@@ -1195,8 +1195,11 @@ def analyze_farm_health(farm_id: str, farm_doc: Dict[str, Any]) -> Dict[str, Any
 
     _wx_recent = wx.copy()
     if "date" in _wx_recent.columns:
-        _wx_recent["date"] = pd.to_datetime(_wx_recent["date"]).dt.normalize()
-        _wx_recent = _wx_recent[_wx_recent["date"] >= TODAY - pd.Timedelta(weeks=4)]
+      _wx_recent["date"] = pd.to_datetime(_wx_recent["date"], utc=True, errors="coerce")
+      _wx_recent["date"] = _wx_recent["date"].dt.tz_localize(None).dt.normalize()
+
+    cutoff = TODAY - pd.Timedelta(weeks=4)
+    _wx_recent = _wx_recent[_wx_recent["date"] >= cutoff]
     _rain_s = _wx_recent["precip_mm"].dropna() if "precip_mm" in _wx_recent.columns else pd.Series(dtype=float)
     _temp_s = _wx_recent["t2m_mean"].dropna()  if "t2m_mean"  in _wx_recent.columns else pd.Series(dtype=float)
     direct_rain_mm = float(_rain_s.sum())  if not _rain_s.empty else None
