@@ -1151,7 +1151,7 @@ if (emailChanged) {
         ),
       ),
       child: Scaffold(
-        extendBody: false,
+        extendBody: true,
         extendBodyBehindAppBar: true,
         backgroundColor: kDeepGreen,
         appBar: AppBar(
@@ -1202,7 +1202,7 @@ if (emailChanged) {
             _buildLuxBackground(),
             SafeArea(
   child: SingleChildScrollView(
-    padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
+    padding: EdgeInsets.fromLTRB(16, 10, 16, MediaQuery.of(context).padding.bottom + 80),
                   child: Column(
                     children: [
                       _glassCard(
