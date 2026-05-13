@@ -158,6 +158,24 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
+
+String? _validateEmail(String? value) {
+  final e = (value ?? '').trim().toLowerCase();
+
+  if (e.isEmpty) {
+    return 'الرجاء إدخال البريد الإلكتروني';
+  }
+
+  final emailRegex = RegExp(
+    r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$',
+  );
+
+  if (!emailRegex.hasMatch(e)) {
+    return 'الرجاء إدخال بريد إلكتروني صحيح';
+  }
+
+  return null;
+}
 Future<bool> _checkProfileAvailability({
   required String email,
   required String phone,
@@ -1268,14 +1286,15 @@ if (emailChanged) {
                               const SizedBox(height: 12),
 
                               _buildField(
-                                controller: _emailCtrl,
-                                label: 'البريد الإلكتروني',
-                                icon: Icons.email,
-                                editing: _editEmail,
-                                onToggle: () =>
-                                    setState(() => _editEmail = !_editEmail),
-                                keyboardType: TextInputType.emailAddress,
-                              ),
+  controller: _emailCtrl,
+  label: 'البريد الإلكتروني',
+  icon: Icons.email,
+  editing: _editEmail,
+  onToggle: () =>
+      setState(() => _editEmail = !_editEmail),
+  keyboardType: TextInputType.emailAddress,
+  validator: _validateEmail,
+),
                               const SizedBox(height: 12),
 
                               DropdownButtonFormField<String>(
